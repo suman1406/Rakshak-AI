@@ -1,0 +1,3 @@
+import Link from 'next/link';
+export default function Login(){return <main className="auth"><Link href="/" className="brand"><span className="mark">R</span>RAKSHAK AI</Link><div className="auth-card"><p className="eyebrow">WELCOME BACK</p><h1>Continue to your field view.</h1><form><label>Email<input type="email" placeholder="you@example.com" /></label><label>Password<input type="password" placeholder="••••••••" /></label><button className="button" type="button">Sign in <span>↗</span></button></form><p className="hint">Pilot access is enabled for farmers, agronomists, and organization teams.</p></div></main>}
+
