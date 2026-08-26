@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'scan_screen.dart';
+import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget { const LoginScreen({super.key}); @override State<LoginScreen> createState() => _LoginScreenState(); }
 class _LoginScreenState extends State<LoginScreen> {
@@ -8,7 +8,6 @@ class _LoginScreenState extends State<LoginScreen> {
     const Text('Your field view awaits.', style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold)), const SizedBox(height: 30),
     TextField(controller: email, decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder())), const SizedBox(height: 16),
     TextField(controller: password, obscureText: true, decoration: const InputDecoration(labelText: 'Password', border: OutlineInputBorder())), const SizedBox(height: 24),
-    FilledButton(onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ScanScreen())), child: const Text('Continue')),
+    FilledButton(onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen())), child: const Text('Continue')),
   ]));
 }
-
