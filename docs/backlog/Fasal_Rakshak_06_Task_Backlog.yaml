@@ -1,0 +1,606 @@
+# Fasal Rakshak — machine-readable task backlog.
+# Mirrors Fasal_Rakshak_05_Agentic_Phase_Backlog.md. If they ever disagree,
+# the markdown file is authoritative — update this file to match.
+#
+# Fields:
+#   id: stable ticket ID, referenced in commits/PRs (FR-P<phase>-<seq>)
+#   phase: integer 0-10, or "cross" for cross-cutting tickets
+#   title: short description
+#   track: BE | ML | Infra | Process | "BE+ML"
+#   depends_on: list of ticket ids (or [] if none / phase-entry ticket)
+#   guardrail_refs: list of Loopholes [L#] ids and/or source-doc section refs
+#   acceptance_criteria: condensed Definition of Done
+#   status: todo | in_progress | done | blocked  (agents/tools update this field)
+
+tickets:
+  # Phase 0 — Prototype Spike
+  - id: FR-P0-01
+    phase: 0
+    title: "Colab/Kaggle end-to-end spike notebook"
+    track: ML
+    depends_on: []
+    guardrail_refs: ["PRD §8"]
+    acceptance_criteria: "Notebook runs top-to-bottom on a sample video and prints a disease name + rough confidence"
+    status: todo
+  - id: FR-P0-02
+    phase: 0
+    title: "Thin local FFmpeg frame-extraction script"
+    track: ML
+    depends_on: []
+    guardrail_refs: []
+    acceptance_criteria: "Given a video file, produces a folder of JPEG frames locally"
+    status: todo
+  - id: FR-P0-03
+    phase: 0
+    title: "Assemble 10-20 sample soybean videos"
+    track: ML
+    depends_on: []
+    guardrail_refs: []
+    acceptance_criteria: "Video set stored outside git, referenced by path in FR-P0-01"
+    status: todo
+  - id: FR-P0-04
+    phase: 0
+    title: "Written breakage log from spike notebook"
+    track: ML
+    depends_on: ["FR-P0-01"]
+    guardrail_refs: []
+    acceptance_criteria: "Doc lists concrete failure modes; becomes Phase 2 requirements input"
+    status: todo
+
+  # Phase 1 — Foundations & Scaffolding
+  - id: FR-P1-01
+    phase: 1
+    title: "Repo scaffolding per Repo Structure doc"
+    track: Infra
+    depends_on: []
+    guardrail_refs: []
+    acceptance_criteria: "Module packages exist per doc 02; imports resolve"
+    status: todo
+  - id: FR-P1-02
+    phase: 1
+    title: "docker-compose + managed cloud Postgres/Redis wiring"
+    track: Infra
+    depends_on: ["FR-P1-01"]
+    guardrail_refs: ["Hardware Reality Check"]
+    acceptance_criteria: "docker-compose up brings up FastAPI locally against managed cloud DB/Redis"
+    status: todo
+  - id: FR-P1-03
+    phase: 1
+    title: "Alembic init + identity/farm/taxonomy migration"
+    track: BE
+    depends_on: ["FR-P1-01"]
+    guardrail_refs: []
+    acceptance_criteria: "alembic upgrade head succeeds; tables match Data Model Schema doc"
+    status: todo
+  - id: FR-P1-04
+    phase: 1
+    title: "JWT auth + RBAC skeleton"
+    track: BE
+    depends_on: ["FR-P1-03"]
+    guardrail_refs: ["PRD §32"]
+    acceptance_criteria: "require_role() dependency; 401/403 test-covered per role"
+    status: todo
+  - id: FR-P1-05
+    phase: 1
+    title: "Structured JSON logging + healthz endpoint"
+    track: Infra
+    depends_on: ["FR-P1-01"]
+    guardrail_refs: []
+    acceptance_criteria: "Every log line is JSON with request_id; /healthz returns 200"
+    status: todo
+  - id: FR-P1-06
+    phase: 1
+    title: "Migration: prediction/verification/governance tables"
+    track: BE
+    depends_on: ["FR-P1-03"]
+    guardrail_refs: ["L13", "Arch rules 4-7"]
+    acceptance_criteria: "All *_model_version columns non-nullable; decision_authority defaults advisory_only"
+    status: todo
+
+  # Phase 2 — Ingestion & Video Processing Pipeline
+  - id: FR-P2-01
+    phase: 2
+    title: "videos.status state machine + status endpoint"
+    track: BE
+    depends_on: ["FR-P1-06"]
+    guardrail_refs: ["Arch rule 2"]
+    acceptance_criteria: "Every transition persisted and queryable; no synchronous-only stage"
+    status: todo
+  - id: FR-P2-02
+    phase: 2
+    title: "Resumable/chunked upload (tus or S3 multipart)"
+    track: BE
+    depends_on: ["FR-P2-01"]
+    guardrail_refs: ["PRD §7"]
+    acceptance_criteria: "Interrupted-and-resumed upload completes (integration test)"
+    status: todo
+  - id: FR-P2-03
+    phase: 2
+    title: "FFmpeg scene-change-aware extraction (CPU worker)"
+    track: BE
+    depends_on: ["FR-P1-01"]
+    guardrail_refs: ["Backend Plan §4 P1"]
+    acceptance_criteria: "Scene-change sampling used, not fixed FPS"
+    status: todo
+  - id: FR-P2-04
+    phase: 2
+    title: "Quality scoring: blur, exposure, near-dup removal, composite score"
+    track: BE
+    depends_on: ["FR-P2-03"]
+    guardrail_refs: ["never trust client-only score"]
+    acceptance_criteria: "Server-side score independent of client score; near-dups pruned"
+    status: todo
+  - id: FR-P2-05
+    phase: 2
+    title: "Celery + Redis wiring, cpu_processing/gpu_inference queues"
+    track: Infra
+    depends_on: ["FR-P1-02"]
+    guardrail_refs: ["Arch rule 3"]
+    acceptance_criteria: "Both queue names exist and are used, gpu_inference pre-empty is fine"
+    status: todo
+  - id: FR-P2-06
+    phase: 2
+    title: "Minimum-usable-frame threshold -> insufficient_evidence"
+    track: BE
+    depends_on: ["FR-P2-04"]
+    guardrail_refs: ["Backend Plan §8"]
+    acceptance_criteria: "Video with <5 usable frames resolves to insufficient_evidence"
+    status: todo
+  - id: FR-P2-07
+    phase: 2
+    title: "Object storage integration (R2/B2) + lifecycle policy"
+    track: Infra
+    depends_on: ["FR-P1-02"]
+    guardrail_refs: ["Hardware Reality Check"]
+    acceptance_criteria: "Video/frames land in cloud storage; lifecycle auto-archive configured"
+    status: todo
+
+  # Phase 3 — Cold-Start ML Baseline
+  - id: FR-P3-01
+    phase: 3
+    title: "Video-level split enforcement (dataset_splits table + utility)"
+    track: ML
+    depends_on: ["FR-P1-06"]
+    guardrail_refs: ["L7"]
+    acceptance_criteria: "Automated check fails build on cross-split frame leakage from same video_id"
+    status: todo
+  - id: FR-P3-02
+    phase: 3
+    title: "Stratified sampling utility"
+    track: ML
+    depends_on: ["FR-P3-01"]
+    guardrail_refs: ["Eval Framework §1"]
+    acceptance_criteria: "Reports per-stratum counts; flags under-represented strata"
+    status: todo
+  - id: FR-P3-03
+    phase: 3
+    title: "Crop classifier transfer learning (Colab)"
+    track: ML
+    depends_on: ["FR-P0-01"]
+    guardrail_refs: ["Backend Plan §5.1"]
+    acceptance_criteria: "Checkpoint + eval metrics logged to W&B/MLflow"
+    status: todo
+  - id: FR-P3-04
+    phase: 3
+    title: "Seed annotation sprint (300-500 boxed images)"
+    track: ML
+    depends_on: []
+    guardrail_refs: ["Backend Plan §5.2"]
+    acceptance_criteria: "Annotated set in DVC/LakeFS; inter-annotator spot-check documented"
+    status: todo
+  - id: FR-P3-05
+    phase: 3
+    title: "Plant/leaf/lesion detector fine-tuned on PlantDoc"
+    track: ML
+    depends_on: ["FR-P3-04"]
+    guardrail_refs: ["Backend Plan §5.2"]
+    acceptance_criteria: "Per-class recall reported, especially lesion class"
+    status: todo
+  - id: FR-P3-06
+    phase: 3
+    title: "Disease classifier Stage 0 training"
+    track: ML
+    depends_on: ["FR-P0-04", "FR-P3-01"]
+    guardrail_refs: ["Backend Plan §5.3"]
+    acceptance_criteria: "AUPRC per class + confusion matrix logged; field-condition augmentation applied"
+    status: todo
+  - id: FR-P3-07
+    phase: 3
+    title: "Post-hoc calibration (temperature scaling) + ECE"
+    track: ML
+    depends_on: ["FR-P3-06"]
+    guardrail_refs: ["Arch rule 9", "Eval Framework §2"]
+    acceptance_criteria: "ECE measured and acceptable for High band"
+    status: todo
+  - id: FR-P3-08
+    phase: 3
+    title: "Class taxonomy lock, validated with agronomist/ICAR reference"
+    track: ML
+    depends_on: []
+    guardrail_refs: ["Backend Plan §5.3"]
+    acceptance_criteria: "diseases table populated; sign-off documented as an ADR"
+    status: todo
+  - id: FR-P3-09
+    phase: 3
+    title: "Experiment tracking + dataset versioning wired from first run"
+    track: ML
+    depends_on: []
+    guardrail_refs: ["Backend Plan §6"]
+    acceptance_criteria: "Every training run logged; dataset version is a citable identifier"
+    status: todo
+  - id: FR-P3-10
+    phase: 3
+    title: "Golden test set v0 + first model_versions row"
+    track: ML
+    depends_on: ["FR-P3-06", "FR-P3-07"]
+    guardrail_refs: ["Backend Plan §6", "L12"]
+    acceptance_criteria: "golden_set_items populated; model_versions has >=1 row with eval_metrics"
+    status: todo
+
+  # Phase 4 — GPU Inference Integration
+  - id: FR-P4-01
+    phase: 4
+    title: "GPU worker wired to gpu_inference queue via rented/serverless GPU"
+    track: Infra
+    depends_on: ["FR-P2-05", "FR-P3-10"]
+    guardrail_refs: ["Hardware Reality Check"]
+    acceptance_criteria: "Queued task invokes remote endpoint and returns a result; no local model load"
+    status: todo
+  - id: FR-P4-02
+    phase: 4
+    title: "Inference chain storing full probability distributions"
+    track: "BE+ML"
+    depends_on: ["FR-P4-01"]
+    guardrail_refs: ["Arch rule 7"]
+    acceptance_criteria: "frame_diagnoses.probability_distribution has full distribution, not just top-1"
+    status: todo
+  - id: FR-P4-03
+    phase: 4
+    title: "Model-version stamping on every prediction row"
+    track: BE
+    depends_on: ["FR-P4-02"]
+    guardrail_refs: ["Arch rule 4"]
+    acceptance_criteria: "100% of rows have non-null *_model_version"
+    status: todo
+  - id: FR-P4-04
+    phase: 4
+    title: "GPU failure handling -> recoverable failed state"
+    track: BE
+    depends_on: ["FR-P4-01"]
+    guardrail_refs: ["Backend Plan §8"]
+    acceptance_criteria: "Simulated OOM leaves job failed with error_detail, not stuck"
+    status: todo
+  - id: FR-P4-05
+    phase: 4
+    title: "End-to-end smoke test upload -> ready"
+    track: BE
+    depends_on: ["FR-P2-07", "FR-P4-02"]
+    guardrail_refs: []
+    acceptance_criteria: "scripts/smoke_test_pipeline.py passes against a fresh environment"
+    status: todo
+
+  # Phase 5 — Aggregation, Severity & Confidence
+  - id: FR-P5-01
+    phase: 5
+    title: "Bayesian/log-odds temporal aggregation"
+    track: "BE+ML"
+    depends_on: ["FR-P4-02"]
+    guardrail_refs: ["Backend Plan §5.4"]
+    acceptance_criteria: "Ablation test shows this beats naive majority vote"
+    status: todo
+  - id: FR-P5-02
+    phase: 5
+    title: "Severity heuristic (4 ordinal levels)"
+    track: "BE+ML"
+    depends_on: ["FR-P5-01"]
+    guardrail_refs: ["Backend Plan §5.5"]
+    acceptance_criteria: "Severity explainable from stored detection stats; UI marks it an estimate"
+    status: todo
+  - id: FR-P5-03
+    phase: 5
+    title: "Open-set/OOD Unknown routing"
+    track: ML
+    depends_on: ["FR-P3-07"]
+    guardrail_refs: ["Arch rule 13"]
+    acceptance_criteria: "Held-out different plant/leaf image routes to is_unknown=true"
+    status: todo
+  - id: FR-P5-04
+    phase: 5
+    title: "Cost-weighted threshold selection + alert-dismissal instrumentation"
+    track: "BE+ML"
+    depends_on: ["FR-P5-01"]
+    guardrail_refs: ["L10"]
+    acceptance_criteria: "Threshold chosen via explicit FN/FP costs; dismissal-rate metric live"
+    status: todo
+  - id: FR-P5-05
+    phase: 5
+    title: "Confidence bands from calibrated probabilities only"
+    track: BE
+    depends_on: ["FR-P3-07"]
+    guardrail_refs: ["Arch rule 9"]
+    acceptance_criteria: "Band thresholds applied only to temperature-scaled output"
+    status: todo
+  - id: FR-P5-06
+    phase: 5
+    title: "Repeat-scan test-retest reliability suite"
+    track: ML
+    depends_on: ["FR-P5-01"]
+    guardrail_refs: ["Eval Framework §3"]
+    acceptance_criteria: "Same unchanging field scanned twice; agreement measured and passes"
+    status: todo
+
+  # Phase 6 — Explanation Layer & Farmer Report
+  - id: FR-P6-01
+    phase: 6
+    title: "LLM/VLM call fed structured JSON only, never raw media"
+    track: BE
+    depends_on: ["FR-P5-02"]
+    guardrail_refs: ["Arch rule 10"]
+    acceptance_criteria: "Request-builder type signature makes raw media attachment impossible"
+    status: todo
+  - id: FR-P6-02
+    phase: 6
+    title: "Strict output JSON schema + validation"
+    track: BE
+    depends_on: ["FR-P6-01"]
+    guardrail_refs: ["Backend Plan §5.6"]
+    acceptance_criteria: "Invalid LLM output rejected pre-render 100% of the time (tested)"
+    status: todo
+  - id: FR-P6-03
+    phase: 6
+    title: "Guardrail filter + canned-template fallback"
+    track: BE
+    depends_on: ["FR-P6-02"]
+    guardrail_refs: ["Backend Plan §5.6"]
+    acceptance_criteria: "Any validation/guardrail failure falls back to template"
+    status: todo
+  - id: FR-P6-04
+    phase: 6
+    title: "Red-team test set + automated guardrail pass-rate check"
+    track: BE
+    depends_on: ["FR-P6-03"]
+    guardrail_refs: ["Eval Framework §6"]
+    acceptance_criteria: "Guardrail pass rate ~100% in CI; failures block release"
+    status: todo
+  - id: FR-P6-05
+    phase: 6
+    title: "Farmer report data contract"
+    track: BE
+    depends_on: ["FR-P6-03"]
+    guardrail_refs: ["PRD §16", "PRD §30"]
+    acceptance_criteria: "GET /diagnosis/{id} matches PRD §30 shape; no autonomous prescriptions"
+    status: todo
+  - id: FR-P6-06
+    phase: 6
+    title: "Recurring human-review process for report clarity/overstated certainty"
+    track: Process
+    depends_on: ["FR-P6-04"]
+    guardrail_refs: ["Eval Framework §6"]
+    acceptance_criteria: "Cadence documented; first review executed and logged"
+    status: todo
+
+  # Phase 7 — Agronomist Dashboard & Verified-Label Loop
+  - id: FR-P7-01
+    phase: 7
+    title: "verified_labels write endpoint, structurally separate"
+    track: BE
+    depends_on: ["FR-P1-06"]
+    guardrail_refs: ["Arch rule 5"]
+    acceptance_criteria: "Verify endpoint never writes to video_diagnoses"
+    status: todo
+  - id: FR-P7-02
+    phase: 7
+    title: "Case queue prioritized low-confidence-first"
+    track: BE
+    depends_on: ["FR-P5-05"]
+    guardrail_refs: ["Backend Plan §4 P4"]
+    acceptance_criteria: "Queue endpoint orders by ascending confidence"
+    status: todo
+  - id: FR-P7-03
+    phase: 7
+    title: "AI-assisted pre-labeling, gated on anchoring mitigation"
+    track: "BE+ML"
+    depends_on: ["FR-P7-04"]
+    guardrail_refs: ["L2"]
+    acceptance_criteria: "Feature flag stays off until FR-P7-04 ships"
+    status: todo
+  - id: FR-P7-04
+    phase: 7
+    title: "Blind re-labeling scheduled job + agreement-rate metric"
+    track: BE
+    depends_on: ["FR-P7-01"]
+    guardrail_refs: ["L2"]
+    acceptance_criteria: "Recurring job hides AI suggestion for a sample; agreement rate queryable"
+    status: todo
+  - id: FR-P7-05
+    phase: 7
+    title: "2+ agronomist consensus rule for gold labels"
+    track: BE
+    depends_on: ["FR-P7-01"]
+    guardrail_refs: ["Backend Plan §4 P4"]
+    acceptance_criteria: "is_gold true only with 2 agreeing reviews; single reviews excluded from export"
+    status: todo
+  - id: FR-P7-06
+    phase: 7
+    title: "Independent severity ground-truth field"
+    track: BE
+    depends_on: ["FR-P7-01"]
+    guardrail_refs: ["L8"]
+    acceptance_criteria: "affected_plant_estimate_independent required, never pre-filled from AI"
+    status: todo
+  - id: FR-P7-07
+    phase: 7
+    title: "Nightly export job to DVC/LakeFS hierarchical structure"
+    track: BE
+    depends_on: ["FR-P7-05"]
+    guardrail_refs: ["Backend Plan §4 P4"]
+    acceptance_criteria: "Flag->verify->export->dataset-repo cycle runs unattended"
+    status: todo
+
+  # Phase 8 — Pilot Program & Real Field Data Collection
+  - id: FR-P8-01
+    phase: 8
+    title: "Pilot recruitment criteria doc with worst-case-site quota"
+    track: Process
+    depends_on: []
+    guardrail_refs: ["L1"]
+    acceptance_criteria: "Doc requires >=1-2 deliberately hard sites"
+    status: todo
+  - id: FR-P8-02
+    phase: 8
+    title: "Multi-region pilot tracking + per-region metric dashboard"
+    track: BE
+    depends_on: ["FR-P8-01"]
+    guardrail_refs: ["L5"]
+    acceptance_criteria: "Per-region performance is a first-class pre-launch dashboard"
+    status: todo
+  - id: FR-P8-03
+    phase: 8
+    title: "Quarterly physical/lab ground-truth verification workflow"
+    track: Process
+    depends_on: ["FR-P7-05"]
+    guardrail_refs: ["L3"]
+    acceptance_criteria: "Scheduled task exists; first round produces independent ground truth"
+    status: todo
+  - id: FR-P8-04
+    phase: 8
+    title: "source_channel tagging enforced before commercial data enters pipeline"
+    track: BE
+    depends_on: ["FR-P3-08"]
+    guardrail_refs: ["L4"]
+    acceptance_criteria: "No insurer/input-company verification writable without non-default source_channel"
+    status: todo
+  - id: FR-P8-05
+    phase: 8
+    title: "Domain-adapt Stage-0 model on pilot data"
+    track: ML
+    depends_on: ["FR-P3-06"]
+    guardrail_refs: ["Backend Plan §5.3 Stage 1"]
+    acceptance_criteria: "New model_versions row registered and evaluated against golden set"
+    status: todo
+
+  # Phase 9 — Field/B2B Analytics & Scale Hardening
+  - id: FR-P9-01
+    phase: 9
+    title: "Field Health Score rollup + Field Health Map"
+    track: BE
+    depends_on: ["FR-P5-02"]
+    guardrail_refs: ["PRD §17-18"]
+    acceptance_criteria: "GET /fields/{id}/health matches PRD shape"
+    status: todo
+  - id: FR-P9-02
+    phase: 9
+    title: "B2B dashboard APIs with drill-down"
+    track: BE
+    depends_on: ["FR-P9-01"]
+    guardrail_refs: ["PRD §31"]
+    acceptance_criteria: "Dashboard + drilldown endpoints match API spec doc"
+    status: todo
+  - id: FR-P9-03
+    phase: 9
+    title: "OLAP/read-replica evaluation, build only once volume justifies"
+    track: Infra
+    depends_on: ["FR-P9-02"]
+    guardrail_refs: ["Backend Plan §4 P5"]
+    acceptance_criteria: "Decision documented with a volume threshold; not built speculatively"
+    status: todo
+  - id: FR-P9-04
+    phase: 9
+    title: "Enforce decision_authority for financial-decision-linked cases"
+    track: BE
+    depends_on: ["FR-P1-06"]
+    guardrail_refs: ["L13"]
+    acceptance_criteria: "Simulated financial case blocked without human_confirmed sign-off"
+    status: todo
+  - id: FR-P9-05
+    phase: 9
+    title: "Metadata integrity + screen-replay/moiré fraud detection"
+    track: "BE+ML"
+    depends_on: ["FR-P2-01"]
+    guardrail_refs: ["Backend Plan §8"]
+    acceptance_criteria: "Screen-replay test video flagged; GPS/timestamp inconsistency flagged"
+    status: todo
+  - id: FR-P9-06
+    phase: 9
+    title: "Tenant-scoped RBAC / row-level security"
+    track: BE
+    depends_on: ["FR-P9-02"]
+    guardrail_refs: ["Backend Plan §8"]
+    acceptance_criteria: "RLS proven to block cross-tenant reads in a test"
+    status: todo
+  - id: FR-P9-07
+    phase: 9
+    title: "GPU autoscaling policy + cost-per-analysis dashboard"
+    track: Infra
+    depends_on: ["FR-P4-01"]
+    guardrail_refs: ["Backend Plan §4 P5"]
+    acceptance_criteria: "Cost-per-analysis is a named, queryable metric"
+    status: todo
+
+  # Phase 10 — Evaluation Gate, MLOps & Governance (standing)
+  - id: FR-P10-01
+    phase: 10
+    title: "Golden set governance: frozen + refreshed subsets, versioned"
+    track: ML
+    depends_on: ["FR-P3-10"]
+    guardrail_refs: ["L12"]
+    acceptance_criteria: "Two subsets separately tracked; changelog records every refresh"
+    status: todo
+  - id: FR-P10-02
+    phase: 10
+    title: "Shadow-mode harness, reserved for major model changes"
+    track: "BE+ML"
+    depends_on: ["FR-P4-03"]
+    guardrail_refs: ["L11"]
+    acceptance_criteria: "Minimum sample size defined; minor retrains gate on golden set alone"
+    status: todo
+  - id: FR-P10-03
+    phase: 10
+    title: "Drift monitoring dashboard sliced by region/season/phone"
+    track: BE
+    depends_on: ["FR-P4-03"]
+    guardrail_refs: ["Backend Plan §6"]
+    acceptance_criteria: "Metrics queryable per-slice, not just aggregate"
+    status: todo
+  - id: FR-P10-04
+    phase: 10
+    title: "Automated release-gate checklist blocking production promotion"
+    track: Infra
+    depends_on: ["FR-P3-10", "FR-P6-04", "FR-P5-06"]
+    guardrail_refs: ["Eval Framework §10"]
+    acceptance_criteria: "deployment_status->production fails without passing release-gate record"
+    status: todo
+  - id: FR-P10-05
+    phase: 10
+    title: "Error-attribution / oracle-detection ablation tooling"
+    track: ML
+    depends_on: ["FR-P4-02"]
+    guardrail_refs: ["L6"]
+    acceptance_criteria: "Tool reports error-rate gap attributable to each pipeline stage"
+    status: todo
+  - id: FR-P10-06
+    phase: 10
+    title: "Standing metrics dashboard (six metrics)"
+    track: BE
+    depends_on: ["FR-P7-04", "FR-P8-04"]
+    guardrail_refs: ["Eval Framework §9", "L4", "L9"]
+    acceptance_criteria: "All six metrics live and queryable; Other-bucket manually sampled periodically"
+    status: todo
+
+  # Cross-cutting
+  - id: FR-PX-01
+    phase: cross
+    title: "Encryption in transit and at rest"
+    track: Infra
+    depends_on: ["FR-P1-02"]
+    guardrail_refs: ["PRD §32"]
+    acceptance_criteria: "TLS everywhere; sensitive columns encrypted"
+    status: todo
+  - id: FR-PX-02
+    phase: cross
+    title: "Consent-based collection + audit logs + retention controls"
+    track: BE
+    depends_on: ["FR-P1-06"]
+    guardrail_refs: ["PRD §32"]
+    acceptance_criteria: "Every mutating request writes audit_logs; retention enforced via S3 lifecycle"
+    status: todo
