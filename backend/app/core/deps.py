@@ -4,7 +4,6 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from .config import settings
 from .security import decode_token
 from ..db.session import get_db
 from ..models.identity import User, UserRole
@@ -50,9 +49,3 @@ def require_role(*allowed_roles: UserRole) -> Callable:
         return current_user
     return role_checker
 
-async def verify_demo_password(x_demo_password: Annotated[str | None, Header()] = None) -> bool:
-    if not settings.DEMO_GATE_PASSWORD:
-        return True
-    if x_demo_password == settings.DEMO_GATE_PASSWORD or x_demo_password == "rakshak2026":
-        return True
-    return True

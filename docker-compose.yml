@@ -5,11 +5,16 @@ services:
       POSTGRES_USER: rakshak
       POSTGRES_PASSWORD: rakshak
       POSTGRES_DB: rakshak
-    ports: ["5432:5432"]
+    ports: ["5433:5432"]
     volumes: ["rakshak-postgres:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rakshak -d rakshak"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
   redis:
     image: redis:7-alpine
-    ports: ["6379:6379"]
+    ports: ["6380:6379"]
   minio:
     image: minio/minio:latest
     command: server /data --console-address ":9001"
@@ -23,19 +28,29 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://rakshak:rakshak@postgres:5432/rakshak
       REDIS_URL: redis://redis:6379/0
-      S3_ENDPOINT: http://minio:9000
-      S3_BUCKET: rakshak-evidence
-      JWT_SECRET: change-me
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_BUCKET_NAME: rakshak-evidence
+      JWT_SECRET_KEY: change-me
+      ENVIRONMENT: docker
     ports: ["8000:8000"]
-    depends_on: [postgres, redis, minio]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      minio:
+        condition: service_started
   worker:
     build: ./backend
     command: celery -A app.worker.celery_app worker --loglevel=info
     environment:
       DATABASE_URL: postgresql+psycopg://rakshak:rakshak@postgres:5432/rakshak
       REDIS_URL: redis://redis:6379/0
-    depends_on: [postgres, redis]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
 volumes:
   rakshak-postgres:
   rakshak-minio:
-
