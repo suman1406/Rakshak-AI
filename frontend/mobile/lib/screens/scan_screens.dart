@@ -1,7 +1,66 @@
-export 'farmer_app.dart'
-    show
-        NewScanScreen,
-        CameraGuidanceScreen,
-        VideoQualityScreen,
-        QualityFailedScreen,
-        AnalyzingScreen;
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
+import '../core/app_theme.dart';
+import '../widgets/app_components.dart';
+import 'report_screens.dart';
+
+class NewScanScreen extends StatefulWidget { const NewScanScreen({super.key}); @override State<NewScanScreen> createState() => _NewScanState(); }
+class _NewScanState extends State<NewScanScreen> {
+  final formKey = GlobalKey<FormState>(); String? fileName; bool consent = false;
+  Future<void> chooseVideo() async { final result = await FilePicker.platform.pickFiles(type: FileType.video, withData: false); if (result != null) setState(() => fileName = result.files.single.name); }
+  @override
+  Widget build(BuildContext context) => AppPage(title: 'New scan', onBack: () => Navigator.pop(context), child: PageContent(children: [Text('Capture a clear view', style: Theme.of(context).textTheme.headlineSmall), const SizedBox(height: 8), const Text('Choose the crop and field, then send a short walkthrough video.'), const SizedBox(height: 24), Form(key: formKey, child: Column(children: [TextFormField(initialValue: 'Soybean', decoration: const InputDecoration(labelText: 'Crop', prefixIcon: Icon(Icons.grass_outlined)), validator: requiredScanField), const SizedBox(height: 14), TextFormField(initialValue: 'North plot', decoration: const InputDecoration(labelText: 'Field', prefixIcon: Icon(Icons.location_on_outlined)), validator: requiredScanField)])), const SizedBox(height: 20), AppCard(child: Column(children: [Icon(fileName == null ? Icons.video_file_outlined : Icons.check_circle_rounded, color: fileName == null ? RakshakColors.leaf : RakshakColors.ink, size: 44), const SizedBox(height: 8), Text(fileName ?? 'No video selected', style: Theme.of(context).textTheme.titleMedium), const SizedBox(height: 4), const Text('MP4 or MOV · up to 100 MB'), const SizedBox(height: 14), SecondaryAction(label: 'Choose video', icon: Icons.upload_file_rounded, onPressed: chooseVideo), const SizedBox(height: 10), SecondaryAction(label: 'Record in app', icon: Icons.videocam_outlined, onPressed: () => navigateTo(context, const CameraGuidanceScreen())), TextButton.icon(onPressed: () => setState(() => fileName = 'north_plot_demo.mp4'), icon: const Icon(Icons.auto_awesome), label: const Text('Use demo video'))])), const SizedBox(height: 12), CheckboxListTile(contentPadding: EdgeInsets.zero, value: consent, onChanged: (value) => setState(() => consent = value ?? false), controlAffinity: ListTileControlAffinity.leading, title: const Text('I understand this is decision support, not a confirmed diagnosis.')), const SizedBox(height: 8), PrimaryAction(label: 'Continue to quality check', icon: Icons.arrow_forward_rounded, onPressed: fileName != null && consent ? () { if (formKey.currentState!.validate()) navigateTo(context, const VideoQualityCheckScreen()); } : null), const SizedBox(height: 16), const SafetyNote()]));
+}
+String? requiredScanField(String? value) => value == null || value.trim().isEmpty ? 'Required' : null;
+
+class CameraGuidanceScreen extends StatelessWidget {
+  const CameraGuidanceScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return AppPage(
+      title: 'Camera guidance',
+      onBack: () => Navigator.pop(context),
+      child: Column(children: [
+        Expanded(
+          child: Container(
+            color: RakshakColors.ink,
+            alignment: Alignment.center,
+            child: Container(
+              width: 220,
+              height: 300,
+              decoration: BoxDecoration(border: Border.all(color: RakshakColors.signal, width: 2), borderRadius: BorderRadius.circular(22)),
+              child: const Center(child: Icon(Icons.eco_rounded, color: RakshakColors.signal, size: 76)),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(children: [
+            const Text('Move slowly and keep leaves inside the frame.', textAlign: TextAlign.center),
+            const SizedBox(height: 14),
+            PrimaryAction(label: 'Capture video', icon: Icons.fiber_manual_record, onPressed: () => navigateTo(context, const VideoQualityCheckScreen())),
+          ]),
+        ),
+      ]),
+    );
+  }
+}
+
+class VideoQualityCheckScreen extends StatelessWidget {
+  const VideoQualityCheckScreen({super.key});
+  @override
+  Widget build(BuildContext context) => AppPage(title: 'Video quality check', onBack: () => Navigator.pop(context), child: PageContent(children: [AppCard(child: Column(children: [Container(height: 160, decoration: BoxDecoration(color: RakshakColors.border, borderRadius: BorderRadius.circular(12)), child: const Center(child: Icon(Icons.play_circle_outline, color: RakshakColors.ink, size: 58))), const SizedBox(height: 12), const Row(children: [Icon(Icons.check_circle_rounded, color: RakshakColors.ink), SizedBox(width: 8), Text('Video is ready to analyze', style: TextStyle(fontWeight: FontWeight.w800))])])), const SizedBox(height: 24), const SectionHeading(title: 'Quality signals'), const SizedBox(height: 8), for (final signal in ['Good lighting', 'Steady movement', 'Crop visible across frames']) Padding(padding: const EdgeInsets.only(bottom: 10), child: AppCard(child: Row(children: [const Icon(Icons.check_circle_outline, color: RakshakColors.ink), const SizedBox(width: 12), Text(signal)]))), const SizedBox(height: 10), PrimaryAction(label: 'Start analysis', icon: Icons.auto_awesome, onPressed: () => navigateTo(context, const AnalyzingCropHealthScreen())), TextButton(onPressed: () => navigateTo(context, const QualityCheckFailedScreen()), child: const Text('Preview failed quality state'))]));
+}
+
+class QualityCheckFailedScreen extends StatelessWidget {
+  const QualityCheckFailedScreen({super.key});
+  @override
+  Widget build(BuildContext context) => AppPage(title: 'Video needs another try', onBack: () => Navigator.pop(context), child: PageContent(crossAxisAlignment: CrossAxisAlignment.center, children: [const SizedBox(height: 64), const Icon(Icons.videocam_off_outlined, color: RakshakColors.warningText, size: 72), const SizedBox(height: 20), Text('We could not use this video', textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineSmall), const SizedBox(height: 10), const Text('Try better light, slower movement, and keep the crop visible in every frame.', textAlign: TextAlign.center), const SizedBox(height: 24), PrimaryAction(label: 'Try again', onPressed: () => navigateTo(context, const NewScanScreen()))]));
+}
+
+class AnalyzingCropHealthScreen extends StatefulWidget { const AnalyzingCropHealthScreen({super.key}); @override State<AnalyzingCropHealthScreen> createState() => _AnalyzingState(); }
+class _AnalyzingState extends State<AnalyzingCropHealthScreen> {
+  int current = 0;
+  @override void initState() { super.initState(); Future.delayed(const Duration(milliseconds: 800), () { if (mounted) setState(() => current = 1); }); Future.delayed(const Duration(milliseconds: 1600), () { if (mounted) setState(() => current = 2); }); }
+  @override Widget build(BuildContext context) => AppPage(title: 'Analyzing crop health', child: PageContent(crossAxisAlignment: CrossAxisAlignment.center, children: [const SizedBox(height: 44), const Icon(Icons.auto_awesome, color: RakshakColors.ink, size: 56), const SizedBox(height: 18), Text('Reading your field', style: Theme.of(context).textTheme.headlineSmall), const SizedBox(height: 8), const Text('Comparing multiple moments for a clearer signal.', textAlign: TextAlign.center), const SizedBox(height: 28), for (var i = 0; i < 4; i++) ListTile(leading: Icon(i <= current ? Icons.check_circle_rounded : Icons.radio_button_unchecked, color: i <= current ? RakshakColors.ink : RakshakColors.border), title: Text(['Extracting frames', 'Checking crop visibility', 'Comparing health signals', 'Preparing your report'][i])), const SizedBox(height: 18), PrimaryAction(label: 'View demo report', onPressed: () => navigateTo(context, const CropHealthReportScreen()))]));
+}
