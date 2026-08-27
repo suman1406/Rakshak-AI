@@ -21,3 +21,11 @@ data/
 models/
 myenv/
 
+# Local media & database storage
+storage/
+*.db
+rakshak.db
+
+# OS files
+.DS_Store
+*/.DS_Store
