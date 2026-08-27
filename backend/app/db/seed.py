@@ -1,6 +1,13 @@
 """
 Seed script: populates demo data on first startup.
 Idempotent — checks for existing rows before inserting anything.
+
+NOTE: All video/frame/detection data here is SYNTHETIC — there are no
+real video files on disk for the seeded records. Storage paths are
+placeholder strings. Diagnoses are hand-crafted to give the Flutter
+frontend developer realistic API response shapes to build against.
+The processing metadata (frame counts, quality scores, etc.) are
+representative values, not outputs of real ML inference.
 """
 import uuid
 from datetime import datetime, timezone, timedelta
@@ -43,14 +50,17 @@ ID = {
     "field_1b": "00000000-0006-0006-0006-000000000002",
     "field_2a": "00000000-0006-0006-0006-000000000003",
     "field_3a": "00000000-0006-0006-0006-000000000004",
+    # 3 completed synthetic videos + 1 in-flight
     "video_1": "00000000-0007-0007-0007-000000000001",
     "video_2": "00000000-0007-0007-0007-000000000002",
     "video_3": "00000000-0007-0007-0007-000000000003",
     "video_4": "00000000-0007-0007-0007-000000000004",
+    # synthetic frames (no real image files exist for these)
     "frame_1_1": "00000000-0008-0008-0008-000000000001",
     "frame_1_2": "00000000-0008-0008-0008-000000000002",
     "frame_2_1": "00000000-0008-0008-0008-000000000003",
     "frame_3_1": "00000000-0008-0008-0008-000000000004",
+    # synthetic detections
     "det_1_1": "00000000-0009-0009-0009-000000000001",
     "det_1_2": "00000000-0009-0009-0009-000000000002",
     "det_3_1": "00000000-0009-0009-0009-000000000003",
@@ -66,28 +76,27 @@ def _dt(days_ago: int = 0, hours_ago: int = 0) -> datetime:
 async def seed_database() -> None:
     """Run all seeds. No-op if data already exists."""
     async with async_session_factory() as session:
-        # Guard: skip if crops already seeded
         result = await session.execute(select(func.count()).select_from(Crop))
         if result.scalar_one() > 0:
             logger.info("Seed: demo data already present — skipping.")
             return
 
-        logger.info("Seed: populating demo data…")
+        logger.info("Seed: populating synthetic demo data…")
         now = datetime.now(timezone.utc)
 
         # 1. Organisations ────────────────────────────────────────────────────
         session.add_all([
-            Organization(id=ID["org_fpo"],     name="Vidarbha Soybean FPO",    org_type=OrgType.fpo,     created_at=_dt(30)),
+            Organization(id=ID["org_fpo"],     name="Vidarbha Soybean FPO",     org_type=OrgType.fpo,     created_at=_dt(30)),
             Organization(id=ID["org_insurer"], name="AgroShield Insurance Ltd.", org_type=OrgType.insurer, created_at=_dt(30)),
         ])
 
         # 2. Users ────────────────────────────────────────────────────────────
         session.add_all([
-            User(id=ID["user_admin"],       email="admin@rakshak.ai",          phone="+919000000001", password_hash=get_password_hash("Admin@1234"),      role=UserRole.admin,       display_name="Rakshak Admin",       org_id=ID["org_fpo"],     created_at=_dt(30), updated_at=_dt(30)),
-            User(id=ID["user_farmer1"],     email="rajan.patil@example.com",   phone="+919111111111", password_hash=get_password_hash("Farmer@1234"),     role=UserRole.farmer,      display_name="Rajan Patil",         org_id=ID["org_fpo"],     created_at=_dt(20), updated_at=_dt(20)),
-            User(id=ID["user_farmer2"],     email="sunita.devi@example.com",   phone="+919222222222", password_hash=get_password_hash("Farmer@1234"),     role=UserRole.farmer,      display_name="Sunita Devi",         org_id=ID["org_fpo"],     created_at=_dt(15), updated_at=_dt(15)),
-            User(id=ID["user_agronomist"],  email="dr.mehta@rakshak.ai",       phone="+919333333333", password_hash=get_password_hash("Agro@1234"),       role=UserRole.agronomist,  display_name="Dr. Priya Mehta",     org_id=None,              created_at=_dt(25), updated_at=_dt(25)),
-            User(id=ID["user_enterprise"],  email="analyst@agroshield.com",    phone="+919444444444", password_hash=get_password_hash("Enterprise@1234"), role=UserRole.enterprise,  display_name="AgroShield Analyst",  org_id=ID["org_insurer"], created_at=_dt(10), updated_at=_dt(10)),
+            User(id=ID["user_admin"],      email="admin@rakshak.ai",         phone="+919000000001", password_hash=get_password_hash("Admin@1234"),      role=UserRole.admin,      display_name="Rakshak Admin",       org_id=ID["org_fpo"],     created_at=_dt(30), updated_at=_dt(30)),
+            User(id=ID["user_farmer1"],    email="rajan.patil@example.com",  phone="+919111111111", password_hash=get_password_hash("Farmer@1234"),     role=UserRole.farmer,     display_name="Rajan Patil",         org_id=ID["org_fpo"],     created_at=_dt(20), updated_at=_dt(20)),
+            User(id=ID["user_farmer2"],    email="sunita.devi@example.com",  phone="+919222222222", password_hash=get_password_hash("Farmer@1234"),     role=UserRole.farmer,     display_name="Sunita Devi",         org_id=ID["org_fpo"],     created_at=_dt(15), updated_at=_dt(15)),
+            User(id=ID["user_agronomist"], email="dr.mehta@rakshak.ai",      phone="+919333333333", password_hash=get_password_hash("Agro@1234"),       role=UserRole.agronomist, display_name="Dr. Priya Mehta",     org_id=None,              created_at=_dt(25), updated_at=_dt(25)),
+            User(id=ID["user_enterprise"], email="analyst@agroshield.com",   phone="+919444444444", password_hash=get_password_hash("Enterprise@1234"), role=UserRole.enterprise, display_name="AgroShield Analyst",  org_id=ID["org_insurer"], created_at=_dt(10), updated_at=_dt(10)),
         ])
 
         # 3. Crops ────────────────────────────────────────────────────────────
@@ -98,20 +107,20 @@ async def seed_database() -> None:
 
         # 4. Diseases ─────────────────────────────────────────────────────────
         session.add_all([
-            Disease(id=ID["dis_soybean_rust"],    crop_id=ID["crop_soybean"], name="Soybean Rust",             taxonomy_version="v1.0", active=True, created_at=_dt(60)),
-            Disease(id=ID["dis_soybean_blight"],  crop_id=ID["crop_soybean"], name="Sudden Death Syndrome",    taxonomy_version="v1.0", active=True, created_at=_dt(60)),
-            Disease(id=ID["dis_soybean_mosaic"],  crop_id=ID["crop_soybean"], name="Bean Pod Mottle Virus",    taxonomy_version="v1.0", active=True, created_at=_dt(60)),
-            Disease(id=ID["dis_soybean_frogeye"], crop_id=ID["crop_soybean"], name="Frogeye Leaf Spot",        taxonomy_version="v1.0", active=True, created_at=_dt(60)),
-            Disease(id=ID["dis_soybean_healthy"], crop_id=ID["crop_soybean"], name="Healthy",                  taxonomy_version="v1.0", active=True, created_at=_dt(60)),
-            Disease(id=ID["dis_cotton_boll"],     crop_id=ID["crop_cotton"],  name="Boll Weevil Infestation",  taxonomy_version="v1.0", active=True, created_at=_dt(60)),
-            Disease(id=ID["dis_cotton_wilt"],     crop_id=ID["crop_cotton"],  name="Fusarium Wilt",            taxonomy_version="v1.0", active=True, created_at=_dt(60)),
+            Disease(id=ID["dis_soybean_rust"],    crop_id=ID["crop_soybean"], name="Soybean Rust",            taxonomy_version="v1.0", active=True, created_at=_dt(60)),
+            Disease(id=ID["dis_soybean_blight"],  crop_id=ID["crop_soybean"], name="Sudden Death Syndrome",   taxonomy_version="v1.0", active=True, created_at=_dt(60)),
+            Disease(id=ID["dis_soybean_mosaic"],  crop_id=ID["crop_soybean"], name="Bean Pod Mottle Virus",   taxonomy_version="v1.0", active=True, created_at=_dt(60)),
+            Disease(id=ID["dis_soybean_frogeye"], crop_id=ID["crop_soybean"], name="Frogeye Leaf Spot",       taxonomy_version="v1.0", active=True, created_at=_dt(60)),
+            Disease(id=ID["dis_soybean_healthy"], crop_id=ID["crop_soybean"], name="Healthy",                 taxonomy_version="v1.0", active=True, created_at=_dt(60)),
+            Disease(id=ID["dis_cotton_boll"],     crop_id=ID["crop_cotton"],  name="Boll Weevil Infestation", taxonomy_version="v1.0", active=True, created_at=_dt(60)),
+            Disease(id=ID["dis_cotton_wilt"],     crop_id=ID["crop_cotton"],  name="Fusarium Wilt",           taxonomy_version="v1.0", active=True, created_at=_dt(60)),
         ])
 
         # 5. Farms ────────────────────────────────────────────────────────────
         session.add_all([
-            Farm(id=ID["farm_1"], owner_user_id=ID["user_farmer1"], org_id=ID["org_fpo"],     name="Patil Soybean Farm",   state="Maharashtra",    district="Nagpur",       created_at=_dt(18)),
-            Farm(id=ID["farm_2"], owner_user_id=ID["user_farmer1"], org_id=ID["org_fpo"],     name="Patil North Block",    state="Maharashtra",    district="Wardha",       created_at=_dt(18)),
-            Farm(id=ID["farm_3"], owner_user_id=ID["user_farmer2"], org_id=ID["org_fpo"],     name="Sunita Ji Ki Khet",    state="Madhya Pradesh", district="Hoshangabad",  created_at=_dt(12)),
+            Farm(id=ID["farm_1"], owner_user_id=ID["user_farmer1"], org_id=ID["org_fpo"], name="Patil Soybean Farm",  state="Maharashtra",    district="Nagpur",      created_at=_dt(18)),
+            Farm(id=ID["farm_2"], owner_user_id=ID["user_farmer1"], org_id=ID["org_fpo"], name="Patil North Block",   state="Maharashtra",    district="Wardha",      created_at=_dt(18)),
+            Farm(id=ID["farm_3"], owner_user_id=ID["user_farmer2"], org_id=ID["org_fpo"], name="Sunita Ji Ki Khet",   state="Madhya Pradesh", district="Hoshangabad", created_at=_dt(12)),
         ])
 
         # 6. Fields ───────────────────────────────────────────────────────────
@@ -122,7 +131,7 @@ async def seed_database() -> None:
             Field(id=ID["field_3a"], farm_id=ID["farm_3"], name="Khet No. 1",    crop_id=ID["crop_cotton"],  area_hectares=1.5, created_at=_dt(12)),
         ])
 
-        await session.flush()  # resolve FKs before videos/frames
+        await session.flush()  # resolve FKs before videos
 
         # 7. Model Versions ───────────────────────────────────────────────────
         session.add_all([
@@ -131,24 +140,69 @@ async def seed_database() -> None:
         ])
 
         # 8. Videos ───────────────────────────────────────────────────────────
+        # IMPORTANT: storage_path values are placeholder strings.
+        # No actual video files exist at these paths on the server.
+        # Metadata values (frame counts, quality) are representative
+        # of what real pipeline output would look like.
         session.add_all([
-            Video(id=ID["video_1"], field_id=ID["field_1a"], uploaded_by=ID["user_farmer1"], status=VideoStatus.ready,      quality_score=0.88, gps_geohash="te7ud3", storage_path="uploads/demo/video_1.mp4", duration_seconds=18.4, device_metadata={"model": "Redmi Note 12", "os": "Android 13"}, total_frames_extracted=55, usable_frames_count=42, created_at=_dt(5),  updated_at=_dt(4)),
-            Video(id=ID["video_2"], field_id=ID["field_1b"], uploaded_by=ID["user_farmer1"], status=VideoStatus.ready,      quality_score=0.95, gps_geohash="te7ud4", storage_path="uploads/demo/video_2.mp4", duration_seconds=22.1, device_metadata={"model": "Redmi Note 12", "os": "Android 13"}, total_frames_extracted=66, usable_frames_count=61, created_at=_dt(3),  updated_at=_dt(2)),
-            Video(id=ID["video_3"], field_id=ID["field_2a"], uploaded_by=ID["user_farmer1"], status=VideoStatus.ready,      quality_score=0.72, gps_geohash="te7ud5", storage_path="uploads/demo/video_3.mp4", duration_seconds=14.0, device_metadata={"model": "Samsung Galaxy M33", "os": "Android 12"}, total_frames_extracted=42, usable_frames_count=28, created_at=_dt(1),  updated_at=_dt(0, hours_ago=3)),
-            Video(id=ID["video_4"], field_id=ID["field_3a"], uploaded_by=ID["user_farmer2"], status=VideoStatus.processing, quality_score=None, gps_geohash=None,     storage_path="uploads/demo/video_4.mp4", duration_seconds=30.5, device_metadata={"model": "iPhone 13", "os": "iOS 17"},           total_frames_extracted=91, usable_frames_count=None, created_at=_dt(0, hours_ago=1), updated_at=_dt(0, hours_ago=1)),
+            # video_1: synthetic completed — Soybean Rust diagnosis
+            Video(
+                id=ID["video_1"], field_id=ID["field_1a"], uploaded_by=ID["user_farmer1"],
+                status=VideoStatus.ready,
+                quality_score=0.88, gps_geohash="te7ud3",
+                storage_path="demo-seed/video_1_SYNTHETIC.mp4",
+                duration_seconds=18.4,
+                device_metadata={"model": "Redmi Note 12", "os": "Android 13", "note": "synthetic-seed"},
+                total_frames_extracted=55, usable_frames_count=42,
+                created_at=_dt(5), updated_at=_dt(4),
+            ),
+            # video_2: synthetic completed — Healthy
+            Video(
+                id=ID["video_2"], field_id=ID["field_1b"], uploaded_by=ID["user_farmer1"],
+                status=VideoStatus.ready,
+                quality_score=0.95, gps_geohash="te7ud4",
+                storage_path="demo-seed/video_2_SYNTHETIC.mp4",
+                duration_seconds=22.1,
+                device_metadata={"model": "Redmi Note 12", "os": "Android 13", "note": "synthetic-seed"},
+                total_frames_extracted=66, usable_frames_count=61,
+                created_at=_dt(3), updated_at=_dt(2),
+            ),
+            # video_3: synthetic completed — Frogeye Leaf Spot (medium confidence)
+            Video(
+                id=ID["video_3"], field_id=ID["field_2a"], uploaded_by=ID["user_farmer1"],
+                status=VideoStatus.ready,
+                quality_score=0.72, gps_geohash="te7ud5",
+                storage_path="demo-seed/video_3_SYNTHETIC.mp4",
+                duration_seconds=14.0,
+                device_metadata={"model": "Samsung Galaxy M33", "os": "Android 12", "note": "synthetic-seed"},
+                total_frames_extracted=42, usable_frames_count=28,
+                created_at=_dt(1), updated_at=_dt(0, hours_ago=3),
+            ),
+            # video_4: in-flight — useful for Flutter dev to test processing status polling
+            Video(
+                id=ID["video_4"], field_id=ID["field_3a"], uploaded_by=ID["user_farmer2"],
+                status=VideoStatus.processing,
+                quality_score=None, gps_geohash=None,
+                storage_path="demo-seed/video_4_SYNTHETIC.mp4",
+                duration_seconds=30.5,
+                device_metadata={"model": "iPhone 13", "os": "iOS 17", "note": "synthetic-seed"},
+                total_frames_extracted=None, usable_frames_count=None,
+                created_at=_dt(0, hours_ago=1), updated_at=_dt(0, hours_ago=1),
+            ),
         ])
         await session.flush()
 
-        # 9. Frames ───────────────────────────────────────────────────────────
+        # 9. Synthetic Frames ─────────────────────────────────────────────────
+        # No real image files at these paths — representative data only.
         session.add_all([
-            Frame(id=ID["frame_1_1"], video_id=ID["video_1"], storage_path="uploads/demo/video_1/frame_001.jpg", blur_score=142.3, exposure_score=0.91, is_selected=True,  sequence_index=1,  created_at=_dt(5)),
-            Frame(id=ID["frame_1_2"], video_id=ID["video_1"], storage_path="uploads/demo/video_1/frame_015.jpg", blur_score=138.7, exposure_score=0.88, is_selected=True,  sequence_index=15, created_at=_dt(5)),
-            Frame(id=ID["frame_2_1"], video_id=ID["video_2"], storage_path="uploads/demo/video_2/frame_001.jpg", blur_score=201.0, exposure_score=0.96, is_selected=True,  sequence_index=1,  created_at=_dt(3)),
-            Frame(id=ID["frame_3_1"], video_id=ID["video_3"], storage_path="uploads/demo/video_3/frame_008.jpg", blur_score=96.5,  exposure_score=0.79, is_selected=True,  sequence_index=8,  created_at=_dt(1)),
+            Frame(id=ID["frame_1_1"], video_id=ID["video_1"], storage_path="demo-seed/video_1/frame_001_SYNTHETIC.jpg", blur_score=142.3, exposure_score=0.91, is_selected=True,  sequence_index=1,  created_at=_dt(5)),
+            Frame(id=ID["frame_1_2"], video_id=ID["video_1"], storage_path="demo-seed/video_1/frame_015_SYNTHETIC.jpg", blur_score=138.7, exposure_score=0.88, is_selected=True,  sequence_index=15, created_at=_dt(5)),
+            Frame(id=ID["frame_2_1"], video_id=ID["video_2"], storage_path="demo-seed/video_2/frame_001_SYNTHETIC.jpg", blur_score=201.0, exposure_score=0.96, is_selected=True,  sequence_index=1,  created_at=_dt(3)),
+            Frame(id=ID["frame_3_1"], video_id=ID["video_3"], storage_path="demo-seed/video_3/frame_008_SYNTHETIC.jpg", blur_score=96.5,  exposure_score=0.79, is_selected=True,  sequence_index=8,  created_at=_dt(1)),
         ])
         await session.flush()
 
-        # 10. Detections ──────────────────────────────────────────────────────
+        # 10. Synthetic Detections ────────────────────────────────────────────
         DET_VER = "soybean-detector-yolov8@sha256:abc123def456"
         session.add_all([
             Detection(id=ID["det_1_1"], frame_id=ID["frame_1_1"], bbox={"x": 0.12, "y": 0.31, "w": 0.18, "h": 0.14}, detection_class=DetectionClass.diseased_leaf, detector_confidence=0.91, detector_model_version=DET_VER, created_at=_dt(5)),
@@ -157,7 +211,7 @@ async def seed_database() -> None:
         ])
         await session.flush()
 
-        # 11. Frame Diagnoses ─────────────────────────────────────────────────
+        # 11. Synthetic Frame Diagnoses ────────────────────────────────────────
         CLS_VER = "soybean-classifier-efficientnet@sha256:xyz789uvw012"
         session.add_all([
             FrameDiagnosis(id=str(uuid.uuid4()), detection_id=ID["det_1_1"], probability_distribution={"Soybean Rust": 0.82, "Frogeye Leaf Spot": 0.10, "Healthy": 0.05, "Bean Pod Mottle Virus": 0.03}, classifier_model_version=CLS_VER, created_at=_dt(5)),
@@ -165,12 +219,53 @@ async def seed_database() -> None:
             FrameDiagnosis(id=str(uuid.uuid4()), detection_id=ID["det_3_1"], probability_distribution={"Frogeye Leaf Spot": 0.61, "Soybean Rust": 0.22, "Healthy": 0.10, "Bean Pod Mottle Virus": 0.07}, classifier_model_version=CLS_VER, created_at=_dt(1)),
         ])
 
-        # 12. Video Diagnoses (aggregated roll-up) ────────────────────────────
+        # 12. Synthetic Video Diagnoses (aggregated roll-up) ──────────────────
         AGG_VER = "bayes-agg-v1.0"
         session.add_all([
-            VideoDiagnosis(id=str(uuid.uuid4()), video_id=ID["video_1"], disease_id=ID["dis_soybean_rust"],    is_unknown=False, confidence=0.86, confidence_band=ConfidenceBand.high,   severity_level=2, affected_plant_estimate=0.34, supporting_frames=36, total_frames=42, aggregation_model_version=AGG_VER, decision_authority=DecisionAuthorityStatus.advisory_only, explanation="High-confidence Soybean Rust (Phakopsora pachyrhizi). Rust pustules on abaxial leaf surfaces in 36/42 frames. ~34% plant coverage. Severity: Moderate. Recommended: Apply fungicide (trifloxystrobin + tebuconazole) within 48 hrs.", created_at=_dt(5)),
-            VideoDiagnosis(id=str(uuid.uuid4()), video_id=ID["video_2"], disease_id=ID["dis_soybean_healthy"], is_unknown=False, confidence=0.94, confidence_band=ConfidenceBand.high,   severity_level=0, affected_plant_estimate=0.00, supporting_frames=61, total_frames=61, aggregation_model_version=AGG_VER, decision_authority=DecisionAuthorityStatus.advisory_only, explanation="All 61 frames show healthy soybean plants. No lesions, discolouration, or structural anomalies detected. Continue standard agronomic practice.", created_at=_dt(3)),
-            VideoDiagnosis(id=str(uuid.uuid4()), video_id=ID["video_3"], disease_id=ID["dis_soybean_frogeye"], is_unknown=False, confidence=0.61, confidence_band=ConfidenceBand.medium, severity_level=1, affected_plant_estimate=0.17, supporting_frames=19, total_frames=28, aggregation_model_version=AGG_VER, decision_authority=DecisionAuthorityStatus.advisory_only, explanation="Medium-confidence Frogeye Leaf Spot (Cercospora sojina). Circular grey-centre lesions in 19/28 frames. Severity: Mild. Agronomist verification recommended before treatment.", created_at=_dt(1)),
+            VideoDiagnosis(
+                id=str(uuid.uuid4()), video_id=ID["video_1"], disease_id=ID["dis_soybean_rust"],
+                is_unknown=False, confidence=0.86, confidence_band=ConfidenceBand.high,
+                severity_level=2, affected_plant_estimate=0.34,
+                supporting_frames=36, total_frames=42,
+                aggregation_model_version=AGG_VER,
+                decision_authority=DecisionAuthorityStatus.advisory_only,
+                explanation=(
+                    "[SYNTHETIC DEMO] Soybean Rust (Phakopsora pachyrhizi) — HIGH confidence. "
+                    "Representative of what the pipeline would output for a rust-positive field scan. "
+                    "Severity: Moderate (Level 2). ~34% estimated plant coverage. "
+                    "Recommended action: Apply fungicide (trifloxystrobin + tebuconazole) within 48 hrs."
+                ),
+                created_at=_dt(5),
+            ),
+            VideoDiagnosis(
+                id=str(uuid.uuid4()), video_id=ID["video_2"], disease_id=ID["dis_soybean_healthy"],
+                is_unknown=False, confidence=0.94, confidence_band=ConfidenceBand.high,
+                severity_level=0, affected_plant_estimate=0.0,
+                supporting_frames=61, total_frames=61,
+                aggregation_model_version=AGG_VER,
+                decision_authority=DecisionAuthorityStatus.advisory_only,
+                explanation=(
+                    "[SYNTHETIC DEMO] Healthy soybean crop — HIGH confidence. "
+                    "Representative of a clean-field scan with no disease detected. "
+                    "Continue standard agronomic practice."
+                ),
+                created_at=_dt(3),
+            ),
+            VideoDiagnosis(
+                id=str(uuid.uuid4()), video_id=ID["video_3"], disease_id=ID["dis_soybean_frogeye"],
+                is_unknown=False, confidence=0.61, confidence_band=ConfidenceBand.medium,
+                severity_level=1, affected_plant_estimate=0.17,
+                supporting_frames=19, total_frames=28,
+                aggregation_model_version=AGG_VER,
+                decision_authority=DecisionAuthorityStatus.advisory_only,
+                explanation=(
+                    "[SYNTHETIC DEMO] Frogeye Leaf Spot (Cercospora sojina) — MEDIUM confidence. "
+                    "Representative of an ambiguous detection requiring agronomist verification. "
+                    "Severity: Mild (Level 1). ~17% estimated coverage. "
+                    "Agronomist review recommended before treatment."
+                ),
+                created_at=_dt(1),
+            ),
         ])
 
         # 13. Audit log ───────────────────────────────────────────────────────
@@ -180,13 +275,13 @@ async def seed_database() -> None:
             action="SEED_DEMO_DATA",
             entity_type="system",
             entity_id=None,
-            metadata_json={"seeded_at": now.isoformat(), "version": "v1.0"},
+            metadata_json={"seeded_at": now.isoformat(), "version": "v1.0", "data_type": "synthetic"},
             created_at=now,
         ))
 
         await session.commit()
         logger.info(
-            "Seed: demo data inserted — "
+            "Seed: synthetic demo data inserted — "
             "2 orgs | 5 users | 2 crops | 7 diseases | 3 farms | 4 fields | "
-            "4 videos | 4 frames | 3 detections | 3 video diagnoses."
+            "4 videos (synthetic paths) | 4 frames | 3 detections | 3 video diagnoses."
         )
