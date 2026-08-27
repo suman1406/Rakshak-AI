@@ -3,12 +3,12 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPExcepti
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from ...core.deps import get_current_user, get_db
-from ...models.identity import User
-from ...models.prediction import VideoDiagnosis
-from ...models.video import Frame, Video, VideoStatus
-from ...modules.ingestion.service import ingestion_service
-from ...schemas.video import (
+from app.core.deps import get_current_user, get_db
+from app.models.identity import User
+from app.models.prediction import VideoDiagnosis
+from app.models.video import Frame, Video, VideoStatus
+from app.modules.ingestion.service import ingestion_service
+from app.schemas.video import (
     VideoAnalysisDiagnosis,
     VideoAnalysisEvidence,
     VideoAnalysisResponse,

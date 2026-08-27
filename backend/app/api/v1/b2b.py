@@ -7,11 +7,11 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...core.deps import get_current_user, require_role, get_db
-from ...models.farm import Farm, Field
-from ...models.identity import User, UserRole
-from ...models.prediction import VideoDiagnosis
-from ...models.video import Video
+from app.core.deps import get_current_user, require_role, get_db
+from app.models.farm import Farm, Field
+from app.models.identity import User, UserRole
+from app.models.prediction import VideoDiagnosis
+from app.models.video import Video
 
 router = APIRouter(prefix="/b2b", tags=["B2B / Enterprise"])
 

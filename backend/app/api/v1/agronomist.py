@@ -8,10 +8,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from ...core.deps import get_current_user, require_role, get_db
-from ...models.identity import User, UserRole
-from ...models.prediction import VideoDiagnosis
-from ...models.video import Video
+from app.core.deps import get_current_user, require_role, get_db
+from app.models.identity import User, UserRole
+from app.models.prediction import VideoDiagnosis
+from app.models.video import Video
 
 router = APIRouter(prefix="/agronomist", tags=["Agronomist"])
 

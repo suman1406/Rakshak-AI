@@ -1,12 +1,14 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .models import farm, identity, video, prediction, verification, governance  # Register models with Base.metadata
-from .api.v1.router import api_router
-from .core.config import settings
-from .core.logging import RequestLoggingMiddleware, logger
-from .db.base import Base
-from .db.session import engine
+
+# Explicit absolute imports for robust container execution
+from app.models import farm, identity, video, prediction, verification, governance  # Register all models with Base.metadata
+from app.api.v1.router import api_router
+from app.core.config import settings
+from app.core.logging import RequestLoggingMiddleware, logger
+from app.db.base import Base
+from app.db.session import engine
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

@@ -7,12 +7,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...core.deps import get_current_user, get_db, require_role
-from ...models.identity import User, UserRole
-from ...models.prediction import VideoDiagnosis
-from ...models.verification import Feedback, VerifiedLabel
-from ...modules.reporting.templates import get_canned_report
-from ...schemas.diagnosis import (
+from app.core.deps import get_current_user, get_db, require_role
+from app.models.identity import User, UserRole
+from app.models.prediction import VideoDiagnosis
+from app.models.verification import Feedback, VerifiedLabel
+from app.modules.reporting.templates import get_canned_report
+from app.schemas.diagnosis import (
     AgronomistVerifyCreate,
     AgronomistVerifyResponse,
     DiagnosisReportResponse,

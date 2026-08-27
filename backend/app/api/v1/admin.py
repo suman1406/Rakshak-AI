@@ -7,10 +7,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...core.deps import get_current_user, require_role, get_db
-from ...models.identity import User, UserRole
-from ...modules.inference.classifier import CLASSIFIER_MODEL_VERSION
-from ...modules.inference.detector import DETECTOR_MODEL_VERSION
+from app.core.deps import get_current_user, require_role, get_db
+from app.models.identity import User, UserRole
+from app.modules.inference.classifier import CLASSIFIER_MODEL_VERSION
+from app.modules.inference.detector import DETECTOR_MODEL_VERSION
 
 router = APIRouter(prefix="/admin", tags=["Admin & Governance"])
 
