@@ -3,7 +3,7 @@ services:
     name: rakshak-backend
     env: docker
     dockerContext: backend
-    dockerfilePath: Dockerfile
+    dockerfilePath: backend/Dockerfile
     plan: free
     envVars:
       - key: ENVIRONMENT
