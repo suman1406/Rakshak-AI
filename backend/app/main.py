@@ -9,14 +9,17 @@ from app.core.config import settings
 from app.core.logging import RequestLoggingMiddleware, logger
 from app.db.base import Base
 from app.db.session import engine
+from app.db.seed import seed_database
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Initializing Fasal Rakshak API...")
-    # Initialize DB tables for local/dev/prod SQLite execution
+    # Initialize DB tables
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     logger.info("Database schema initialized successfully.")
+    # Populate demo data (idempotent — skips if already seeded)
+    await seed_database()
     yield
     logger.info("Shutting down Fasal Rakshak API...")
 
