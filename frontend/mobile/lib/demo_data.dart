@@ -1,5 +1,9 @@
 class DemoField {
-  const DemoField({required this.name, required this.crop, required this.health, required this.status});
+  const DemoField(
+      {required this.name,
+      required this.crop,
+      required this.health,
+      required this.status});
   final String name;
   final String crop;
   final int health;
@@ -7,7 +11,13 @@ class DemoField {
 }
 
 class DemoScan {
-  const DemoScan({required this.date, required this.field, required this.disease, required this.confidence, required this.severity, required this.affectedPlants});
+  const DemoScan(
+      {required this.date,
+      required this.field,
+      required this.disease,
+      required this.confidence,
+      required this.severity,
+      required this.affectedPlants});
   final String date;
   final String field;
   final String disease;
@@ -22,7 +32,18 @@ const demoFields = [
 ];
 
 const demoScans = [
-  DemoScan(date: 'Today, 09:42', field: 'North plot', disease: 'Soybean rust', confidence: 87, severity: 'Moderate', affectedPlants: '~20%'),
-  DemoScan(date: '18 Aug 2026', field: 'East field', disease: 'No significant signal', confidence: 92, severity: 'Healthy', affectedPlants: '~4%'),
+  DemoScan(
+      date: 'Today, 09:42',
+      field: 'North plot',
+      disease: 'Soybean rust',
+      confidence: 87,
+      severity: 'Moderate',
+      affectedPlants: '~20%'),
+  DemoScan(
+      date: '18 Aug 2026',
+      field: 'East field',
+      disease: 'No significant signal',
+      confidence: 92,
+      severity: 'Healthy',
+      affectedPlants: '~4%'),
 ];
-

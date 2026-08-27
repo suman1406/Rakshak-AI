@@ -38,3 +38,6 @@ rakshak.db
 # OS files
 .DS_Store
 */.DS_Store
+# Ignore root-level generated model assets, but keep backend/app/models tracked.
+/models/
+work/
