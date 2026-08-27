@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --field-ink: #14231D;
+    --muted-leaf: #66766D;
+    --field-canvas: #F4F7F1;
+    --pure-surface: #FFFFFF;
+    --lime-signal: #D8F36A;
+    --soft-healthy: #E6F0D8;
+    --structural-border: #DFE7DC;
+    --warning-orange: #B86B36;
+    --alert-red: #A84B45;
+  }
+
+  body {
+    background-color: var(--field-canvas);
+    color: var(--field-ink);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* Custom Utilities for Rakshak AI Brand Palette */
+.bg-field-ink { background-color: #14231D; }
+.text-field-ink { color: #14231D; }
+.bg-muted-leaf { background-color: #66766D; }
+.text-muted-leaf { color: #66766D; }
+.bg-field-canvas { background-color: #F4F7F1; }
+.bg-pure-surface { background-color: #FFFFFF; }
+.bg-lime-signal { background-color: #D8F36A; }
+.text-lime-signal { color: #D8F36A; }
+.bg-soft-healthy { background-color: #E6F0D8; }
+.text-soft-healthy { color: #3A6321; }
+.border-structural { border-color: #DFE7DC; }
+.bg-warning-orange { background-color: #B86B36; }
+.text-warning-orange { color: #B86B36; }
+.bg-alert-red { background-color: #A84B45; }
+.text-alert-red { color: #A84B45; }
+
+/* Custom scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F4F7F1;
+}
+::-webkit-scrollbar-thumb {
+  background: #DFE7DC;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #66766D;
+}

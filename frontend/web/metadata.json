@@ -1,0 +1,6 @@
+{
+  "name": "Rakshak AI",
+  "description": "AI-powered crop disease detection and field health intelligence platform for Fasal Rakshak.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

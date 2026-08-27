@@ -1,0 +1,284 @@
+import React, { useState } from 'react';
+import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import { UserRole } from '../../types';
+import { RoleBadge } from '../shared/RoleBadge';
+import {
+  Sprout,
+  LayoutDashboard,
+  Camera,
+  History,
+  ClipboardList,
+  Building2,
+  FileBarChart,
+  User,
+  Settings,
+  LogOut,
+  Bell,
+  Sparkles,
+  ChevronDown,
+  Shield,
+  Menu,
+  X,
+  HelpCircle,
+  AlertTriangle,
+} from 'lucide-react';
+
+export const AppLayout: React.FC = () => {
+  const { user, role, logout, switchRole, isDemoMode } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+
+  const getNavItems = (userRole: UserRole | null) => {
+    switch (userRole) {
+      case 'farmer':
+        return [
+          { name: 'Field Overview', path: '/farmer/dashboard', icon: LayoutDashboard },
+          { name: 'Start Crop Scan', path: '/farmer/scan', icon: Camera },
+          { name: 'Scan History', path: '/farmer/history', icon: History },
+          { name: 'Profile & Settings', path: '/settings/profile', icon: User },
+        ];
+      case 'agronomist':
+        return [
+          { name: 'Review Queue', path: '/agronomist/dashboard', icon: ClipboardList },
+          { name: 'Agronomist Reports', path: '/agronomist/reports', icon: FileBarChart },
+          { name: 'Profile & Settings', path: '/settings/profile', icon: User },
+        ];
+      case 'org_admin':
+      default:
+        return [
+          { name: 'Organization Overview', path: '/organization/dashboard', icon: LayoutDashboard },
+          { name: 'Disease Reports', path: '/organization/reports', icon: FileBarChart },
+          { name: 'Organization Profile', path: '/settings/organization', icon: Building2 },
+          { name: 'Account & Security', path: '/settings/security', icon: Settings },
+        ];
+    }
+  };
+
+  const navItems = getNavItems(role);
+
+  const handleRoleSwitch = (newRole: UserRole) => {
+    switchRole(newRole);
+    setRoleDropdownOpen(false);
+    if (newRole === 'farmer') navigate('/farmer/dashboard');
+    else if (newRole === 'agronomist') navigate('/agronomist/dashboard');
+    else navigate('/organization/dashboard');
+  };
+
+  return (
+    <div className="min-h-screen bg-field-canvas flex flex-col md:flex-row">
+      {/* Mobile Top Navbar */}
+      <div className="md:hidden bg-field-ink text-white p-4 flex items-center justify-between border-b border-field-ink/20 sticky top-0 z-40">
+        <Link to="/" className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-lime-signal text-field-ink flex items-center justify-center font-bold">
+            <Sprout size={18} />
+          </div>
+          <span className="font-extrabold text-base tracking-tight">Rakshak AI</span>
+        </Link>
+        <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1 rounded-lg hover:bg-white/10">
+          {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
+      </div>
+
+      {/* Sidebar Navigation */}
+      <aside
+        className={`fixed md:sticky top-0 z-30 h-screen w-64 bg-field-ink text-white flex flex-col justify-between p-4 transition-transform duration-200 border-r border-field-ink/20 shrink-0 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        }`}
+      >
+        <div className="space-y-6">
+          {/* Logo & Platform Info */}
+          <div className="hidden md:flex items-center gap-2.5 pb-4 border-b border-white/10">
+            <div className="w-9 h-9 rounded-xl bg-lime-signal text-field-ink flex items-center justify-center font-bold">
+              <Sprout size={20} />
+            </div>
+            <div>
+              <span className="font-extrabold text-base tracking-tight block leading-tight">Rakshak AI</span>
+              <span className="text-[10px] text-slate-300">Fasal Field Intelligence</span>
+            </div>
+          </div>
+
+          {/* Current Role Context Card */}
+          <div className="bg-white/5 border border-white/10 p-3 rounded-xl space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono text-slate-300 uppercase tracking-wider">Active Role</span>
+              {isDemoMode && (
+                <span className="text-[9px] font-bold bg-lime-signal text-field-ink px-1.5 py-0.5 rounded font-mono">
+                  DEMO
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <RoleBadge role={role || 'farmer'} />
+            </div>
+          </div>
+
+          {/* Navigation Links */}
+          <nav className="space-y-1">
+            <div className="px-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+              Workspace Menu
+            </div>
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname.startsWith(item.path);
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => setSidebarOpen(false)}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition ${
+                    isActive
+                      ? 'bg-lime-signal text-field-ink font-bold shadow-xs'
+                      : 'text-slate-300 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  <Icon size={18} />
+                  <span>{item.name}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Sidebar Footer & User Card */}
+        <div className="pt-4 border-t border-white/10 space-y-3">
+          <div className="flex items-center justify-between px-2 text-xs">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-lime-signal/20 text-lime-signal font-bold flex items-center justify-center text-xs">
+                {user?.name ? user.name[0] : 'U'}
+              </div>
+              <div className="overflow-hidden">
+                <p className="font-semibold text-white truncate text-xs">{user?.name || 'Demo User'}</p>
+                <p className="text-[10px] text-slate-400 truncate">{user?.organization || 'Fasal Rakshak'}</p>
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={logout}
+            className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-slate-300 hover:text-red-400 hover:bg-white/5 rounded-xl transition"
+          >
+            <LogOut size={16} />
+            <span>Sign Out</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Top Header Bar */}
+        <header className="bg-pure-surface border-b border-structural px-6 py-3 flex items-center justify-between gap-4 sticky top-0 z-20 shadow-2xs">
+          <div className="flex items-center gap-3">
+            <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-lime-signal/20 text-field-ink font-mono text-xs font-bold border border-lime-signal/30">
+              <Sparkles size={12} className="text-field-ink" />
+              DEMO MODE
+            </span>
+            <span className="text-xs text-muted-leaf hidden lg:inline">
+              Simulated agricultural data • FastAPI mock layer active
+            </span>
+          </div>
+
+          {/* Top Actions: Role Switcher & Notifications */}
+          <div className="flex items-center gap-3">
+            {/* Quick Demo Role Switcher Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setRoleDropdownOpen(!roleDropdownOpen)}
+                className="flex items-center gap-2 px-3 py-1.5 bg-field-canvas hover:bg-gray-200/70 border border-structural rounded-xl text-xs font-medium text-field-ink transition"
+              >
+                <span className="text-muted-leaf">Demo Role:</span>
+                <span className="font-bold capitalize">{role?.replace('_', ' ')}</span>
+                <ChevronDown size={14} className="text-muted-leaf" />
+              </button>
+
+              {roleDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-56 bg-pure-surface border border-structural rounded-2xl shadow-lg p-2 z-50 space-y-1">
+                  <div className="px-2 py-1 text-[10px] font-mono text-muted-leaf uppercase font-semibold">
+                    Switch Demo Persona
+                  </div>
+                  <button
+                    onClick={() => handleRoleSwitch('farmer')}
+                    className={`w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between transition ${
+                      role === 'farmer' ? 'bg-soft-healthy text-field-ink font-bold' : 'hover:bg-field-canvas'
+                    }`}
+                  >
+                    <span>Farmer View</span>
+                    {role === 'farmer' && <span className="text-[10px] text-emerald-700 font-mono">Active</span>}
+                  </button>
+                  <button
+                    onClick={() => handleRoleSwitch('agronomist')}
+                    className={`w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between transition ${
+                      role === 'agronomist' ? 'bg-blue-50 text-blue-900 font-bold' : 'hover:bg-field-canvas'
+                    }`}
+                  >
+                    <span>Agronomist View</span>
+                    {role === 'agronomist' && <span className="text-[10px] text-blue-700 font-mono">Active</span>}
+                  </button>
+                  <button
+                    onClick={() => handleRoleSwitch('org_admin')}
+                    className={`w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between transition ${
+                      role === 'org_admin' ? 'bg-amber-50 text-amber-900 font-bold' : 'hover:bg-field-canvas'
+                    }`}
+                  >
+                    <span>Organization Admin</span>
+                    {role === 'org_admin' && <span className="text-[10px] text-amber-700 font-mono">Active</span>}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Notifications Button */}
+            <div className="relative">
+              <button
+                onClick={() => setNotificationsOpen(!notificationsOpen)}
+                className="p-2 rounded-xl bg-field-canvas hover:bg-gray-200/70 border border-structural text-field-ink relative transition"
+              >
+                <Bell size={18} />
+                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-alert-red"></span>
+              </button>
+
+              {notificationsOpen && (
+                <div className="absolute right-0 mt-2 w-80 bg-pure-surface border border-structural rounded-2xl shadow-xl p-4 z-50 space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b border-structural">
+                    <span className="font-bold text-xs text-field-ink">Field Alerts</span>
+                    <span className="text-[10px] bg-alert-red text-white px-1.5 py-0.5 rounded-full font-mono">
+                      2 Unread
+                    </span>
+                  </div>
+                  <div className="space-y-2 max-h-60 overflow-y-auto text-xs">
+                    <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl space-y-1">
+                      <div className="flex items-center justify-between text-amber-900 font-semibold">
+                        <span>High Risk Signal</span>
+                        <span className="text-[10px] text-amber-700">10m ago</span>
+                      </div>
+                      <p className="text-[11px] text-amber-800">
+                        Soybean rust signal detected in North Plot (Patil Farm). Case #FASAL-10482 awaiting review.
+                      </p>
+                    </div>
+                    <div className="p-2.5 bg-field-canvas border border-structural rounded-xl space-y-1">
+                      <div className="flex items-center justify-between font-semibold text-field-ink">
+                        <span>Agronomist Verified</span>
+                        <span className="text-[10px] text-muted-leaf">2h ago</span>
+                      </div>
+                      <p className="text-[11px] text-muted-leaf">
+                        Dr. Anita Deshmukh verified Case #FASAL-10450 as Cercospora Leaf Blight.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </header>
+
+        {/* Dynamic Page Outlet */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
+};
