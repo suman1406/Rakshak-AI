@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'screens/stitch_screens.dart';
+import 'screens/welcome_screen.dart';
 
 void main() => runApp(const RakshakApp());
 
