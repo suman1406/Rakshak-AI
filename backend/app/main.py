@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from . import models  # Register all SQLAlchemy models with Base.metadata
+from .models import farm, identity, video, prediction, verification, governance  # Register models with Base.metadata
 from .api.v1.router import api_router
 from .core.config import settings
 from .core.logging import RequestLoggingMiddleware, logger
