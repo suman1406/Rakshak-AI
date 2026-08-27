@@ -33,9 +33,6 @@ export const PublicNavbar: React.FC = () => {
           <div>
             <div className="flex items-center gap-1.5">
               <span className="font-extrabold text-lg tracking-tight text-field-ink">Rakshak AI</span>
-              <span className="text-[10px] font-mono font-semibold bg-lime-signal text-field-ink px-1.5 py-0.2 rounded">
-                BETA
-              </span>
             </div>
             <p className="text-[10px] font-medium text-muted-leaf">Fasal Rakshak Intelligence</p>
           </div>

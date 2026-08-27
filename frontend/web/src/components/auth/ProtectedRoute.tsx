@@ -10,7 +10,11 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
-  const { user, role, isAuthenticated } = useAuth();
+  const { user, role, isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <div className="min-h-screen bg-field-canvas flex items-center justify-center text-sm text-muted-leaf">Checking workspace access…</div>;
+  }
 
   if (!isAuthenticated || !role || !user) {
     return <Navigate to="/login" replace />;

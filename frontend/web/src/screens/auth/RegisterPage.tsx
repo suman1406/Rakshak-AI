@@ -1,21 +1,16 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import { UserRole } from '../../types';
-import { Sprout, ArrowRight } from 'lucide-react';
+import { Sprout } from 'lucide-react';
 import { PublicNavbar } from '../../components/layout/PublicNavbar';
 
 export const RegisterPage: React.FC = () => {
-  const { login } = useAuth();
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [roleChoice, setRoleChoice] = useState<UserRole>('agronomist');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    login(roleChoice, email);
-    navigate('/onboarding');
+    navigate('/contact');
   };
 
   return (
@@ -58,22 +53,11 @@ export const RegisterPage: React.FC = () => {
             />
           </div>
 
-          <div>
-            <label className="block font-semibold mb-2">Workspace type</label>
-            <div className="grid grid-cols-2 gap-2">
-              {(['agronomist', 'org_admin'] as UserRole[]).map((workspaceRole) => (
-                <button key={workspaceRole} type="button" onClick={() => setRoleChoice(workspaceRole)} className={`p-3 rounded-xl border text-left transition ${roleChoice === workspaceRole ? 'border-field-ink bg-soft-healthy font-bold' : 'border-structural bg-field-canvas'}`}>
-                  {workspaceRole === 'agronomist' ? 'Agronomist' : 'Organization admin'}
-                </button>
-              ))}
-            </div>
-          </div>
-
           <button
             type="submit"
             className="w-full py-3 bg-field-ink text-white font-bold rounded-xl hover:bg-opacity-90 transition"
           >
-            Create account
+            Request access
           </button>
         </form>
 

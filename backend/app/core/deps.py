@@ -1,6 +1,6 @@
 from typing import Annotated, Callable
 import jwt
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,57 +14,31 @@ security_scheme = HTTPBearer(auto_error=False)
 async def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security_scheme)] = None,
     db: Annotated[AsyncSession, Depends(get_db)] = None,
-    x_demo_role: Annotated[str | None, Header()] = None,
 ) -> User:
-    # 1. Check Bearer Token if present
-    if credentials:
-        token = credentials.credentials
-        try:
-            payload = decode_token(token)
-            user_id = payload.get("sub")
-            if not user_id:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid token claims",
-                    headers={"WWW-Authenticate": "Bearer"},
-                )
-            stmt = select(User).where(User.id == user_id)
-            result = await db.execute(stmt)
-            user = result.scalar_one_or_none()
-            if user:
-                return user
-        except (jwt.PyJWTError, Exception):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Could not validate credentials",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-
-    # 2. Local dev mode fallback if explicit x_demo_role header is set
-    demo_role_str = x_demo_role or "farmer"
-    try:
-        demo_role = UserRole(demo_role_str)
-    except ValueError:
-        demo_role = UserRole.farmer
-
-    stmt = select(User).where(User.email == f"demo-{demo_role.value}@rakshak.ai")
-    result = await db.execute(stmt)
-    user = result.scalar_one_or_none()
-    if not user:
-        user = User(
-            id=f"demo-user-{demo_role.value}",
-            email=f"demo-{demo_role.value}@rakshak.ai",
-            password_hash="demo-hash",
-            role=demo_role,
-            display_name=f"Demo {demo_role.value.capitalize()}",
+    if not credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-        db.add(user)
-        try:
-            await db.commit()
-            await db.refresh(user)
-        except Exception:
-            await db.rollback()
-    return user
+    try:
+        payload = decode_token(credentials.credentials)
+        user_id = payload.get("sub")
+        if not user_id:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token claims")
+        result = await db.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+        if not user:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Account not found")
+        return user
+    except HTTPException:
+        raise
+    except jwt.PyJWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
 def require_role(*allowed_roles: UserRole) -> Callable:
     async def role_checker(current_user: Annotated[User, Depends(get_current_user)]) -> User:
