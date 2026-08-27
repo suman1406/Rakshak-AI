@@ -188,7 +188,7 @@ export const AgronomistCaseReviewPage: React.FC = () => {
           <div className="p-4 bg-soft-healthy border border-emerald-300 rounded-2xl flex items-center justify-between text-emerald-950 font-bold">
             <div className="flex items-center gap-2">
               <CheckCircle2 size={18} className="text-emerald-700" />
-              <span>Agronomist verification recorded successfully! Dashboard queue updated.</span>
+              <span>Verification recorded. The review queue has been updated.</span>
             </div>
             <Link to="/agronomist/dashboard" className="px-3 py-1 bg-field-ink text-white text-xs rounded-lg font-mono">
               Return to Queue

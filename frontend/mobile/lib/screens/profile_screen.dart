@@ -24,7 +24,7 @@ class ProfileScreen extends StatelessWidget {
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('Arjun Kumar',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-            Text('Farmer · Demo organization')
+            Text('Farmer · Field operations')
           ])
         ])),
         const SizedBox(height: 20),

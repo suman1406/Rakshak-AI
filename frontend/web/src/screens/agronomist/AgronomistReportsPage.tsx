@@ -6,6 +6,7 @@ import { FileBarChart, Download, Plus, Loader2, Sparkles } from 'lucide-react';
 export const AgronomistReportsPage: React.FC = () => {
   const [reports, setReports] = useState<GeneratedReport[]>([]);
   const [generating, setGenerating] = useState(false);
+  const [downloadedReport, setDownloadedReport] = useState<string | null>(null);
 
   useEffect(() => {
     mockApi.getReports().then(setReports);
@@ -58,7 +59,7 @@ export const AgronomistReportsPage: React.FC = () => {
                 href="#"
                 onClick={(e) => {
                   e.preventDefault();
-                  alert(`Downloading demo report ${rep.title}`);
+                  setDownloadedReport(rep.id);
                 }}
                 className="px-3 py-1.5 bg-pure-surface border border-structural font-bold text-field-ink rounded-lg hover:bg-gray-200 transition flex items-center gap-1"
               >

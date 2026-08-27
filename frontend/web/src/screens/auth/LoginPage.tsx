@@ -2,7 +2,13 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types';
-import { Sprout, Sparkles, UserCheck, Shield, ArrowRight, Lock, Play } from 'lucide-react';
+import { Sprout, ArrowRight, Check } from 'lucide-react';
+import { PublicNavbar } from '../../components/layout/PublicNavbar';
+
+const workspaces: { role: UserRole; title: string; description: string }[] = [
+  { role: 'agronomist', title: 'Agronomist review', description: 'Review cases, inspect evidence, and record expert decisions.' },
+  { role: 'org_admin', title: 'Organization analytics', description: 'Monitor farms, fields, risk signals, and reports.' },
+];
 
 export const LoginPage: React.FC = () => {
   const { login } = useAuth();
@@ -10,152 +16,58 @@ export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [selectedRole, setSelectedRole] = useState<UserRole>('agronomist');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
-  /*
-   * FUTURE FASTAPI INTEGRATION POINT:
-   * Submit credentials to POST /api/v1/auth/login
-   * Expects JSON: { username: email, password: password }
-   * Returns: { access_token: "...", token_type: "bearer", role: "agronomist" }
-   */
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    login(selectedRole, email);
-    navigate('/onboarding');
-  };
-
-  const handleDemoClick = (role: UserRole) => {
-    login(role);
-    navigate('/onboarding');
+    if (!email.trim() || !password.trim()) {
+      setError('Enter your email and password to continue.');
+      return;
+    }
+    setError('');
+    setSubmitting(true);
+    try {
+      await login(selectedRole, email, password);
+      navigate('/onboarding');
+    } catch {
+      setError('We could not sign you in. Check your details and try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-field-canvas flex items-center justify-center p-4 sm:p-6 lg:p-8 font-sans">
-      <div className="max-w-md w-full space-y-6">
-        {/* Logo Branding */}
-        <div className="text-center space-y-2">
+    <div className="min-h-screen bg-field-canvas text-field-ink">
+      <PublicNavbar />
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-20 grid lg:grid-cols-[0.85fr_1.15fr] gap-12 items-start">
+        <section className="space-y-6 lg:pt-8">
           <Link to="/" className="inline-flex items-center gap-2.5">
-            <div className="w-12 h-12 rounded-2xl bg-field-ink text-lime-signal flex items-center justify-center font-bold text-2xl shadow-sm">
-              <Sprout size={26} />
-            </div>
+            <span className="w-11 h-11 rounded-2xl bg-field-ink text-lime-signal flex items-center justify-center"><Sprout size={23} /></span>
+            <span className="font-extrabold text-lg">Rakshak AI</span>
           </Link>
-          <h1 className="text-2xl font-extrabold text-field-ink">Rakshak AI Login</h1>
-          <p className="text-xs text-muted-leaf">Select a demo persona or enter credentials to enter</p>
-        </div>
-
-        {/* Demo Mode Notice Banner */}
-        <div className="bg-lime-signal/20 border border-lime-signal/40 p-3.5 rounded-2xl flex items-center justify-between text-xs text-field-ink">
-          <div className="flex items-center gap-2 font-semibold">
-            <Sparkles size={16} className="text-field-ink" />
-            <span>Simulated Auth • No backend required</span>
+          <div className="space-y-3">
+            <p className="text-xs font-mono uppercase tracking-[0.16em] text-muted-leaf">Secure workspace access</p>
+            <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-balance">Work from the signal, not the noise.</h1>
+            <p className="text-sm leading-6 text-muted-leaf max-w-md">Sign in to review crop-health evidence or understand the health of your organization’s monitored fields.</p>
           </div>
-          <span className="font-mono text-[10px] bg-field-ink text-white px-2 py-0.5 rounded font-bold">
-            DEMO
-          </span>
-        </div>
+          <ul className="space-y-3 text-sm text-muted-leaf">
+            {['Evidence-led crop health signals', 'Role-specific access and navigation', 'Human review before field action'].map((item) => <li key={item} className="flex items-center gap-2"><Check size={16} className="text-field-ink" />{item}</li>)}
+          </ul>
+        </section>
 
-        {/* Quick Demo Persona Access Buttons (Required) */}
-        <div className="bg-pure-surface border border-structural p-5 rounded-2xl shadow-xs space-y-3">
-          <span className="text-[10px] font-mono text-muted-leaf uppercase font-bold tracking-wider block">
-            Instant Demo Roles (1-Click Login)
-          </span>
-
-          <div className="space-y-2">
-            <button
-              onClick={() => handleDemoClick('agronomist')}
-              className="w-full py-3 px-4 bg-blue-50 hover:bg-blue-100/80 border border-blue-200 rounded-xl text-left text-xs font-bold text-blue-900 flex items-center justify-between transition group"
-            >
-              <div className="flex items-center gap-2.5">
-                <UserCheck size={16} className="text-blue-700" />
-                <span>Open Agronomist Demo</span>
-              </div>
-              <ArrowRight size={14} className="text-blue-700 group-hover:translate-x-1 transition" />
-            </button>
-
-            <button
-              onClick={() => handleDemoClick('org_admin')}
-              className="w-full py-3 px-4 bg-amber-50 hover:bg-amber-100/80 border border-amber-200 rounded-xl text-left text-xs font-bold text-amber-900 flex items-center justify-between transition group"
-            >
-              <div className="flex items-center gap-2.5">
-                <Shield size={16} className="text-amber-700" />
-                <span>Open Organization Demo</span>
-              </div>
-              <ArrowRight size={14} className="text-amber-700 group-hover:translate-x-1 transition" />
-            </button>
-          </div>
-        </div>
-
-        {/* Standard Form Login */}
-        <div className="bg-pure-surface border border-structural p-6 rounded-2xl shadow-xs space-y-4 text-xs">
-          <div className="flex items-center justify-between pb-2 border-b border-structural">
-            <span className="font-bold text-field-ink">Custom Email & Password Login</span>
-            <span className="text-[10px] text-muted-leaf">Any inputs accepted</span>
-          </div>
-
-          <form onSubmit={handleFormSubmit} className="space-y-4">
-            <div>
-              <label className="block font-semibold mb-2 text-field-ink">Choose a workspace</label>
-              <div className="grid grid-cols-2 gap-2">
-                {(['agronomist', 'org_admin'] as UserRole[]).map((workspaceRole) => (
-                  <button key={workspaceRole} type="button" onClick={() => setSelectedRole(workspaceRole)} className={`p-3 rounded-xl border text-left text-xs transition ${selectedRole === workspaceRole ? 'border-field-ink bg-soft-healthy font-bold' : 'border-structural bg-field-canvas hover:border-muted-leaf'}`}>
-                    {workspaceRole === 'agronomist' ? 'Agronomist review' : 'Organization analytics'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="block font-semibold mb-1 text-field-ink">Email Address</label>
-              <input
-                type="text"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="e.g. ramesh.patil@example.com (or leave empty)"
-                className="w-full p-2.5 rounded-xl border border-structural bg-field-canvas text-xs focus:ring-2 focus:ring-field-ink outline-none"
-              />
-            </div>
-
-            <div>
-              <div className="flex justify-between mb-1">
-                <label className="font-semibold text-field-ink">Password</label>
-                <Link to="/forgot-password" className="text-muted-leaf hover:underline text-[11px]">
-                  Forgot password?
-                </Link>
-              </div>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="•••••••• (or leave empty)"
-                className="w-full p-2.5 rounded-xl border border-structural bg-field-canvas text-xs focus:ring-2 focus:ring-field-ink outline-none"
-              />
-            </div>
-
-            <div className="pt-2 space-y-2">
-              <button
-                type="submit"
-                className="w-full py-3 bg-field-ink text-white font-bold rounded-xl hover:bg-opacity-90 transition text-xs shadow-xs"
-              >
-                Sign In with Role
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleDemoClick(selectedRole)}
-                className="w-full py-2.5 bg-field-canvas border border-structural text-field-ink font-bold rounded-xl hover:bg-gray-200 transition text-xs"
-              >
-                Continue as Demo
-              </button>
-            </div>
+        <section className="bg-pure-surface border border-structural rounded-3xl p-6 sm:p-8 shadow-lg">
+          <div className="space-y-2 mb-7"><h2 className="text-2xl font-extrabold">Sign in</h2><p className="text-sm text-muted-leaf">Choose your workspace, then enter your account details.</p></div>
+          <form onSubmit={handleFormSubmit} className="space-y-5">
+            <fieldset className="space-y-3"><legend className="text-sm font-bold mb-2">Workspace</legend>{workspaces.map((workspace) => <button key={workspace.role} type="button" onClick={() => setSelectedRole(workspace.role)} className={`w-full text-left p-4 rounded-2xl border transition ${selectedRole === workspace.role ? 'border-field-ink bg-soft-healthy' : 'border-structural bg-field-canvas hover:border-muted-leaf'}`}><span className="flex items-start justify-between gap-4"><span><span className="block text-sm font-bold">{workspace.title}</span><span className="block text-xs text-muted-leaf mt-1">{workspace.description}</span></span>{selectedRole === workspace.role && <Check size={18} className="shrink-0 mt-0.5" />}</span></button>)}</fieldset>
+            <div><label htmlFor="login-email" className="block text-sm font-semibold mb-2">Email address</label><input id="login-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" placeholder="name@organization.com" className="w-full p-3 rounded-xl border border-structural bg-field-canvas text-sm outline-none focus:ring-2 focus:ring-field-ink/20" /></div>
+            <div><div className="flex justify-between mb-2"><label htmlFor="login-password" className="text-sm font-semibold">Password</label><Link to="/forgot-password" className="text-xs font-semibold text-muted-leaf hover:text-field-ink">Forgot password?</Link></div><input id="login-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" placeholder="Enter your password" className="w-full p-3 rounded-xl border border-structural bg-field-canvas text-sm outline-none focus:ring-2 focus:ring-field-ink/20" /></div>
+            {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-alert-red">{error}</p>}
+            <button type="submit" disabled={submitting} className="w-full py-3.5 bg-field-ink text-white font-bold rounded-xl hover:bg-opacity-90 disabled:opacity-60 transition flex items-center justify-center gap-2">{submitting ? 'Signing in...' : 'Continue to workspace'} {!submitting && <ArrowRight size={16} className="text-lime-signal" />}</button>
           </form>
-
-          <div className="pt-3 text-center border-t border-structural text-[11px] text-muted-leaf">
-            Don't have an account?{' '}
-            <Link to="/register" className="font-bold text-field-ink hover:underline">
-              Create an account
-            </Link>
-          </div>
-        </div>
-      </div>
+          <p className="mt-6 pt-5 border-t border-structural text-sm text-muted-leaf">Need access? <Link to="/register" className="font-bold text-field-ink hover:underline">Create an account</Link></p>
+        </section>
+      </main>
     </div>
   );
 };

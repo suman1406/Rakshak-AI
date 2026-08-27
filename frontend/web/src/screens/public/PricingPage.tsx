@@ -14,7 +14,7 @@ export const PricingPage: React.FC = () => {
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto space-y-4">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-lime-signal text-field-ink text-xs font-mono font-bold rounded-full">
-            <Sparkles size={12} /> PILOT DEMO PRICING
+            <Sparkles size={12} /> PLANS FOR FIELD OPERATIONS
           </span>
           <h1 className="text-4xl font-extrabold text-field-ink tracking-tight">
             Transparent Plans for Field Health Intelligence
@@ -83,7 +83,7 @@ export const PricingPage: React.FC = () => {
                 >
                   {plan.ctaText}
                 </Link>
-                <p className="text-[10px] text-center text-muted-leaf">No credit card required for pilot demo</p>
+                <p className="text-[10px] text-center text-muted-leaf">Plans can be tailored to your deployment</p>
               </div>
             </div>
           ))}
@@ -95,7 +95,7 @@ export const PricingPage: React.FC = () => {
           <div className="space-y-1">
             <span className="font-bold text-amber-950">Pilot Pricing Note:</span>
             <p>
-              All prices shown above are demo terms for pilot projects. Custom government grants, state department partnerships, and FPO subsidy structures are available upon request.
+              Indicative plans are shown above. Government programs, state partnerships, and FPO deployments can be scoped with our team.
             </p>
           </div>
         </div>

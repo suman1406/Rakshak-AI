@@ -30,7 +30,7 @@ export const PublicFooter: React.FC = () => {
             <ul className="space-y-2 text-xs text-slate-300">
               <li><Link to="/how-it-works" className="hover:text-white transition">How It Works</Link></li>
               <li><Link to="/pricing" className="hover:text-white transition">Pricing Plans</Link></li>
-              <li><Link to="/login" className="hover:text-white transition">Farmer Scan Demo</Link></li>
+              <li><Link to="/login" className="hover:text-white transition">Farmer mobile app</Link></li>
               <li><Link to="/login" className="hover:text-white transition">Agronomist Queue</Link></li>
               <li><Link to="/login" className="hover:text-white transition">FPO Command Center</Link></li>
             </ul>
@@ -41,7 +41,7 @@ export const PublicFooter: React.FC = () => {
             <h4 className="text-xs font-bold uppercase tracking-wider text-lime-signal">Company</h4>
             <ul className="space-y-2 text-xs text-slate-300">
               <li><Link to="/about" className="hover:text-white transition">About Fasal Rakshak</Link></li>
-              <li><Link to="/contact" className="hover:text-white transition">Contact & Demo</Link></li>
+              <li><Link to="/contact" className="hover:text-white transition">Contact the team</Link></li>
               <li><Link to="/privacy" className="hover:text-white transition">Privacy Policy</Link></li>
               <li><Link to="/terms" className="hover:text-white transition">Terms of Service</Link></li>
             </ul>
@@ -71,7 +71,7 @@ export const PublicFooter: React.FC = () => {
         <div className="flex flex-wrap items-center justify-between gap-4 text-xs text-slate-400">
           <p>© {new Date().getFullYear()} Fasal Rakshak. All rights reserved.</p>
           <p className="text-[11px] text-slate-400">
-            Pilot Demonstration Platform • Standardized deterministic data mode
+            Evidence-led crop health intelligence
           </p>
         </div>
       </div>

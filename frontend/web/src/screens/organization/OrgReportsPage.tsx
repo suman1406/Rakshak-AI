@@ -77,7 +77,7 @@ export const OrgReportsPage: React.FC = () => {
               ) : (
                 <Sparkles size={16} className="text-lime-signal" />
               )}
-              <span>{generating ? 'Generating Report...' : 'Generate Demo Report'}</span>
+              <span>{generating ? 'Generating Report...' : 'Generate report'}</span>
             </button>
           </div>
         </div>

@@ -40,7 +40,7 @@ export const ContactPage: React.FC = () => {
               </div>
               <div className="flex items-center gap-3">
                 <Phone size={18} className="text-lime-signal shrink-0" />
-                <span>+91 1800 123 4567 (Toll Free Demo Line)</span>
+                <span>+91 1800 123 4567 (Toll Free)</span>
               </div>
             </div>
           </div>

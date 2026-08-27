@@ -12,14 +12,13 @@ import {
   Settings,
   LogOut,
   Bell,
-  Sparkles,
   Shield,
   Menu,
   X,
 } from 'lucide-react';
 
 export const AppLayout: React.FC = () => {
-  const { user, role, logout, isDemoMode } = useAuth();
+  const { user, role, logout } = useAuth();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -73,12 +72,7 @@ export const AppLayout: React.FC = () => {
           {/* Current Role Context Card */}
           <div className="bg-white/5 border border-white/10 p-3 rounded-xl space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-mono text-slate-300 uppercase tracking-wider">Active Role</span>
-              {isDemoMode && (
-                <span className="text-[9px] font-bold bg-lime-signal text-field-ink px-1.5 py-0.5 rounded font-mono">
-                  DEMO
-                </span>
-              )}
+              <span className="text-[10px] font-mono text-slate-300 uppercase tracking-wider">Workspace</span>
             </div>
             <div className="flex items-center gap-2">
               <RoleBadge role={role || 'farmer'} />
@@ -120,7 +114,7 @@ export const AppLayout: React.FC = () => {
                 {user?.name ? user.name[0] : 'U'}
               </div>
               <div className="overflow-hidden">
-                <p className="font-semibold text-white truncate text-xs">{user?.name || 'Demo User'}</p>
+                <p className="font-semibold text-white truncate text-xs">{user?.name || 'Workspace member'}</p>
                 <p className="text-[10px] text-slate-400 truncate">{user?.organization || 'Fasal Rakshak'}</p>
               </div>
             </div>
@@ -140,15 +134,7 @@ export const AppLayout: React.FC = () => {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Header Bar */}
         <header className="bg-pure-surface border-b border-structural px-6 py-3 flex items-center justify-between gap-4 sticky top-0 z-20 shadow-2xs">
-          <div className="flex items-center gap-3">
-            <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-lime-signal/20 text-field-ink font-mono text-xs font-bold border border-lime-signal/30">
-              <Sparkles size={12} className="text-field-ink" />
-              DEMO MODE
-            </span>
-            <span className="text-xs text-muted-leaf hidden lg:inline">
-              Simulated agricultural data • FastAPI mock layer active
-            </span>
-          </div>
+          <div className="hidden sm:block text-xs text-muted-leaf">Evidence-led field intelligence</div>
 
           {/* Top Actions: fixed workspace context & notifications */}
           <div className="flex items-center gap-3">

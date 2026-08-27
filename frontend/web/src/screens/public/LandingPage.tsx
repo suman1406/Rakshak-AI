@@ -77,7 +77,7 @@ export const LandingPage: React.FC = () => {
               <div className="flex items-center justify-between pb-3 border-b border-structural">
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-alert-red animate-ping" />
-                  <span className="font-mono text-xs font-bold text-field-ink">LIVE ANALYSIS #FASAL-10482</span>
+                  <span className="font-mono text-xs font-bold text-field-ink">FIELD REVIEW #FASAL-10482</span>
                 </div>
                 <span className="text-[10px] font-mono bg-soft-healthy text-emerald-800 px-2 py-0.5 rounded font-bold">
                   SOYBEAN
@@ -311,7 +311,7 @@ export const LandingPage: React.FC = () => {
             <span className="text-xs font-bold uppercase tracking-wider text-muted-leaf font-mono">Pilot Pricing</span>
             <h2 className="text-3xl font-extrabold text-field-ink">Transparent Plans for Farms & Collectives</h2>
             <p className="text-xs text-muted-leaf">
-              Demonstration pilot pricing for individual growers, FPOs, and state agricultural departments.
+              Flexible plans for individual growers, FPOs, and state agricultural departments.
             </p>
           </div>
 
@@ -373,14 +373,14 @@ export const LandingPage: React.FC = () => {
         <div className="bg-soft-healthy border border-emerald-200 rounded-3xl p-8 md:p-12 text-center max-w-4xl mx-auto space-y-6">
           <h2 className="text-3xl font-extrabold text-field-ink">Ready to bring field intelligence to your FPO?</h2>
           <p className="text-sm text-muted-leaf max-w-xl mx-auto">
-            Schedule a platform walkthrough with our agricultural specialists or try our interactive demo right now.
+            Schedule a platform walkthrough with our agricultural specialists or open the workspace.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4">
             <Link
               to="/login"
               className="px-6 py-3 bg-field-ink text-white font-bold text-xs rounded-xl hover:bg-opacity-90 transition shadow-xs"
             >
-              Open Interactive Demo
+              Open workspace
             </Link>
             <Link
               to="/contact"

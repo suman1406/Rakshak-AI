@@ -99,7 +99,7 @@ export const SettingsProfilePage: React.FC = () => {
           <div className="p-4 bg-soft-healthy rounded-2xl border border-emerald-200 flex items-center justify-between text-emerald-950 font-semibold">
             <div className="flex items-center gap-2">
               <CheckCircle2 size={16} />
-              <span>Demo Persona Active • LocalStorage Synchronized</span>
+              <span>Your workspace access is active</span>
             </div>
           </div>
 
@@ -108,7 +108,7 @@ export const SettingsProfilePage: React.FC = () => {
             className="px-5 py-2.5 bg-red-50 text-alert-red border border-red-200 font-bold rounded-xl hover:bg-red-100 transition flex items-center gap-2"
           >
             <LogOut size={14} />
-            <span>Sign Out of Demo Session</span>
+            <span>Sign out</span>
           </button>
         </div>
       </div>

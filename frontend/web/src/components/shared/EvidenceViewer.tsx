@@ -61,7 +61,7 @@ export const EvidenceViewer: React.FC<EvidenceViewerProps> = ({
             }`}
           >
             <Play size={14} />
-            Video Simulation
+            Video playback
           </button>
         </div>
       </div>

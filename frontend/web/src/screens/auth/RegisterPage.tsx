@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types';
 import { Sprout, ArrowRight } from 'lucide-react';
+import { PublicNavbar } from '../../components/layout/PublicNavbar';
 
 export const RegisterPage: React.FC = () => {
   const { login } = useAuth();
@@ -18,7 +19,9 @@ export const RegisterPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-field-canvas flex items-center justify-center p-4 font-sans">
+    <div className="min-h-screen bg-field-canvas font-sans">
+      <PublicNavbar />
+      <div className="flex items-center justify-center p-4 py-12">
       <div className="max-w-md w-full bg-pure-surface border border-structural p-8 rounded-3xl shadow-sm space-y-6">
         <div className="text-center space-y-2">
           <Link to="/" className="inline-flex items-center gap-2">
@@ -27,7 +30,7 @@ export const RegisterPage: React.FC = () => {
             </div>
           </Link>
           <h1 className="text-2xl font-extrabold text-field-ink">Register for Rakshak AI</h1>
-          <p className="text-xs text-muted-leaf">Create a simulated account for testing</p>
+          <p className="text-xs text-muted-leaf">Create your workspace account</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
@@ -70,7 +73,7 @@ export const RegisterPage: React.FC = () => {
             type="submit"
             className="w-full py-3 bg-field-ink text-white font-bold rounded-xl hover:bg-opacity-90 transition"
           >
-            Create Account & Enter Demo
+            Create account
           </button>
         </form>
 
@@ -81,6 +84,7 @@ export const RegisterPage: React.FC = () => {
           </Link>
         </div>
       </div>
+      </div>
     </div>
   );
 };
@@ -89,7 +93,9 @@ export const ForgotPasswordPage: React.FC = () => {
   const [sent, setSent] = useState(false);
 
   return (
-    <div className="min-h-screen bg-field-canvas flex items-center justify-center p-4 font-sans">
+    <div className="min-h-screen bg-field-canvas font-sans">
+      <PublicNavbar />
+      <div className="flex items-center justify-center p-4 py-12">
       <div className="max-w-md w-full bg-pure-surface border border-structural p-8 rounded-3xl shadow-sm space-y-6 text-xs text-center">
         <Link to="/" className="inline-flex items-center gap-2">
           <div className="w-10 h-10 rounded-xl bg-field-ink text-lime-signal flex items-center justify-center font-bold">
@@ -101,7 +107,7 @@ export const ForgotPasswordPage: React.FC = () => {
         {sent ? (
           <div className="space-y-4">
             <p className="text-emerald-700 bg-emerald-50 p-4 rounded-xl border border-emerald-200">
-              Demo reset link dispatched. In demo mode, you can sign in directly using any password.
+              If an account exists for this email, password reset instructions will be sent shortly.
             </p>
             <Link to="/login" className="block py-2.5 bg-field-ink text-white font-bold rounded-xl">
               Return to Login
@@ -129,6 +135,7 @@ export const ForgotPasswordPage: React.FC = () => {
             </button>
           </form>
         )}
+      </div>
       </div>
     </div>
   );

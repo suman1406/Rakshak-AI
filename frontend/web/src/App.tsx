@@ -91,7 +91,7 @@ export function App() {
           <Route
             path="/settings"
             element={
-              <ProtectedRoute allowedRoles={['farmer', 'agronomist', 'org_admin']}>
+                <ProtectedRoute allowedRoles={['agronomist', 'org_admin']}>
                 <AppLayout />
               </ProtectedRoute>
             }

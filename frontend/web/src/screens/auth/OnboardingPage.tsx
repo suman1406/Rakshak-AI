@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Sprout, CheckCircle2, ArrowRight, LayoutDashboard, ClipboardCheck, BarChart3 } from 'lucide-react';
+import { PublicNavbar } from '../../components/layout/PublicNavbar';
 
 export const OnboardingPage: React.FC = () => {
   const { user, role } = useAuth();
@@ -13,7 +14,9 @@ export const OnboardingPage: React.FC = () => {
     : [['Field health', 'See portfolio risk', BarChart3], ['Farms & fields', 'Drill into local signals', Sprout], ['Reports', 'Export pilot summaries', CheckCircle2]];
 
   return (
-    <div className="min-h-screen bg-field-canvas flex items-center justify-center p-4 sm:p-6 font-sans">
+    <div className="min-h-screen bg-field-canvas font-sans">
+      <PublicNavbar />
+      <div className="flex items-center justify-center p-4 sm:p-6 py-12">
       <main className="max-w-2xl w-full bg-pure-surface border border-structural rounded-3xl p-6 sm:p-10 shadow-lg">
         <div className="flex items-center gap-3 mb-10">
           <div className="w-11 h-11 rounded-2xl bg-field-ink text-lime-signal flex items-center justify-center"><Sprout size={24} /></div>
@@ -22,7 +25,7 @@ export const OnboardingPage: React.FC = () => {
         <section className="space-y-3">
           <span className="text-[10px] font-mono uppercase tracking-[0.16em] text-muted-leaf">Step 1 of 1</span>
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-field-ink text-balance">Your {isAgronomist ? 'review workspace' : 'organization workspace'} is ready.</h1>
-          <p className="text-sm leading-6 text-muted-leaf max-w-xl">Welcome, {user?.name || 'demo user'}. This prototype keeps your workspace role fixed for this session so the navigation and data always match your responsibilities.</p>
+          <p className="text-sm leading-6 text-muted-leaf max-w-xl">Welcome, {user?.name || 'workspace member'}. Your workspace is configured for the responsibilities associated with your account.</p>
         </section>
         <div className="grid sm:grid-cols-3 gap-3 my-8">
           {features.map(([title, description, Icon]) => {
@@ -35,6 +38,7 @@ export const OnboardingPage: React.FC = () => {
           <button onClick={() => navigate('/')} className="py-3.5 px-5 bg-field-canvas border border-structural text-field-ink font-bold text-sm rounded-xl hover:bg-white transition">Return to site</button>
         </div>
       </main>
+      </div>
     </div>
   );
 };
