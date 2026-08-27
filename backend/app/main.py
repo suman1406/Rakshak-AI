@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from . import models  # Register all SQLAlchemy models with Base.metadata
 from .api.v1.router import api_router
 from .core.config import settings
 from .core.logging import RequestLoggingMiddleware, logger
@@ -10,7 +11,7 @@ from .db.session import engine
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Initializing Fasal Rakshak API...")
-    # Initialize DB tables for local/dev SQLite execution
+    # Initialize DB tables for local/dev/prod SQLite execution
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     logger.info("Database schema initialized successfully.")
