@@ -9,7 +9,7 @@ export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [selectedRole, setSelectedRole] = useState<UserRole>('farmer');
+  const [selectedRole, setSelectedRole] = useState<UserRole>('agronomist');
 
   /*
    * FUTURE FASTAPI INTEGRATION POINT:
@@ -61,17 +61,6 @@ export const LoginPage: React.FC = () => {
 
           <div className="space-y-2">
             <button
-              onClick={() => handleDemoClick('farmer')}
-              className="w-full py-3 px-4 bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200 rounded-xl text-left text-xs font-bold text-emerald-900 flex items-center justify-between transition group"
-            >
-              <div className="flex items-center gap-2.5">
-                <Sprout size={16} className="text-emerald-700" />
-                <span>Open Farmer Demo</span>
-              </div>
-              <ArrowRight size={14} className="text-emerald-700 group-hover:translate-x-1 transition" />
-            </button>
-
-            <button
               onClick={() => handleDemoClick('agronomist')}
               className="w-full py-3 px-4 bg-blue-50 hover:bg-blue-100/80 border border-blue-200 rounded-xl text-left text-xs font-bold text-blue-900 flex items-center justify-between transition group"
             >
@@ -104,16 +93,14 @@ export const LoginPage: React.FC = () => {
 
           <form onSubmit={handleFormSubmit} className="space-y-4">
             <div>
-              <label className="block font-semibold mb-1 text-field-ink">Role Context</label>
-              <select
-                value={selectedRole}
-                onChange={(e) => setSelectedRole(e.target.value as UserRole)}
-                className="w-full p-2.5 rounded-xl border border-structural bg-field-canvas text-xs font-medium focus:ring-2 focus:ring-field-ink outline-none"
-              >
-                <option value="farmer">Farmer (View Field Scans & Reports)</option>
-                <option value="agronomist">Agronomist (Review Queue & Evidence Verification)</option>
-                <option value="org_admin">Organization Admin (FPO Command Dashboard & Analytics)</option>
-              </select>
+              <label className="block font-semibold mb-2 text-field-ink">Choose a workspace</label>
+              <div className="grid grid-cols-2 gap-2">
+                {(['agronomist', 'org_admin'] as UserRole[]).map((workspaceRole) => (
+                  <button key={workspaceRole} type="button" onClick={() => setSelectedRole(workspaceRole)} className={`p-3 rounded-xl border text-left text-xs transition ${selectedRole === workspaceRole ? 'border-field-ink bg-soft-healthy font-bold' : 'border-structural bg-field-canvas hover:border-muted-leaf'}`}>
+                    {workspaceRole === 'agronomist' ? 'Agronomist review' : 'Organization analytics'}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div>

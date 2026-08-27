@@ -48,7 +48,7 @@ export const OrgFieldDetailsPage: React.FC = () => {
         </div>
 
         <Link
-          to={`/farmer/report/${activeCase.id}`}
+          to={`/agronomist/cases/${activeCase.id}`}
           className="px-4 py-2.5 bg-field-ink text-white font-bold text-xs rounded-xl hover:bg-opacity-90 transition flex items-center gap-2 shadow-xs"
         >
           <FileText size={14} className="text-lime-signal" />

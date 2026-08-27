@@ -26,7 +26,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
     const getTargetDashboard = (userRole: UserRole) => {
       switch (userRole) {
         case 'farmer':
-          return '/farmer/dashboard';
+          return '/';
         case 'agronomist':
           return '/agronomist/dashboard';
         case 'org_admin':

@@ -1,13 +1,10 @@
 import React, { useState } from 'react';
-import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
+import { Link, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { UserRole } from '../../types';
 import { RoleBadge } from '../shared/RoleBadge';
 import {
   Sprout,
   LayoutDashboard,
-  Camera,
-  History,
   ClipboardList,
   Building2,
   FileBarChart,
@@ -16,57 +13,29 @@ import {
   LogOut,
   Bell,
   Sparkles,
-  ChevronDown,
   Shield,
   Menu,
   X,
-  HelpCircle,
-  AlertTriangle,
 } from 'lucide-react';
 
 export const AppLayout: React.FC = () => {
-  const { user, role, logout, switchRole, isDemoMode } = useAuth();
+  const { user, role, logout, isDemoMode } = useAuth();
   const location = useLocation();
-  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
-  const getNavItems = (userRole: UserRole | null) => {
-    switch (userRole) {
-      case 'farmer':
-        return [
-          { name: 'Field Overview', path: '/farmer/dashboard', icon: LayoutDashboard },
-          { name: 'Start Crop Scan', path: '/farmer/scan', icon: Camera },
-          { name: 'Scan History', path: '/farmer/history', icon: History },
-          { name: 'Profile & Settings', path: '/settings/profile', icon: User },
-        ];
-      case 'agronomist':
-        return [
+  const navItems = role === 'agronomist'
+      ? [
           { name: 'Review Queue', path: '/agronomist/dashboard', icon: ClipboardList },
           { name: 'Agronomist Reports', path: '/agronomist/reports', icon: FileBarChart },
           { name: 'Profile & Settings', path: '/settings/profile', icon: User },
-        ];
-      case 'org_admin':
-      default:
-        return [
+        ]
+      : [
           { name: 'Organization Overview', path: '/organization/dashboard', icon: LayoutDashboard },
           { name: 'Disease Reports', path: '/organization/reports', icon: FileBarChart },
           { name: 'Organization Profile', path: '/settings/organization', icon: Building2 },
           { name: 'Account & Security', path: '/settings/security', icon: Settings },
         ];
-    }
-  };
-
-  const navItems = getNavItems(role);
-
-  const handleRoleSwitch = (newRole: UserRole) => {
-    switchRole(newRole);
-    setRoleDropdownOpen(false);
-    if (newRole === 'farmer') navigate('/farmer/dashboard');
-    else if (newRole === 'agronomist') navigate('/agronomist/dashboard');
-    else navigate('/organization/dashboard');
-  };
 
   return (
     <div className="min-h-screen bg-field-canvas flex flex-col md:flex-row">
@@ -181,54 +150,11 @@ export const AppLayout: React.FC = () => {
             </span>
           </div>
 
-          {/* Top Actions: Role Switcher & Notifications */}
+          {/* Top Actions: fixed workspace context & notifications */}
           <div className="flex items-center gap-3">
-            {/* Quick Demo Role Switcher Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setRoleDropdownOpen(!roleDropdownOpen)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-field-canvas hover:bg-gray-200/70 border border-structural rounded-xl text-xs font-medium text-field-ink transition"
-              >
-                <span className="text-muted-leaf">Demo Role:</span>
-                <span className="font-bold capitalize">{role?.replace('_', ' ')}</span>
-                <ChevronDown size={14} className="text-muted-leaf" />
-              </button>
-
-              {roleDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-pure-surface border border-structural rounded-2xl shadow-lg p-2 z-50 space-y-1">
-                  <div className="px-2 py-1 text-[10px] font-mono text-muted-leaf uppercase font-semibold">
-                    Switch Demo Persona
-                  </div>
-                  <button
-                    onClick={() => handleRoleSwitch('farmer')}
-                    className={`w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between transition ${
-                      role === 'farmer' ? 'bg-soft-healthy text-field-ink font-bold' : 'hover:bg-field-canvas'
-                    }`}
-                  >
-                    <span>Farmer View</span>
-                    {role === 'farmer' && <span className="text-[10px] text-emerald-700 font-mono">Active</span>}
-                  </button>
-                  <button
-                    onClick={() => handleRoleSwitch('agronomist')}
-                    className={`w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between transition ${
-                      role === 'agronomist' ? 'bg-blue-50 text-blue-900 font-bold' : 'hover:bg-field-canvas'
-                    }`}
-                  >
-                    <span>Agronomist View</span>
-                    {role === 'agronomist' && <span className="text-[10px] text-blue-700 font-mono">Active</span>}
-                  </button>
-                  <button
-                    onClick={() => handleRoleSwitch('org_admin')}
-                    className={`w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between transition ${
-                      role === 'org_admin' ? 'bg-amber-50 text-amber-900 font-bold' : 'hover:bg-field-canvas'
-                    }`}
-                  >
-                    <span>Organization Admin</span>
-                    {role === 'org_admin' && <span className="text-[10px] text-amber-700 font-mono">Active</span>}
-                  </button>
-                </div>
-              )}
-            </div>
+            <span className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 bg-field-canvas border border-structural rounded-xl text-xs font-semibold text-field-ink capitalize">
+              <Shield size={14} className="text-muted-leaf" /> {role?.replace('_', ' ')} workspace
+            </span>
 
             {/* Notifications Button */}
             <div className="relative">

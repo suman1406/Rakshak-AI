@@ -9,7 +9,6 @@ interface AuthContextType {
   isDemoMode: boolean;
   login: (roleChoice: UserRole, customEmail?: string) => void;
   logout: () => void;
-  switchRole: (newRole: UserRole) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -66,10 +65,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setRole(roleChoice);
   };
 
-  const switchRole = (newRole: UserRole) => {
-    login(newRole);
-  };
-
   const logout = () => {
     /*
      * FUTURE FASTAPI INTEGRATION POINT:
@@ -88,7 +83,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isDemoMode: true, // Always true for this prototype
         login,
         logout,
-        switchRole,
       }}
     >
       {children}

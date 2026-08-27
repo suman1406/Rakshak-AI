@@ -17,7 +17,7 @@ export const PublicNavbar: React.FC = () => {
   ];
 
   const getDashboardPath = () => {
-    if (role === 'farmer') return '/farmer/dashboard';
+    if (role === 'farmer') return '/';
     if (role === 'agronomist') return '/agronomist/dashboard';
     return '/organization/dashboard';
   };

@@ -9,7 +9,7 @@ export const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [roleChoice, setRoleChoice] = useState<UserRole>('farmer');
+  const [roleChoice, setRoleChoice] = useState<UserRole>('agronomist');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,16 +56,14 @@ export const RegisterPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block font-semibold mb-1">Role Persona</label>
-            <select
-              value={roleChoice}
-              onChange={(e) => setRoleChoice(e.target.value as UserRole)}
-              className="w-full p-2.5 rounded-xl border border-structural bg-field-canvas text-xs outline-none font-medium"
-            >
-              <option value="farmer">Farmer</option>
-              <option value="agronomist">Agronomist</option>
-              <option value="org_admin">Organization Admin</option>
-            </select>
+            <label className="block font-semibold mb-2">Workspace type</label>
+            <div className="grid grid-cols-2 gap-2">
+              {(['agronomist', 'org_admin'] as UserRole[]).map((workspaceRole) => (
+                <button key={workspaceRole} type="button" onClick={() => setRoleChoice(workspaceRole)} className={`p-3 rounded-xl border text-left transition ${roleChoice === workspaceRole ? 'border-field-ink bg-soft-healthy font-bold' : 'border-structural bg-field-canvas'}`}>
+                  {workspaceRole === 'agronomist' ? 'Agronomist' : 'Organization admin'}
+                </button>
+              ))}
+            </div>
           </div>
 
           <button

@@ -17,12 +17,6 @@ import { LoginPage } from './screens/auth/LoginPage';
 import { RegisterPage, ForgotPasswordPage } from './screens/auth/RegisterPage';
 import { OnboardingPage } from './screens/auth/OnboardingPage';
 
-// Farmer Pages
-import { FarmerDashboard } from './screens/farmer/FarmerDashboard';
-import { FarmerScanPage } from './screens/farmer/FarmerScanPage';
-import { FarmerReportPage } from './screens/farmer/FarmerReportPage';
-import { FarmerHistoryPage } from './screens/farmer/FarmerHistoryPage';
-
 // Agronomist Pages
 import { AgronomistDashboard } from './screens/agronomist/AgronomistDashboard';
 import { AgronomistCaseReviewPage } from './screens/agronomist/AgronomistCaseReviewPage';
@@ -61,22 +55,6 @@ export function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/onboarding" element={<OnboardingPage />} />
-
-          {/* Farmer Portal (Protected) */}
-          <Route
-            path="/farmer"
-            element={
-              <ProtectedRoute allowedRoles={['farmer', 'agronomist', 'org_admin']}>
-                <AppLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<Navigate to="/farmer/dashboard" replace />} />
-            <Route path="dashboard" element={<FarmerDashboard />} />
-            <Route path="scan" element={<FarmerScanPage />} />
-            <Route path="report/:id" element={<FarmerReportPage />} />
-            <Route path="history" element={<FarmerHistoryPage />} />
-          </Route>
 
           {/* Agronomist Portal (Protected) */}
           <Route

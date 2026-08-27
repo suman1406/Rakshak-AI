@@ -53,7 +53,7 @@ export const LandingPage: React.FC = () => {
                 to="/login"
                 className="px-6 py-3.5 bg-field-ink text-white font-bold text-sm rounded-xl hover:bg-opacity-90 transition shadow-md flex items-center gap-2 group"
               >
-                <span>Start a field scan</span>
+                <span>Explore workspaces</span>
                 <ArrowRight size={16} className="text-lime-signal group-hover:translate-x-1 transition" />
               </Link>
               <Link
