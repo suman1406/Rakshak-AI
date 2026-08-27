@@ -18,7 +18,16 @@ ios/Pods/
 .idea/
 coverage/
 data/
-models/
+# Ignore ML model weight files, but NOT the app/models Python package
+*.pt
+*.pth
+*.onnx
+*.h5
+*.pkl
+*.joblib
+models/*.pt
+models/*.onnx
+models/*.h5
 myenv/
 
 # Local media & database storage
