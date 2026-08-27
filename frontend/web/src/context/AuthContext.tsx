@@ -15,6 +15,10 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const LOCAL_STORAGE_KEY_ROLE = 'rakshak_ai_demo_role';
 const LOCAL_STORAGE_KEY_USER = 'rakshak_ai_demo_user';
+const WEB_ROLES: UserRole[] = ['agronomist', 'org_admin'];
+
+const isWebRole = (value: string | null): value is UserRole =>
+  value !== null && WEB_ROLES.includes(value as UserRole);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(() => {
@@ -25,21 +29,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
      */
     const savedUser = localStorage.getItem(LOCAL_STORAGE_KEY_USER);
     const savedRole = localStorage.getItem(LOCAL_STORAGE_KEY_ROLE) as UserRole | null;
-    if (savedUser && savedRole) {
+    if (savedUser && isWebRole(savedRole)) {
       try {
         return JSON.parse(savedUser);
       } catch {
-        return DEMO_USERS[savedRole] || DEMO_USERS.farmer;
+        return DEMO_USERS[savedRole];
       }
     }
     return null;
   });
 
   const [role, setRole] = useState<UserRole | null>(() => {
-    return (localStorage.getItem(LOCAL_STORAGE_KEY_ROLE) as UserRole) || (user?.role ?? null);
+    const savedRole = localStorage.getItem(LOCAL_STORAGE_KEY_ROLE);
+    return isWebRole(savedRole) ? savedRole : null;
   });
 
   useEffect(() => {
+    // Remove sessions created by the retired farmer web portal.
+    if (localStorage.getItem(LOCAL_STORAGE_KEY_ROLE) === 'farmer') {
+      localStorage.removeItem(LOCAL_STORAGE_KEY_ROLE);
+      localStorage.removeItem(LOCAL_STORAGE_KEY_USER);
+      setUser(null);
+      setRole(null);
+      return;
+    }
     if (user && role) {
       localStorage.setItem(LOCAL_STORAGE_KEY_USER, JSON.stringify(user));
       localStorage.setItem(LOCAL_STORAGE_KEY_ROLE, role);
