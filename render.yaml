@@ -3,7 +3,8 @@ services:
     name: rakshak-backend
     env: docker
     dockerContext: backend
-    dockerfilePath: backend/Dockerfile
+    dockerfilePath: Dockerfile
+    plan: free
     envVars:
       - key: ENVIRONMENT
         value: production
@@ -12,7 +13,7 @@ services:
       - key: API_V1_STR
         value: /api/v1
       - key: DATABASE_URL
-        value: sqlite+aiosqlite:///./rakshak.db
+        value: sqlite+aiosqlite:////tmp/rakshak.db
       - key: JWT_SECRET_KEY
         generateValue: true
       - key: QUALITY_BLUR_THRESHOLD
