@@ -40,14 +40,13 @@ async def get_current_user(
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-    # 2. Demo fallback mode for local / preview testing
+    # 2. Local dev mode fallback if explicit x_demo_role header is set
     demo_role_str = x_demo_role or "farmer"
     try:
         demo_role = UserRole(demo_role_str)
     except ValueError:
         demo_role = UserRole.farmer
 
-    # Query or create demo user
     stmt = select(User).where(User.email == f"demo-{demo_role.value}@rakshak.ai")
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()

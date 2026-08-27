@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: rakshak-backend
+    env: docker
+    dockerContext: backend
+    dockerfilePath: backend/Dockerfile
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: PROJECT_NAME
+        value: Fasal Rakshak AI
+      - key: API_V1_STR
+        value: /api/v1
+      - key: DATABASE_URL
+        value: sqlite+aiosqlite:///./rakshak.db
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: QUALITY_BLUR_THRESHOLD
+        value: "80.0"
+      - key: MIN_USABLE_FRAMES_THRESHOLD
+        value: "5"
+    healthCheckPath: /healthz

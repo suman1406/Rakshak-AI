@@ -1,51 +1,98 @@
+"""
+diagnosis.py — Pydantic Schemas for Farmer Report (PRD §30) and Agronomist Verification
+"""
+
+from __future__ import annotations
+
 from datetime import datetime
-from typing import Any
-from pydantic import BaseModel, ConfigDict, Field as PydanticField
+from pydantic import BaseModel, Field
 from ..models.prediction import ConfidenceBand, DecisionAuthorityStatus
-from ..models.verification import CorrectionType
 
 class DiagnosisEvidence(BaseModel):
     frames_analyzed: int
     supporting_frames: int
     leaf_regions_analyzed: int
-    quality_score: float | None = None
-    frames: list[dict[str, Any]] = []
+    quality_score: float = 80.0
+
 
 class DiagnosisRecommendation(BaseModel):
-    action: str
-    agronomist_review: bool
-    inspection_priority: str
-    next_steps: list[str] = []
+    title: str
+    description: str
+
 
 class DiagnosisOut(BaseModel):
-    id: str
+    video_diagnosis_id: str
     video_id: str
     crop: str = "soybean"
     disease: str
-    is_unknown: bool = False
+    headline: str
+    is_unknown: bool
     confidence: float
     confidence_band: ConfidenceBand
-    severity: str
-    severity_level: int | None = None
-    affected_plant_estimate: float | None = None
-    evidence: DiagnosisEvidence
-    recommendation: DiagnosisRecommendation
+    severity_level: int
+    severity_name: str
+    affected_plant_estimate: float
+    supporting_frames: int
+    total_frames: int
+    decision_authority: DecisionAuthorityStatus
     explanation: str
-    decision_authority: DecisionAuthorityStatus = DecisionAuthorityStatus.advisory_only
-    disclaimer: str = "AI indication, not a confirmed diagnosis."
+    action_items: str
+    disclaimer: str = "AI estimate, not a confirmed diagnosis"
     created_at: datetime
 
-    model_config = ConfigDict(from_attributes=True)
+    class Config:
+        from_attributes = True
+
+
+DiagnosisReportResponse = DiagnosisOut
+
 
 class FeedbackCreate(BaseModel):
-    correction_type: CorrectionType = CorrectionType.other
+    correction_type: str = Field(..., description="disease_change | healthy_override | severity_change | other")
     note: str | None = None
+
+
+FarmerFeedbackCreate = FeedbackCreate
+
 
 class FeedbackOut(BaseModel):
-    id: str
+    feedback_id: str
     video_diagnosis_id: str
-    correction_type: CorrectionType
-    note: str | None = None
     created_at: datetime
 
-    model_config = ConfigDict(from_attributes=True)
+
+FarmerFeedbackResponse = FeedbackOut
+
+
+class VerifyCreate(BaseModel):
+    disease_id: str | None = None
+    disease_slug: str | None = None
+    is_healthy_override: bool = False
+    severity_level: int = Field(..., ge=0, le=3)
+    affected_plant_estimate_independent: float = Field(..., ge=0.0, le=1.0)
+    is_blind_relabel: bool = False
+    notes: str | None = None
+
+
+AgronomistVerifyCreate = VerifyCreate
+
+
+class VerifiedLabelOut(BaseModel):
+    verified_label_id: str
+    video_diagnosis_id: str
+    is_gold: bool = False
+    created_at: datetime
+
+
+AgronomistVerifyResponse = VerifiedLabelOut
+
+
+class AgronomistQueueItem(BaseModel):
+    video_diagnosis_id: str
+    video_id: str
+    disease: str
+    confidence: float
+    confidence_band: str
+    severity_level: int | None
+    is_unknown: bool
+    created_at: datetime
