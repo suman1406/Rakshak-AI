@@ -92,16 +92,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
           Form(
               key: formKey,
               child: Column(children: [
-                const TextFormField(
-                    decoration: InputDecoration(labelText: 'Full name'),
+                TextFormField(
+                    decoration: const InputDecoration(labelText: 'Full name'),
                     validator: requiredField),
                 const SizedBox(height: 14),
-                const TextFormField(
-                    decoration: InputDecoration(labelText: 'Phone number'),
+                TextFormField(
+                    decoration: const InputDecoration(labelText: 'Phone number'),
                     validator: requiredField),
                 const SizedBox(height: 14),
-                const TextFormField(
-                    decoration: InputDecoration(labelText: 'Email address'),
+                TextFormField(
+                    decoration: const InputDecoration(labelText: 'Email address'),
                     validator: requiredField),
                 const SizedBox(height: 24),
                 PrimaryAction(
