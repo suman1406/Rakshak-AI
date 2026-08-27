@@ -14,8 +14,8 @@ from .models import farm, identity, prediction, video  # noqa: F401
 SEED_USERS = [
     ("agronomist.one@rakshak.ai", "Agronomist One", UserRole.agronomist, "org-fasal-west"),
     ("agronomist.two@rakshak.ai", "Agronomist Two", UserRole.agronomist, "org-fasal-west"),
-    ("admin.one@rakshak.ai", "Organization Admin One", UserRole.org_admin, "org-fasal-west"),
-    ("admin.two@rakshak.ai", "Organization Admin Two", UserRole.org_admin, "org-fasal-west"),
+    ("admin.one@rakshak.ai", "Organization Admin One", UserRole.admin, "org-fasal-west"),
+    ("admin.two@rakshak.ai", "Organization Admin Two", UserRole.admin, "org-fasal-west"),
     ("farmer.one@rakshak.ai", "Farmer One", UserRole.farmer, "org-fasal-west"),
     ("farmer.two@rakshak.ai", "Farmer Two", UserRole.farmer, "org-fasal-west"),
 ]
