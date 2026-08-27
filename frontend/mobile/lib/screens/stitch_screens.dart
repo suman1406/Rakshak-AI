@@ -324,6 +324,8 @@ class _NewScanState extends State<NewScanScreen> {
               style: const TextStyle(color: ink, fontWeight: FontWeight.w700)),
           const SizedBox(height: 12),
           AltButton('Choose video', choose),
+          AltButton('Record in app',
+              () => openPage(context, const CameraGuidanceScreen())),
           TextButton(
               onPressed: () => setState(() => file = 'north_plot_demo.mp4'),
               child: const Text('Use demo video'))
