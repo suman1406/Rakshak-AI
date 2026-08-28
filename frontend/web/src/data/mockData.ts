@@ -33,7 +33,7 @@ export const MOCK_EVIDENCE_FRAMES_SOYBEAN_RUST: EvidenceFrame[] = Array.from({ l
   return {
     frameNumber: frameNum,
     timestampSeconds: Number((frameNum * 0.85).toFixed(1)),
-    thumbnailUrl: `https://images.unsplash.com/photo-1592417817098-8f3d6eb231fc?auto=format&fit=crop&w=600&q=80`,
+    thumbnailUrl: '/rakshak-leaf.svg',
     leafRegionsCount: Math.floor(Math.random() * 3) + 2,
     lesionsCount: isSupporting ? Math.floor(Math.random() * 5) + 3 : Math.floor(Math.random() * 2),
     confidenceScore: isSupporting ? 82 + (frameNum % 10) : 45 + (frameNum % 15),
@@ -80,7 +80,7 @@ export const MOCK_EVIDENCE_FRAMES_BACTERIAL_BLIGHT: EvidenceFrame[] = Array.from
   return {
     frameNumber: frameNum,
     timestampSeconds: Number((frameNum * 0.75).toFixed(1)),
-    thumbnailUrl: `https://images.unsplash.com/photo-1595974482597-4b8da8879bc5?auto=format&fit=crop&w=600&q=80`,
+    thumbnailUrl: '/rakshak-leaf.svg',
     leafRegionsCount: 3,
     lesionsCount: frameNum <= 10 ? 4 : 1,
     confidenceScore: frameNum <= 10 ? 76 : 50,

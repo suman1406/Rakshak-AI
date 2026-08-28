@@ -12,7 +12,7 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-const WEB_ROLES: UserRole[] = ['agronomist', 'org_admin'];
+const WEB_ROLES: UserRole[] = ['agronomist', 'org_admin', 'admin', 'enterprise'];
 const TOKEN_KEY = 'rakshak_ai_access_token';
 const isWebRole = (value: string): value is UserRole => WEB_ROLES.includes(value as UserRole);
 

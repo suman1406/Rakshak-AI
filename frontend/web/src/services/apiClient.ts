@@ -60,4 +60,7 @@ export const apiClient = {
   getVideoStatus: (videoId: string) => request(`/api/v1/videos/${videoId}/status`),
   getVideoAnalysis: (videoId: string) => request(`/api/v1/videos/${videoId}/analysis`),
   getVideoFrames: (videoId: string) => request(`/api/v1/videos/${videoId}/frames`),
+  getB2BDashboard: () => request('/api/v1/b2b/dashboard'),
+  getAgronomistQueue: (limit = 50) => request(`/api/v1/agronomist/queue?limit=${limit}`),
+  getAgronomistCase: (diagnosisId: string) => request(`/api/v1/agronomist/cases/${diagnosisId}`),
 };

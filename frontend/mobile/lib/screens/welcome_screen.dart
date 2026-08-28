@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../core/app_theme.dart';
 import '../widgets/app_components.dart';
 import 'authentication_screens.dart';
+import 'onboarding_screens.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -39,7 +40,7 @@ class WelcomeScreen extends StatelessWidget {
         PrimaryAction(
             label: 'Get started',
             icon: Icons.arrow_forward_rounded,
-            onPressed: () => navigateTo(context, const LoginScreen())),
+            onPressed: () => navigateTo(context, const OnboardingScreen())),
         const SizedBox(height: 12),
         SecondaryAction(
             label: 'Create an account',

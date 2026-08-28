@@ -1,6 +1,6 @@
 import React from 'react';
 import { UserRole, SeverityLevel, ReviewStatus } from '../../types';
-import { UserCheck, Shield, Sprout, AlertTriangle, CheckCircle, Clock, Search } from 'lucide-react';
+import { UserCheck, Shield, Sprout, Building2, CheckCircle, Clock, Search } from 'lucide-react';
 
 export const RoleBadge: React.FC<{ role: UserRole; className?: string }> = ({ role, className = '' }) => {
   const configs: Record<UserRole, { label: string; bg: string; text: string; icon: React.ReactNode }> = {
@@ -21,6 +21,18 @@ export const RoleBadge: React.FC<{ role: UserRole; className?: string }> = ({ ro
       bg: 'bg-amber-50 border-amber-200',
       text: 'text-amber-800',
       icon: <Shield size={12} className="text-amber-600" />,
+    },
+    admin: {
+      label: 'Platform Admin',
+      bg: 'bg-amber-50 border-amber-200',
+      text: 'text-amber-800',
+      icon: <Shield size={12} className="text-amber-600" />,
+    },
+    enterprise: {
+      label: 'Enterprise',
+      bg: 'bg-slate-100 border-slate-200',
+      text: 'text-slate-800',
+      icon: <Building2 size={12} className="text-slate-600" />,
     },
   };
 

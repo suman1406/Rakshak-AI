@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" role="img" aria-labelledby="title desc">
+  <title id="title">Soybean field scan</title><desc id="desc">Illustrated soybean leaves in a field-intelligence scan.</desc>
+  <defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#b9d8bf"/><stop offset="1" stop-color="#eef3df"/></linearGradient><linearGradient id="soil" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#536e4b"/><stop offset="1" stop-color="#294536"/></linearGradient></defs>
+  <rect width="1600" height="1000" fill="url(#sky)"/><path d="M0 490 Q360 350 720 500 T1600 430V1000H0Z" fill="#8ead76"/><path d="M0 650 Q360 520 720 690 T1600 600V1000H0Z" fill="url(#soil)"/>
+  <g fill="none" stroke="#d8f36a" stroke-width="13" opacity=".86"><path d="M800 1000C790 780 830 560 910 290"/><path d="M320 1000C360 780 470 640 650 530"/><path d="M1190 1000C1160 790 1080 630 950 500"/></g>
+  <g fill="#315f42" stroke="#204334" stroke-width="7"><ellipse cx="790" cy="540" rx="150" ry="62" transform="rotate(-25 790 540)"/><ellipse cx="995" cy="430" rx="165" ry="67" transform="rotate(25 995 430)"/><ellipse cx="610" cy="675" rx="155" ry="65" transform="rotate(18 610 675)"/><ellipse cx="1160" cy="690" rx="160" ry="62" transform="rotate(-24 1160 690)"/></g>
+  <g fill="#d8f36a" opacity=".8"><circle cx="910" cy="290" r="14"/><circle cx="650" cy="530" r="14"/><circle cx="950" cy="500" r="14"/></g>
+</svg>

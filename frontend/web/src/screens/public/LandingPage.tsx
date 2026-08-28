@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { PublicNavbar } from '../../components/layout/PublicNavbar';
 import { PublicFooter } from '../../components/layout/PublicFooter';
 import { SafetyBanner } from '../../components/shared/SafetyBanner';
+import { SafeImage } from '../../components/shared/SafeImage';
 import { PRICING_PLANS } from '../../data/mockData';
 import {
   Video,
@@ -86,8 +87,8 @@ export const LandingPage: React.FC = () => {
 
               {/* Sample Frame Canvas Preview */}
               <div className="relative aspect-16/10 rounded-2xl overflow-hidden bg-field-ink border border-structural">
-                <img
-                  src="https://images.unsplash.com/photo-1592417817098-8f3d6eb231fc?auto=format&fit=crop&w=800&q=80"
+                <SafeImage
+                  src="/rakshak-leaf.svg"
                   alt="Soybean Leaf Detection"
                   className="w-full h-full object-cover opacity-90"
                 />
@@ -186,7 +187,7 @@ export const LandingPage: React.FC = () => {
             </div>
           </div>
           <div className="relative overflow-hidden rounded-3xl border border-structural bg-field-ink min-h-[18rem] shadow-lg">
-            <img src="https://kj1bcdn.b-cdn.net/media/62983/jl.jpg?width=1200" alt="Farmer inspecting a green crop field" className="absolute inset-0 h-full w-full object-cover opacity-75" />
+            <SafeImage src="/rakshak-field.svg" alt="Illustrated soybean field scan" className="absolute inset-0 h-full w-full object-cover opacity-75" />
             <div className="absolute inset-0 bg-field-ink/35" />
             <div className="absolute left-5 top-5 max-w-[15rem] rounded-2xl border border-white/20 bg-field-ink/85 p-4 text-white backdrop-blur-sm">
               <p className="eyebrow text-lime-signal">Field note / 04</p>
@@ -235,8 +236,8 @@ export const LandingPage: React.FC = () => {
             <div className="grid grid-cols-4 gap-2">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="aspect-square rounded-lg overflow-hidden border border-structural relative">
-                  <img
-                    src="https://images.unsplash.com/photo-1592417817098-8f3d6eb231fc?auto=format&fit=crop&w=300&q=80"
+                  <SafeImage
+                    src="/rakshak-leaf.svg"
                     alt=""
                     className="w-full h-full object-cover"
                   />

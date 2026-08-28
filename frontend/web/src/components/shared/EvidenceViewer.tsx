@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { EvidenceFrame } from '../../types';
 import { Play, Pause, Maximize2, ShieldAlert, CheckCircle2, Eye, ScanLine, Layers } from 'lucide-react';
+import { SafeImage } from './SafeImage';
 
 interface EvidenceViewerProps {
   evidenceFrames: EvidenceFrame[];
@@ -72,7 +73,7 @@ export const EvidenceViewer: React.FC<EvidenceViewerProps> = ({
           <div className="lg:col-span-7 space-y-3">
             <div className="relative aspect-4/3 rounded-xl overflow-hidden bg-field-ink border border-structural group">
               {/* Simulated Leaf Image with Lesion Bounding Boxes */}
-              <img
+              <SafeImage
                 src={activeFrame.thumbnailUrl}
                 alt={`Frame ${activeFrame.frameNumber}`}
                 className="w-full h-full object-cover opacity-90 transition group-hover:opacity-100"
@@ -208,7 +209,7 @@ export const EvidenceViewer: React.FC<EvidenceViewerProps> = ({
                           : 'border-structural hover:border-gray-400 opacity-75 hover:opacity-100'
                       }`}
                     >
-                      <img src={frame.thumbnailUrl} alt="" className="w-full h-full object-cover rounded" />
+                      <SafeImage src={frame.thumbnailUrl} alt={`Evidence frame ${frame.frameNumber}`} className="w-full h-full object-cover rounded" />
                       <span className="absolute bottom-0.5 right-0.5 bg-field-ink/90 text-white font-mono text-[9px] px-1 rounded">
                         #{frame.frameNumber}
                       </span>
@@ -226,7 +227,7 @@ export const EvidenceViewer: React.FC<EvidenceViewerProps> = ({
         /* Video Simulation Mode */
         <div className="space-y-4">
           <div className="relative aspect-video rounded-2xl bg-field-ink border border-structural overflow-hidden flex items-center justify-center">
-            <img
+            <SafeImage
               src={evidenceFrames[selectedFrameIndex]?.thumbnailUrl}
               alt="Field Crop Video"
               className="w-full h-full object-cover opacity-80"

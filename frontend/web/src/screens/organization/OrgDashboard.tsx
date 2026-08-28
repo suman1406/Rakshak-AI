@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { mockApi } from '../../services/mockApi';
+import { apiClient } from '../../services/apiClient';
 import { OrgDashboardMetrics, Farm, Case } from '../../types';
 import { SeverityBadge } from '../../components/shared/RoleBadge';
 import {
@@ -41,7 +42,12 @@ export const OrgDashboard: React.FC = () => {
 
   useEffect(() => {
     const fetchOrgData = async () => {
-      const m = await mockApi.getOrgMetrics();
+      let m = await mockApi.getOrgMetrics();
+      try {
+        const live = await apiClient.getB2BDashboard() as { total_farms: number; healthy_fields_count: number; at_risk_fields_count: number; total_diagnoses: number };
+        const totalFields = Math.max(live.healthy_fields_count + live.at_risk_fields_count, 1);
+        m = { ...m, totalFarms: live.total_farms, healthyPercent: Math.round(live.healthy_fields_count / totalFields * 100), atRiskPercent: Math.round(live.at_risk_fields_count / totalFields * 100), diseaseDetectedPercent: Math.max(0, 100 - Math.round(live.healthy_fields_count / totalFields * 100) - Math.round(live.at_risk_fields_count / totalFields * 100)) };
+      } catch (_) { /* Keep deterministic fixture data when the API is unavailable. */ }
       const f = await mockApi.getFarms(district);
       const c = await mockApi.getCases();
       setMetrics(m);

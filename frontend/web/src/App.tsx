@@ -60,7 +60,7 @@ export function App() {
           <Route
             path="/agronomist"
             element={
-              <ProtectedRoute allowedRoles={['agronomist', 'org_admin']}>
+              <ProtectedRoute allowedRoles={['agronomist', 'org_admin', 'admin', 'enterprise']}>
                 <AppLayout />
               </ProtectedRoute>
             }
@@ -75,7 +75,7 @@ export function App() {
           <Route
             path="/organization"
             element={
-              <ProtectedRoute allowedRoles={['org_admin']}>
+              <ProtectedRoute allowedRoles={['org_admin', 'admin', 'enterprise']}>
                 <AppLayout />
               </ProtectedRoute>
             }
@@ -91,7 +91,7 @@ export function App() {
           <Route
             path="/settings"
             element={
-                <ProtectedRoute allowedRoles={['agronomist', 'org_admin']}>
+                <ProtectedRoute allowedRoles={['agronomist', 'org_admin', 'admin', 'enterprise']}>
                 <AppLayout />
               </ProtectedRoute>
             }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../core/app_theme.dart';
 import '../widgets/app_components.dart';
 import 'dashboard_screen.dart';
+import 'authentication_screens.dart';
 
 class OnboardingScreen extends StatelessWidget {
   const OnboardingScreen({super.key});
@@ -41,7 +42,7 @@ class OnboardingNextStepsScreen extends StatelessWidget {
         body: 'See evidence, confidence, and what to do next in plain language.',
         icon: Icons.check_circle_outline,
         nextLabel: 'Go to my fields',
-        onNext: () => navigateTo(context, const HomeScreen()),
+        onNext: () => navigateTo(context, const LoginScreen()),
       );
 }
 
@@ -63,6 +64,8 @@ class _OnboardingPage extends StatelessWidget {
           Text(body, textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyLarge),
           const SizedBox(height: 32),
           PrimaryAction(label: nextLabel, onPressed: onNext ?? () => navigateTo(context, const OnboardingEvidenceScreen())),
+          const SizedBox(height: 12),
+          TextButton(onPressed: () => navigateTo(context, const LoginScreen()), child: const Text('Skip for now')),
         ]),
       );
 }
