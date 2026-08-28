@@ -1,15 +1,26 @@
 import 'package:flutter/material.dart';
 import '../core/app_theme.dart';
+import '../api_client.dart';
 import '../widgets/app_components.dart';
 
 class FeedbackScreen extends StatefulWidget {
-  const FeedbackScreen({super.key});
+  const FeedbackScreen({super.key, this.diagnosisId});
+  final String? diagnosisId;
   @override
   State<FeedbackScreen> createState() => _FeedbackState();
 }
 
 class _FeedbackState extends State<FeedbackScreen> {
   int rating = 0;
+  final noteController = TextEditingController();
+  bool submitting = false;
+  Future<void> submit() async {
+    if (widget.diagnosisId == null || rating == 0) return;
+    setState(() => submitting = true);
+    try { await ApiClient.instance.submitFeedback(widget.diagnosisId!, correctionType: rating >= 4 ? 'agree' : 'disagree', note: noteController.text.trim().isEmpty ? null : noteController.text.trim()); if (mounted) navigateTo(context, const ReviewRequestedScreen()); }
+    catch (error) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not submit feedback: $error'))); }
+    finally { if (mounted) setState(() => submitting = false); }
+  }
   @override
   Widget build(BuildContext context) => AppPage(
       title: 'Share feedback',
@@ -39,14 +50,14 @@ class _FeedbackState extends State<FeedbackScreen> {
           ])
         ])),
         const SizedBox(height: 18),
-        const TextField(
+        TextField(controller: noteController,
             maxLines: 5,
             decoration: InputDecoration(
                 labelText: 'Add a note (optional)', alignLabelWithHint: true)),
         const SizedBox(height: 22),
         PrimaryAction(
-            label: 'Submit feedback',
-            onPressed: () => navigateTo(context, const ReviewRequestedScreen()))
+            label: submitting ? 'Submitting...' : 'Submit feedback',
+            onPressed: submitting || rating == 0 ? null : submit)
       ]));
 }
 

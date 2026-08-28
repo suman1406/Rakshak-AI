@@ -17,6 +17,7 @@ ThemeData buildRakshakTheme() {
   final scheme = ColorScheme.fromSeed(seedColor: RakshakColors.ink);
   return ThemeData(
     useMaterial3: true,
+    fontFamily: 'Avenir Next',
     scaffoldBackgroundColor: RakshakColors.canvas,
     colorScheme: scheme.copyWith(
       primary: RakshakColors.ink,
@@ -91,14 +92,16 @@ ThemeData buildRakshakTheme() {
             backgroundColor: RakshakColors.signal,
             foregroundColor: RakshakColors.ink,
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10)))),
+                borderRadius: BorderRadius.circular(14)),
+            elevation: 0,
+            textStyle: const TextStyle(fontWeight: FontWeight.w800))),
     outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
             minimumSize: const Size.fromHeight(52),
             foregroundColor: RakshakColors.ink,
             side: const BorderSide(color: RakshakColors.ink),
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10)))),
+                borderRadius: BorderRadius.circular(14)))),
     navigationBarTheme: NavigationBarThemeData(
         backgroundColor: Colors.white,
         indicatorColor: RakshakColors.healthy,

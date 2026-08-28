@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Mobile</string>
+	<string>Rakshak AI</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -15,7 +15,13 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>mobile</string>
+	<string>Rakshak AI</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Rakshak AI uses the camera to capture a short crop video for field health analysis.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Rakshak AI uses the microphone while recording a crop video. Audio is not used for diagnosis.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Rakshak AI needs photo library access so you can choose a crop video to upload.</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

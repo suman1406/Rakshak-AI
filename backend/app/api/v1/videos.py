@@ -1,9 +1,13 @@
 from typing import Annotated
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse
+from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from app.core.deps import get_current_user, get_db
+from app.core.scopes import video_scope
+from app.models.farm import Field
 from app.models.identity import User
 from app.models.prediction import VideoDiagnosis
 from app.models.video import Frame, Video, VideoStatus
@@ -15,18 +19,21 @@ from app.schemas.video import (
     VideoStatusResponse,
     VideoUploadResponse,
 )
+from app.worker import process_video
 
 router = APIRouter(prefix="/videos", tags=["Videos"])
 
 @router.post("", response_model=VideoUploadResponse, status_code=status.HTTP_201_CREATED)
 async def upload_video(
-    background_tasks: BackgroundTasks,
     field_id: Annotated[str, Form(...)],
     consent: Annotated[bool, Form(...)],
     file: Annotated[UploadFile, File(...)],
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
+    field_result = await db.execute(select(Field).join(Field.farm).where(Field.id == field_id, video_scope(current_user)))
+    if field_result.scalar_one_or_none() is None:
+        raise HTTPException(status_code=404, detail="Field not found")
     video = await ingestion_service.init_upload(
         file=file,
         field_id=field_id,
@@ -36,7 +43,7 @@ async def upload_video(
     )
 
     # Launch processing pipeline as background task
-    background_tasks.add_task(ingestion_service.execute_processing_pipeline, video.id)
+    process_video.delay(video.id)
 
     return VideoUploadResponse(
         video_id=video.id,
@@ -52,7 +59,7 @@ async def get_video_status(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    stmt = select(Video).where(Video.id == video_id)
+    stmt = select(Video).join(Video.field).join(Field.farm).where(Video.id == video_id, video_scope(current_user))
     result = await db.execute(stmt)
     video = result.scalar_one_or_none()
     if not video:
@@ -73,7 +80,7 @@ async def get_video_analysis(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    stmt = select(Video).options(selectinload(Video.diagnoses)).where(Video.id == video_id)
+    stmt = select(Video).join(Video.field).join(Field.farm).options(selectinload(Video.diagnoses)).where(Video.id == video_id, video_scope(current_user))
     result = await db.execute(stmt)
     video = result.scalar_one_or_none()
     if not video:
@@ -91,6 +98,7 @@ async def get_video_analysis(
 
     return VideoAnalysisResponse(
         video_id=video.id,
+        diagnosis_id=diagnosis_row.id if diagnosis_row else None,
         crop="soybean",
         crop_confidence=0.95,
         diagnosis=VideoAnalysisDiagnosis(
@@ -120,7 +128,7 @@ async def get_video_frames(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    stmt = select(Frame).where(Frame.video_id == video_id).order_by(Frame.sequence_index)
+    stmt = select(Frame).join(Frame.video).join(Video.field).join(Field.farm).where(Frame.video_id == video_id, video_scope(current_user)).order_by(Frame.sequence_index)
     result = await db.execute(stmt)
     frames = result.scalars().all()
     return [
@@ -130,7 +138,26 @@ async def get_video_frames(
             "blur_score": f.blur_score,
             "exposure_score": f.exposure_score,
             "is_selected": f.is_selected,
-            "storage_path": f.storage_path,
+            "evidence_url": f"/api/v1/videos/{video_id}/frames/{f.id}/content",
         }
         for f in frames
     ]
+
+
+@router.get("/{video_id}/frames/{frame_id}/content")
+async def get_frame_content(
+    video_id: str,
+    frame_id: str,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    stmt = (
+        select(Frame)
+        .join(Frame.video).join(Video.field).join(Field.farm)
+        .where(Frame.id == frame_id, Frame.video_id == video_id, video_scope(current_user))
+    )
+    result = await db.execute(stmt)
+    frame = result.scalar_one_or_none()
+    if not frame or not Path(frame.storage_path).is_file():
+        raise HTTPException(status_code=404, detail="Evidence frame not found")
+    return FileResponse(frame.storage_path, media_type="image/jpeg", filename=f"frame-{frame.sequence_index}.jpg")

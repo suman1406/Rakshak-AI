@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_current_user, get_db
+from app.core.scopes import field_scope
 from app.models.farm import Farm, Field
 from app.models.identity import User
 from app.schemas.farm import FieldCreate, FieldHealthScoreOut, FieldOut
@@ -14,7 +15,7 @@ async def list_fields(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    stmt = select(Field)
+    stmt = select(Field).join(Field.farm).where(field_scope(current_user))
     result = await db.execute(stmt)
     return result.scalars().all()
 
@@ -52,7 +53,7 @@ async def get_field(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    stmt = select(Field).where(Field.id == field_id)
+    stmt = select(Field).join(Field.farm).where(Field.id == field_id, field_scope(current_user))
     result = await db.execute(stmt)
     field = result.scalar_one_or_none()
 
@@ -67,7 +68,7 @@ async def get_field_health(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    stmt = select(Field).where(Field.id == field_id)
+    stmt = select(Field).join(Field.farm).where(Field.id == field_id, field_scope(current_user))
     result = await db.execute(stmt)
     field = result.scalar_one_or_none()
 

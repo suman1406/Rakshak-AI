@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from app.core.deps import get_current_user, get_db
+from app.core.scopes import farm_scope
 from app.models.farm import Farm
 from app.models.identity import User
 from app.schemas.farm import FarmCreate, FarmOut
@@ -34,14 +35,11 @@ async def get_farm(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    stmt = select(Farm).options(selectinload(Farm.fields)).where(Farm.id == farm_id)
+    stmt = select(Farm).options(selectinload(Farm.fields)).where(Farm.id == farm_id, farm_scope(current_user))
     result = await db.execute(stmt)
     farm = result.scalar_one_or_none()
 
     if not farm:
         raise HTTPException(status_code=404, detail="Farm not found")
-
-    if farm.owner_user_id != current_user.id and current_user.role.value not in ("admin", "enterprise"):
-        raise HTTPException(status_code=403, detail="Forbidden: You do not access to this farm")
 
     return farm

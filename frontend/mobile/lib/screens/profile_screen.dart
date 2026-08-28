@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/app_theme.dart';
 import '../widgets/app_components.dart';
+import '../api_client.dart';
 import 'welcome_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -48,8 +49,9 @@ class ProfileScreen extends StatelessWidget {
         const SizedBox(height: 10),
         SecondaryAction(
             label: 'Sign out',
-            onPressed: () => Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const WelcomeScreen()),
-                (_) => false))
+            onPressed: () async {
+              await ApiClient.instance.signOut();
+              if (context.mounted) Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const WelcomeScreen()), (_) => false);
+            })
       ]);
 }

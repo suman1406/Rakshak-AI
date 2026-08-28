@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../api_client.dart';
+import '../core/app_theme.dart';
 import '../widgets/app_components.dart';
 import 'dashboard_screen.dart';
 import 'onboarding_screens.dart';
@@ -14,6 +16,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final email = TextEditingController();
   final password = TextEditingController();
   bool obscure = true;
+  bool submitting = false;
+  String? error;
 
   @override
   Widget build(BuildContext context) {
@@ -51,12 +55,24 @@ class _LoginScreenState extends State<LoginScreen> {
                             : Icons.visibility_off_outlined))),
                 validator: requiredField),
             const SizedBox(height: 24),
+            if (error != null) ...[
+              AppCard(color: RakshakColors.error, child: Text(error!, style: const TextStyle(color: RakshakColors.errorText))),
+              const SizedBox(height: 12),
+            ],
             PrimaryAction(
-                label: 'Sign in',
+                label: submitting ? 'Signing in...' : 'Sign in',
                 icon: Icons.arrow_forward_rounded,
-                onPressed: () {
-                  if (formKey.currentState!.validate())
-                    navigateTo(context, const HomeScreen());
+                onPressed: submitting ? null : () async {
+                  if (!formKey.currentState!.validate()) return;
+                  setState(() { submitting = true; error = null; });
+                  try {
+                    await ApiClient.instance.login(email.text.trim(), password.text);
+                    if (mounted) navigateTo(context, const HomeScreen());
+                  } catch (exception) {
+                    if (mounted) setState(() => error = exception.toString());
+                  } finally {
+                    if (mounted) setState(() => submitting = false);
+                  }
                 }),
           ]),
         ),

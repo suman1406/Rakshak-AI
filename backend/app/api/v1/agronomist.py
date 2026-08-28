@@ -9,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.deps import get_current_user, require_role, get_db
+from app.core.scopes import diagnosis_scope
+from app.models.farm import Field
 from app.models.identity import User, UserRole
 from app.models.prediction import VideoDiagnosis
 from app.models.video import Video
@@ -27,6 +29,8 @@ async def get_agronomist_queue(
     stmt = (
         select(VideoDiagnosis)
         .options(selectinload(VideoDiagnosis.video))
+        .join(VideoDiagnosis.video).join(Video.field).join(Field.farm)
+        .where(diagnosis_scope(current_user))
         .order_by(VideoDiagnosis.confidence.asc())
         .offset(offset)
         .limit(limit)
@@ -61,7 +65,8 @@ async def get_agronomist_case(
             selectinload(VideoDiagnosis.video).selectinload(Video.frames),
             selectinload(VideoDiagnosis.verified_labels),
         )
-        .where(VideoDiagnosis.id == video_diagnosis_id)
+        .join(VideoDiagnosis.video).join(Video.field).join(Field.farm)
+        .where(VideoDiagnosis.id == video_diagnosis_id, diagnosis_scope(current_user))
     )
     result = await db.execute(stmt)
     diag = result.scalar_one_or_none()
@@ -86,7 +91,7 @@ async def get_agronomist_case(
                 "blur_score": f.blur_score,
                 "exposure_score": f.exposure_score,
                 "is_selected": f.is_selected,
-                "storage_path": f.storage_path,
+                "evidence_url": f"/api/v1/videos/{diag.video_id}/frames/{f.id}/content",
             }
             for f in (diag.video.frames if diag.video else [])
         ],

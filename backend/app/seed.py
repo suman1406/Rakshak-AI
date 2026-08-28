@@ -7,6 +7,7 @@ from sqlalchemy import select
 from .core.security import get_password_hash
 from .db.base import Base
 from .db.session import async_session_factory, engine
+from .db.migrations import apply_pilot_schema_upgrades
 from .models.farm import Crop, Disease, Farm, Field
 from .models.identity import User, UserRole
 from .models import farm, identity, prediction, video  # noqa: F401
@@ -24,6 +25,7 @@ PASSWORD = "Rakshak@2026"
 
 
 async def seed() -> None:
+    await apply_pilot_schema_upgrades(engine)
     async with engine.begin() as connection:
         await connection.run_sync(Base.metadata.create_all)
 

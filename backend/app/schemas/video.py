@@ -37,6 +37,7 @@ class VideoAnalysisDiagnosis(BaseModel):
 
 class VideoAnalysisResponse(BaseModel):
     video_id: str
+    diagnosis_id: str | None = None
     crop: str
     crop_confidence: float
     diagnosis: VideoAnalysisDiagnosis

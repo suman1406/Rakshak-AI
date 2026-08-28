@@ -11,9 +11,11 @@ representative values, not outputs of real ML inference.
 """
 import uuid
 from datetime import datetime, timezone, timedelta
-from sqlalchemy import select, func
+from sqlalchemy import select
 
 from .session import async_session_factory
+from .migrations import apply_pilot_schema_upgrades
+from .session import engine
 from ..core.security import get_password_hash
 from ..models.identity import Organization, OrgType, User, UserRole
 from ..models.farm import Crop, Disease, Farm, Field
@@ -75,9 +77,10 @@ def _dt(days_ago: int = 0, hours_ago: int = 0) -> datetime:
 
 async def seed_database() -> None:
     """Run all seeds. No-op if data already exists."""
+    await apply_pilot_schema_upgrades(engine)
     async with async_session_factory() as session:
-        result = await session.execute(select(func.count()).select_from(Crop))
-        if result.scalar_one() > 0:
+        result = await session.execute(select(User).where(User.id == ID["user_admin"]))
+        if result.scalar_one_or_none() is not None:
             logger.info("Seed: demo data already present — skipping.")
             return
 
@@ -186,7 +189,7 @@ async def seed_database() -> None:
                 storage_path="demo-seed/video_4_SYNTHETIC.mp4",
                 duration_seconds=30.5,
                 device_metadata={"model": "iPhone 13", "os": "iOS 17", "note": "synthetic-seed"},
-                total_frames_extracted=None, usable_frames_count=None,
+                total_frames_extracted=0, usable_frames_count=0,
                 created_at=_dt(0, hours_ago=1), updated_at=_dt(0, hours_ago=1),
             ),
         ])

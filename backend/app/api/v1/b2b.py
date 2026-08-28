@@ -8,6 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user, require_role, get_db
+from app.core.scopes import farm_scope
 from app.models.farm import Farm, Field
 from app.models.identity import User, UserRole
 from app.models.prediction import VideoDiagnosis
@@ -21,16 +22,17 @@ async def get_b2b_dashboard(
     current_user: Annotated[User, Depends(require_role(UserRole.enterprise, UserRole.admin))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    farms_count_stmt = select(func.count(Farm.id))
+    scope = farm_scope(current_user)
+    farms_count_stmt = select(func.count(Farm.id)).where(scope)
     farms_count = (await db.execute(farms_count_stmt)).scalar() or 0
 
-    fields_count_stmt = select(func.count(Field.id))
+    fields_count_stmt = select(func.count(Field.id)).join(Field.farm).where(scope)
     fields_count = (await db.execute(fields_count_stmt)).scalar() or 0
 
-    videos_count_stmt = select(func.count(Video.id))
+    videos_count_stmt = select(func.count(Video.id)).join(Video.field).join(Field.farm).where(scope)
     videos_count = (await db.execute(videos_count_stmt)).scalar() or 0
 
-    diag_count_stmt = select(func.count(VideoDiagnosis.id))
+    diag_count_stmt = select(func.count(VideoDiagnosis.id)).join(VideoDiagnosis.video).join(Video.field).join(Field.farm).where(scope)
     total_diagnoses = (await db.execute(diag_count_stmt)).scalar() or 0
 
     return {

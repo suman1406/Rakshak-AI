@@ -8,6 +8,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user, get_db, require_role
+from app.core.scopes import diagnosis_scope
+from app.models.farm import Field
+from app.models.video import Video
 from app.models.identity import User, UserRole
 from app.models.prediction import VideoDiagnosis
 from app.models.verification import Feedback, VerifiedLabel
@@ -29,7 +32,7 @@ async def get_diagnosis_report(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    stmt = select(VideoDiagnosis).where(VideoDiagnosis.id == video_diagnosis_id)
+    stmt = select(VideoDiagnosis).join(VideoDiagnosis.video).join(Video.field).join(Field.farm).where(VideoDiagnosis.id == video_diagnosis_id, diagnosis_scope(current_user))
     result = await db.execute(stmt)
     diag = result.scalar_one_or_none()
     if not diag:
@@ -69,7 +72,7 @@ async def submit_farmer_feedback(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    stmt = select(VideoDiagnosis).where(VideoDiagnosis.id == video_diagnosis_id)
+    stmt = select(VideoDiagnosis).join(VideoDiagnosis.video).join(Video.field).join(Field.farm).where(VideoDiagnosis.id == video_diagnosis_id, diagnosis_scope(current_user))
     result = await db.execute(stmt)
     diag = result.scalar_one_or_none()
     if not diag:
@@ -98,7 +101,7 @@ async def submit_agronomist_verification(
     current_user: Annotated[User, Depends(require_role(UserRole.agronomist, UserRole.admin))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    stmt = select(VideoDiagnosis).where(VideoDiagnosis.id == video_diagnosis_id)
+    stmt = select(VideoDiagnosis).join(VideoDiagnosis.video).join(Video.field).join(Field.farm).where(VideoDiagnosis.id == video_diagnosis_id, diagnosis_scope(current_user))
     result = await db.execute(stmt)
     diag = result.scalar_one_or_none()
     if not diag:
