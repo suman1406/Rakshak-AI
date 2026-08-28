@@ -27,6 +27,22 @@ class ApiClient {
     try { await currentUser(); return true; } catch (_) { await signOut(); return false; }
   }
 
+  Future<bool> refreshSession() async {
+    final refresh = await _secureStorage.read(key: 'refresh_token');
+    if (refresh == null) return false;
+    try {
+      final response = await http.post(_uri('/api/v1/auth/refresh'), headers: _jsonHeaders(), body: jsonEncode({'refresh_token': refresh}));
+      final body = _decode(response);
+      _ensureSuccess(response, body);
+      _accessToken = body['access_token'] as String?;
+      if (_accessToken != null) await _secureStorage.write(key: 'access_token', value: _accessToken);
+      return _accessToken != null;
+    } catch (_) {
+      await signOut();
+      return false;
+    }
+  }
+
   Future<Map<String, dynamic>> currentUser() async => (await _get('/api/v1/auth/me')) as Map<String, dynamic>;
   Map<String, String> get mediaHeaders => _authHeaders();
   Future<List<Map<String, dynamic>>> listFields() async => (await _get('/api/v1/fields')).cast<Map<String, dynamic>>();
@@ -52,12 +68,18 @@ class ApiClient {
   Future<void> signOut() async { _accessToken = null; await _secureStorage.deleteAll(); }
 
   Future<dynamic> _get(String path) async {
-    final response = await http.get(_uri(path), headers: _authHeaders());
+    var response = await http.get(_uri(path), headers: _authHeaders());
+    if (response.statusCode == 401 && await refreshSession()) {
+      response = await http.get(_uri(path), headers: _authHeaders());
+    }
     final body = _decode(response); _ensureSuccess(response, body); return body;
   }
 
   Future<dynamic> _post(String path, Map<String, dynamic> payload) async {
-    final response = await http.post(_uri(path), headers: {..._jsonHeaders(), ..._authHeaders()}, body: jsonEncode(payload));
+    var response = await http.post(_uri(path), headers: {..._jsonHeaders(), ..._authHeaders()}, body: jsonEncode(payload));
+    if (response.statusCode == 401 && await refreshSession()) {
+      response = await http.post(_uri(path), headers: {..._jsonHeaders(), ..._authHeaders()}, body: jsonEncode(payload));
+    }
     final body = _decode(response); _ensureSuccess(response, body); return body;
   }
 
@@ -65,7 +87,7 @@ class ApiClient {
   Map<String, String> _jsonHeaders() => {'Content-Type': 'application/json', 'Accept': 'application/json'};
   Map<String, String> _authHeaders() => _accessToken == null ? {} : {'Authorization': 'Bearer $_accessToken'};
   dynamic _decode(http.Response response) { try { return jsonDecode(response.body); } catch (_) { return {'detail': response.body}; } }
-  void _ensureSuccess(http.Response response, dynamic body) { if (response.statusCode >= 200 && response.statusCode < 300) return; throw ApiException(body is Map ? body['detail']?.toString() ?? 'Request failed' : 'Request failed', response.statusCode); }
+  void _ensureSuccess(http.Response response, dynamic body) { if (response.statusCode >= 200 && response.statusCode < 300) return; throw ApiException(body is Map ? (body['message'] ?? body['detail'])?.toString() ?? 'Request failed' : 'Request failed', response.statusCode); }
 }
 
 class ApiException implements Exception {

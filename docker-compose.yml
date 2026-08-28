@@ -30,6 +30,9 @@ services:
       REDIS_URL: redis://redis:6379/0
       S3_ENDPOINT_URL: http://minio:9000
       S3_BUCKET_NAME: rakshak-evidence
+      MAX_UPLOAD_BYTES: 104857600
+      CELERY_CPU_QUEUE: cpu_processing
+      CELERY_GPU_QUEUE: gpu_inference
       JWT_SECRET_KEY: change-me
       ENVIRONMENT: docker
     ports: ["8000:8000"]
@@ -42,10 +45,12 @@ services:
         condition: service_started
   worker:
     build: ./backend
-    command: celery -A app.worker.celery_app worker --loglevel=info
+    command: celery -A app.worker.celery_app worker --loglevel=info -Q cpu_processing,gpu_inference
     environment:
       DATABASE_URL: postgresql+psycopg://rakshak:rakshak@postgres:5432/rakshak
       REDIS_URL: redis://redis:6379/0
+      CELERY_CPU_QUEUE: cpu_processing
+      CELERY_GPU_QUEUE: gpu_inference
     depends_on:
       postgres:
         condition: service_healthy

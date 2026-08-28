@@ -2,6 +2,7 @@ import { UserRole } from '../types';
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/$/, '');
 const TOKEN_KEY = 'rakshak_ai_access_token';
+const REFRESH_KEY = `${TOKEN_KEY}_refresh`;
 
 export class ApiError extends Error {
   constructor(message: string, public readonly status: number) {
@@ -13,17 +14,34 @@ export class ApiError extends Error {
 const parseResponse = async (response: Response) => {
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new ApiError(body.detail || 'Request failed', response.status);
+    throw new ApiError(body.message || body.detail || 'Request failed', response.status);
   }
   return body;
 };
 
-const request = async (path: string, init: RequestInit = {}) => {
+const refreshAccessToken = async () => {
+  if (typeof window === 'undefined') return false;
+  const refreshToken = window.localStorage.getItem(REFRESH_KEY);
+  if (!refreshToken) return false;
+  const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ refresh_token: refreshToken }),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok || !body.access_token) return false;
+  window.localStorage.setItem(TOKEN_KEY, body.access_token);
+  return true;
+};
+
+const request = async (path: string, init: RequestInit = {}, canRefresh = true): Promise<any> => {
   const token = typeof window === 'undefined' ? null : window.localStorage.getItem(TOKEN_KEY);
   const headers = new Headers(init.headers);
   headers.set('Accept', 'application/json');
   if (token) headers.set('Authorization', `Bearer ${token}`);
-  return parseResponse(await fetch(`${API_BASE_URL}${path}`, { ...init, headers }));
+  const response = await fetch(`${API_BASE_URL}${path}`, { ...init, headers });
+  if (response.status === 401 && canRefresh && await refreshAccessToken()) return request(path, init, false);
+  return parseResponse(response);
 };
 
 export const apiClient = {
@@ -36,6 +54,7 @@ export const apiClient = {
     });
     if (typeof window !== 'undefined' && data.access_token) {
       window.localStorage.setItem(TOKEN_KEY, data.access_token);
+      if (data.refresh_token) window.localStorage.setItem(`${TOKEN_KEY}_refresh`, data.refresh_token);
     }
     return data as { access_token: string; refresh_token?: string; role: UserRole; user_id: string };
   },
@@ -44,7 +63,10 @@ export const apiClient = {
     return data as { id: string; email?: string; phone?: string; role: UserRole; org_id?: string; display_name?: string };
   },
   logout: () => {
-    if (typeof window !== 'undefined') window.localStorage.removeItem(TOKEN_KEY);
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(TOKEN_KEY);
+      window.localStorage.removeItem(REFRESH_KEY);
+    }
   },
   listFields: () => request('/api/v1/fields'),
   getField: (fieldId: string) => request(`/api/v1/fields/${fieldId}`),

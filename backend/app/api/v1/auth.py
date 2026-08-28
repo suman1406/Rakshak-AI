@@ -8,6 +8,7 @@ from app.core.deps import get_current_user, get_db
 from app.core.security import create_access_token, create_refresh_token, decode_token, get_password_hash, verify_password
 from app.models.identity import User, UserRole
 from app.schemas.auth import TokenResponse, UserLogin, UserOut, UserRegister
+from app.core.audit import write_audit_log
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -46,6 +47,8 @@ async def register(payload: UserRegister, db: Annotated[AsyncSession, Depends(ge
         display_name=payload.display_name,
     )
     db.add(new_user)
+    await db.flush()
+    await write_audit_log(db, actor_user_id=new_user.id, action="user.registered", entity_type="user", entity_id=new_user.id, metadata={"role": new_user.role.value})
     await db.commit()
     await db.refresh(new_user)
     return new_user
@@ -68,6 +71,8 @@ async def login(payload: UserLogin, db: Annotated[AsyncSession, Depends(get_db)]
 
     access_token = create_access_token(subject=user.id, role=user.role.value, org_id=user.org_id)
     refresh_token = create_refresh_token(subject=user.id)
+    await write_audit_log(db, actor_user_id=user.id, action="user.logged_in", entity_type="user", entity_id=user.id)
+    await db.commit()
     return TokenResponse(
         access_token=access_token,
         refresh_token=refresh_token,
@@ -89,7 +94,7 @@ async def refresh_token(payload: RefreshRequest, db: Annotated[AsyncSession, Dep
             raise HTTPException(status_code=401, detail="User not found")
         new_access_token = create_access_token(subject=user.id, role=user.role.value, org_id=user.org_id)
         return RefreshResponse(access_token=new_access_token)
-    except (jwt.PyJWTError, Exception):
+    except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
 

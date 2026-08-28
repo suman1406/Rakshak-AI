@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     S3_BUCKET_NAME: str = "fasal-rakshak-evidence"
     S3_REGION: str = "auto"
     LOCAL_STORAGE_DIR: str = "./storage"
+    MAX_UPLOAD_BYTES: int = 100 * 1024 * 1024
+    ALLOWED_VIDEO_EXTENSIONS: str = ".mp4,.mov,.m4v,.avi"
+    CELERY_CPU_QUEUE: str = "cpu_processing"
+    CELERY_GPU_QUEUE: str = "gpu_inference"
     
     # Pipeline thresholds
     MIN_USABLE_FRAMES_THRESHOLD: int = 5

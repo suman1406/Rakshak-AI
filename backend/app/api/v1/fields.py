@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_current_user, get_db
 from app.core.scopes import field_scope
+from app.core.audit import write_audit_log
 from app.models.farm import Farm, Field
 from app.models.identity import User
 from app.schemas.farm import FieldCreate, FieldHealthScoreOut, FieldOut
@@ -43,6 +44,8 @@ async def create_field(
         area_hectares=payload.area_hectares,
     )
     db.add(field)
+    await db.flush()
+    await write_audit_log(db, actor_user_id=current_user.id, action="field.created", entity_type="field", entity_id=field.id, metadata={"farm_id": farm_id})
     await db.commit()
     await db.refresh(field)
     return field

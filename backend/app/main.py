@@ -1,5 +1,7 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 # Explicit absolute imports for robust container execution
@@ -30,6 +32,26 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
+
+
+def _error_response(request: Request, status_code: int, message: str, error_code: str, headers: dict[str, str] | None = None) -> JSONResponse:
+    return JSONResponse(
+        status_code=status_code,
+        content={"error_code": error_code, "message": message, "request_id": getattr(request.state, "request_id", None)},
+        headers=headers,
+    )
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    code = {401: "AUTHENTICATION_REQUIRED", 403: "FORBIDDEN", 404: "NOT_FOUND", 409: "CONFLICT"}.get(exc.status_code, "REQUEST_FAILED")
+    message = exc.detail if isinstance(exc.detail, str) else "Request failed"
+    return _error_response(request, exc.status_code, message, code, exc.headers)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    return _error_response(request, 422, "Request validation failed", "VALIDATION_ERROR")
 
 # Middlewares
 app.add_middleware(RequestLoggingMiddleware)

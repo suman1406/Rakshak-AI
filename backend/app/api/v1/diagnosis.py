@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user, get_db, require_role
 from app.core.scopes import diagnosis_scope
+from app.core.audit import write_audit_log
 from app.models.farm import Field
 from app.models.video import Video
 from app.models.identity import User, UserRole
@@ -85,6 +86,8 @@ async def submit_farmer_feedback(
         note=payload.note,
     )
     db.add(fb)
+    await db.flush()
+    await write_audit_log(db, actor_user_id=current_user.id, action="diagnosis.feedback_submitted", entity_type="diagnosis", entity_id=video_diagnosis_id)
     await db.commit()
     await db.refresh(fb)
     return FarmerFeedbackResponse(
@@ -118,6 +121,8 @@ async def submit_agronomist_verification(
         notes=payload.notes,
     )
     db.add(vl)
+    await db.flush()
+    await write_audit_log(db, actor_user_id=current_user.id, action="diagnosis.verified", entity_type="diagnosis", entity_id=video_diagnosis_id, metadata={"decision": payload.disease_id or "healthy"})
     await db.commit()
     await db.refresh(vl)
     return AgronomistVerifyResponse(

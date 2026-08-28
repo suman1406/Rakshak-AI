@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from app.core.deps import get_current_user, get_db
 from app.core.scopes import farm_scope
+from app.core.audit import write_audit_log
 from app.models.farm import Farm
 from app.models.identity import User
 from app.schemas.farm import FarmCreate, FarmOut
@@ -25,6 +26,8 @@ async def create_farm(
         district=payload.district,
     )
     db.add(farm)
+    await db.flush()
+    await write_audit_log(db, actor_user_id=current_user.id, action="farm.created", entity_type="farm", entity_id=farm.id)
     await db.commit()
     await db.refresh(farm)
     return farm

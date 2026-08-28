@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from app.core.deps import get_current_user, get_db
 from app.core.scopes import video_scope
+from app.core.audit import write_audit_log
 from app.models.farm import Field
 from app.models.identity import User
 from app.models.prediction import VideoDiagnosis
@@ -156,6 +157,8 @@ async def get_frame_content(
         .join(Frame.video).join(Video.field).join(Field.farm)
         .where(Frame.id == frame_id, Frame.video_id == video_id, video_scope(current_user))
     )
+    await write_audit_log(db, actor_user_id=current_user.id, action="video.uploaded", entity_type="video", entity_id=video.id, metadata={"field_id": field_id})
+    await db.commit()
     result = await db.execute(stmt)
     frame = result.scalar_one_or_none()
     if not frame or not Path(frame.storage_path).is_file():

@@ -1,4 +1,5 @@
 import shutil
+from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 from fastapi import HTTPException, UploadFile
@@ -37,6 +38,11 @@ class VideoIngestionService:
         if not consent:
             raise HTTPException(status_code=400, detail="User consent is required to process field video")
 
+        extension = Path(file.filename or "video.mp4").suffix.lower()
+        allowed = {item.strip().lower() for item in settings.ALLOWED_VIDEO_EXTENSIONS.split(",") if item.strip()}
+        if extension not in allowed:
+            raise HTTPException(status_code=415, detail="Unsupported video format")
+
         # Validate field exists
         stmt = select(Field).where(Field.id == field_id)
         result = await db.execute(stmt)
@@ -54,6 +60,9 @@ class VideoIngestionService:
         # Write uploaded chunks to disk
         with open(video_file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
+        if video_file_path.stat().st_size > settings.MAX_UPLOAD_BYTES:
+            video_file_path.unlink(missing_ok=True)
+            raise HTTPException(status_code=413, detail="Video exceeds the maximum upload size")
 
         video = Video(
             id=video_id,
@@ -267,7 +276,9 @@ class VideoIngestionService:
                 if video:
                     video.status = VideoStatus.failed
                     video.error_detail = str(e)
+                    video.last_failure_at = datetime.now(timezone.utc)
                     await db_session.commit()
+                raise
         else:
             async with async_session_factory() as db:
                 try:
@@ -280,6 +291,8 @@ class VideoIngestionService:
                     if video:
                         video.status = VideoStatus.failed
                         video.error_detail = str(e)
+                        video.last_failure_at = datetime.now(timezone.utc)
                         await db.commit()
+                    raise
 
 ingestion_service = VideoIngestionService()

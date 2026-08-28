@@ -30,6 +30,10 @@ class Video(Base):
     total_frames_extracted: Mapped[int | None] = mapped_column(Integer, nullable=True)
     usable_frames_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     error_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+    retry_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    job_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    job_completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_failure_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 
