@@ -46,10 +46,12 @@ export const AppLayout: React.FC = () => {
           </div>
           <span className="font-extrabold text-base tracking-tight">Rakshak AI</span>
         </Link>
-        <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1 rounded-lg hover:bg-white/10">
+        <button type="button" aria-label={sidebarOpen ? 'Close workspace navigation' : 'Open workspace navigation'} aria-expanded={sidebarOpen} onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1 rounded-lg hover:bg-white/10">
           {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
       </div>
+
+      {sidebarOpen && <button type="button" aria-label="Close workspace navigation" onClick={() => setSidebarOpen(false)} className="fixed inset-0 z-20 bg-field-ink/40 md:hidden" />}
 
       {/* Sidebar Navigation */}
       <aside
@@ -92,6 +94,7 @@ export const AppLayout: React.FC = () => {
                   key={item.path}
                   to={item.path}
                   onClick={() => setSidebarOpen(false)}
+                  aria-current={isActive ? 'page' : undefined}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition ${
                     isActive
                       ? 'bg-lime-signal text-field-ink font-bold shadow-xs'

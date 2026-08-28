@@ -23,8 +23,8 @@ export const PublicNavbar: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-pure-surface/90 backdrop-blur-md border-b border-structural">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
+    <header className="sticky top-0 z-50 bg-pure-surface/95 backdrop-blur-md border-b border-structural">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[4.5rem] flex items-center justify-between">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2.5 group">
           <div className="w-10 h-10 rounded-xl bg-field-ink text-lime-signal flex items-center justify-center font-bold text-xl shadow-xs group-hover:scale-105 transition">
@@ -46,8 +46,9 @@ export const PublicNavbar: React.FC = () => {
               <Link
                 key={link.path}
                 to={link.path}
-                className={`text-sm font-medium transition ${
-                  isActive ? 'text-field-ink font-semibold' : 'text-muted-leaf hover:text-field-ink'
+                aria-current={isActive ? 'page' : undefined}
+                className={`relative py-2 text-sm font-medium transition ${
+                  isActive ? 'text-field-ink font-semibold after:absolute after:left-0 after:right-0 after:-bottom-1 after:h-0.5 after:bg-lime-signal after:content-[""]' : 'text-muted-leaf hover:text-field-ink'
                 }`}
               >
                 {link.name}
@@ -87,6 +88,9 @@ export const PublicNavbar: React.FC = () => {
 
         {/* Mobile menu button */}
         <button
+          type="button"
+          aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+          aria-expanded={mobileMenuOpen}
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           className="md:hidden p-2 rounded-lg text-field-ink hover:bg-field-canvas"
         >
@@ -102,7 +106,8 @@ export const PublicNavbar: React.FC = () => {
               key={link.path}
               to={link.path}
               onClick={() => setMobileMenuOpen(false)}
-              className="block py-2 text-sm font-medium text-field-ink hover:text-muted-leaf"
+              aria-current={location.pathname === link.path ? 'page' : undefined}
+              className={`block py-2 text-sm font-medium ${location.pathname === link.path ? 'text-field-ink font-bold' : 'text-muted-leaf hover:text-field-ink'}`}
             >
               {link.name}
             </Link>
