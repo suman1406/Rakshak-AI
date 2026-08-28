@@ -53,7 +53,11 @@ export const OrgDashboard: React.FC = () => {
   }, [district, timeRange]);
 
   if (loading || !metrics) {
-    return <div className="p-8 text-center text-xs text-muted-leaf">Loading organization command center...</div>;
+    return <div className="space-y-6 p-6" aria-busy="true" aria-label="Loading organization command center">
+      <div className="h-28 animate-pulse rounded-3xl bg-white/70 border border-structural" />
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">{Array.from({ length: 5 }).map((_, index) => <div key={index} className="h-24 animate-pulse rounded-2xl bg-white/70 border border-structural" />)}</div>
+      <div className="h-80 animate-pulse rounded-3xl bg-white/70 border border-structural" />
+    </div>;
   }
 
   // Chart dataset for health status breakdown
@@ -78,6 +82,7 @@ export const OrgDashboard: React.FC = () => {
             <p className="text-xs text-muted-leaf mt-1">
               FPO & Regional Agricultural Field Health Intelligence • Shinde FPO Collective
             </p>
+            <p className="mt-2 text-[10px] font-mono uppercase tracking-wider text-muted-leaf">Last updated 2 minutes ago · {timeRange === '30d' ? '30-day view' : timeRange}</p>
           </div>
 
           <div className="flex items-center gap-2 text-xs">

@@ -41,3 +41,7 @@ rakshak.db
 # Ignore root-level generated model assets, but keep backend/app/models tracked.
 /models/
 work/
+
+# Local agent tooling installed outside the application
+.agents/
+skills-lock.json

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PublicNavbar } from '../../components/layout/PublicNavbar';
 import { PublicFooter } from '../../components/layout/PublicFooter';
@@ -6,6 +6,7 @@ import { PRICING_PLANS } from '../../data/mockData';
 import { CheckCircle2, ShieldCheck, Sparkles, HelpCircle } from 'lucide-react';
 
 export const PricingPage: React.FC = () => {
+  const [annual, setAnnual] = useState(false);
   return (
     <div className="min-h-screen bg-field-canvas text-field-ink flex flex-col font-sans">
       <PublicNavbar />
@@ -22,6 +23,13 @@ export const PricingPage: React.FC = () => {
           <p className="text-sm text-muted-leaf max-w-xl mx-auto">
             These are pilot pricing tiers designed for initial FPO rollouts and field deployment testing.
           </p>
+        </div>
+
+        <div className="flex justify-center">
+          <div className="inline-flex items-center gap-1 rounded-full border border-structural bg-pure-surface p-1 text-xs font-bold shadow-2xs" aria-label="Billing frequency">
+            <button type="button" onClick={() => setAnnual(false)} className={`rounded-full px-4 py-2 ${!annual ? 'bg-field-ink text-white' : 'text-muted-leaf'}`}>Monthly</button>
+            <button type="button" onClick={() => setAnnual(true)} className={`rounded-full px-4 py-2 ${annual ? 'bg-field-ink text-white' : 'text-muted-leaf'}`}>Annual <span className="ml-1 text-[10px] text-lime-signal">Save 20%</span></button>
+          </div>
         </div>
 
         {/* Pricing Cards Grid */}
@@ -46,7 +54,7 @@ export const PricingPage: React.FC = () => {
                   <h2 className="text-xl font-bold text-field-ink">{plan.name}</h2>
                   <p className="text-xs text-muted-leaf mt-1">{plan.targetUser}</p>
                   <div className="mt-4 flex items-baseline gap-1">
-                    <span className="text-4xl font-black text-field-ink">{plan.price}</span>
+                    <span className="text-4xl font-black text-field-ink">{annual && plan.price !== 'Custom' ? plan.price.replace(/\d+/, (value) => String(Math.round(Number(value) * 0.8))) : plan.price}</span>
                     <span className="text-xs text-muted-leaf font-medium">{plan.period}</span>
                   </div>
                 </div>
@@ -98,6 +106,12 @@ export const PricingPage: React.FC = () => {
               Indicative plans are shown above. Government programs, state partnerships, and FPO deployments can be scoped with our team.
             </p>
           </div>
+        </div>
+
+        <div className="grid sm:grid-cols-3 gap-3 text-xs text-muted-leaf">
+          <div className="rounded-2xl border border-structural bg-pure-surface p-4"><p className="font-bold text-field-ink">Pilot-first pricing</p><p className="mt-1">Confirm scope and farm volume before a contract starts.</p></div>
+          <div className="rounded-2xl border border-structural bg-pure-surface p-4"><p className="font-bold text-field-ink">No automatic charge</p><p className="mt-1">This page does not collect payment details or start a subscription.</p></div>
+          <div className="rounded-2xl border border-structural bg-pure-surface p-4"><p className="font-bold text-field-ink">Talk to field ops</p><p className="mt-1">Government and FPO deployments can be tailored with the team.</p></div>
         </div>
       </main>
 

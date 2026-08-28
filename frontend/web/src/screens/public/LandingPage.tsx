@@ -170,6 +170,33 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
+      {/* Trust & objection handling */}
+      <section className="py-16 bg-field-canvas border-b border-structural">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-[1fr_1.1fr] gap-10 items-center">
+          <div className="space-y-5">
+            <span className="eyebrow">Built for the field, reviewed by people</span>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-field-ink">A signal is useful only when you can see why it was raised.</h2>
+            <p className="text-sm text-muted-leaf leading-relaxed max-w-xl">Every indication carries its evidence frames, confidence band, and a clear path to agronomist review. That gives growers context before they act.</p>
+            <div className="grid sm:grid-cols-3 gap-3 pt-2">
+              {[
+                ['16', 'evidence frames'],
+                ['40+', 'leaf regions'],
+                ['1', 'review queue'],
+              ].map(([value, label]) => <div key={label} className="surface-card rounded-2xl p-4"><p className="metric-value text-2xl font-black text-field-ink">{value}</p><p className="text-[11px] text-muted-leaf mt-1">{label}</p></div>)}
+            </div>
+          </div>
+          <div className="relative overflow-hidden rounded-3xl border border-structural bg-field-ink min-h-[18rem] shadow-lg">
+            <img src="https://kj1bcdn.b-cdn.net/media/62983/jl.jpg?width=1200" alt="Farmer inspecting a green crop field" className="absolute inset-0 h-full w-full object-cover opacity-75" />
+            <div className="absolute inset-0 bg-field-ink/35" />
+            <div className="absolute left-5 top-5 max-w-[15rem] rounded-2xl border border-white/20 bg-field-ink/85 p-4 text-white backdrop-blur-sm">
+              <p className="eyebrow text-lime-signal">Field note / 04</p>
+              <p className="mt-2 text-sm font-semibold leading-5">The next best action starts with better evidence.</p>
+            </div>
+            <div className="absolute bottom-5 right-5 rounded-xl border border-white/20 bg-white/90 px-3 py-2 text-[10px] font-mono font-bold text-field-ink">OBSERVE → REVIEW → ACT</div>
+          </div>
+        </div>
+      </section>
+
       {/* Feature Deep Dive Sections */}
       <section className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-24">
         {/* Multi-frame Intelligence */}
@@ -365,6 +392,20 @@ export const LandingPage: React.FC = () => {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      <section className="py-16 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+        <div className="text-center space-y-3 mb-8">
+          <span className="eyebrow">Before you start</span>
+          <h2 className="text-3xl font-extrabold text-field-ink">Clear answers for a careful rollout</h2>
+        </div>
+        <div className="divide-y divide-structural rounded-3xl border border-structural bg-pure-surface px-6">
+          {[
+            ['Is Rakshak AI a confirmed diagnosis?', 'No. It is an AI indication with evidence and confidence. High-risk or uncertain cases can be reviewed by an agronomist.'],
+            ['What does a farmer need to capture?', 'A short sweep across the upper, middle, and lower soybean canopy in good light. The app checks video quality before analysis.'],
+            ['Can an organization start with a pilot?', 'Yes. Pilot plans are designed for FPO and regional deployments, with scope and support agreed with the field operations team.'],
+          ].map(([question, answer]) => <details key={question} className="group py-5"><summary className="cursor-pointer list-none pr-8 text-sm font-bold text-field-ink marker:content-none">{question}<span className="float-right text-muted-leaf transition group-open:rotate-45">+</span></summary><p className="pt-3 text-xs leading-5 text-muted-leaf max-w-2xl">{answer}</p></details>)}
         </div>
       </section>
 
