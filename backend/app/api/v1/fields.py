@@ -96,18 +96,4 @@ async def get_field_health(
     if not field:
         raise HTTPException(status_code=404, detail="Field not found")
 
-    return FieldHealthScoreOut(
-        field_id=field_id,
-        fasal_health_score=78,
-        components={
-            "disease_prevalence": 25,
-            "severity": 20,
-            "healthy_ratio": 25,
-            "visual_stress": 4,
-            "confidence": 4,
-        },
-        zones=[
-            {"zone_label": "North Plot", "status": "healthy"},
-            {"zone_label": "South Plot", "status": "early_disease"},
-        ],
-    )
+    raise HTTPException(status_code=501, detail="Field health scoring is unavailable until its methodology is validated")

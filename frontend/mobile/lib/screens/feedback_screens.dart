@@ -17,7 +17,11 @@ class _FeedbackState extends State<FeedbackScreen> {
   Future<void> submit() async {
     if (widget.diagnosisId == null || rating == 0) return;
     setState(() => submitting = true);
-    try { await ApiClient.instance.submitFeedback(widget.diagnosisId!, correctionType: rating >= 4 ? 'agree' : 'disagree', note: noteController.text.trim().isEmpty ? null : noteController.text.trim()); if (mounted) navigateTo(context, const ReviewRequestedScreen()); }
+    try {
+      final note = noteController.text.trim();
+      await ApiClient.instance.submitFeedback(widget.diagnosisId!, correctionType: 'other', note: 'Rating: $rating/5${note.isEmpty ? '' : '. $note'}');
+      if (mounted) Navigator.of(context).pop();
+    }
     catch (error) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not submit feedback: $error'))); }
     finally { if (mounted) setState(() => submitting = false); }
   }

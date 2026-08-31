@@ -103,6 +103,25 @@ async def submit_farmer_feedback(
     )
 
 
+@router.post("/{video_diagnosis_id}/review-requests", status_code=status.HTTP_201_CREATED)
+async def request_agronomist_review(
+    video_diagnosis_id: str,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    diag = (await db.execute(select(VideoDiagnosis).join(VideoDiagnosis.video).join(Video.field).join(Field.farm).where(VideoDiagnosis.id == video_diagnosis_id, diagnosis_scope(current_user)))).scalar_one_or_none()
+    if not diag:
+        raise HTTPException(status_code=404, detail="Diagnosis record not found")
+    work_item = (await db.execute(select(ReviewWorkItem).where(ReviewWorkItem.video_diagnosis_id == video_diagnosis_id))).scalar_one_or_none()
+    if work_item is None:
+        work_item = ReviewWorkItem(video_diagnosis_id=video_diagnosis_id, status=ReviewStatus.pending)
+        db.add(work_item)
+        await write_audit_log(db, actor_user_id=current_user.id, action="diagnosis.review_requested", entity_type="diagnosis", entity_id=video_diagnosis_id)
+        await db.commit()
+        await db.refresh(work_item)
+    return {"review_work_item_id": work_item.id, "status": work_item.status, "already_requested": work_item.status != ReviewStatus.pending}
+
+
 @router.post("/{video_diagnosis_id}/verify", response_model=AgronomistVerifyResponse, status_code=status.HTTP_201_CREATED)
 async def submit_agronomist_verification(
     video_diagnosis_id: str,

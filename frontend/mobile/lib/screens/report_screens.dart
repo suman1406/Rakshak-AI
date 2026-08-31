@@ -30,6 +30,9 @@ class _ReportState extends State<CropHealthReportScreen> {
     final disease = diagnosis['disease']?.toString() ?? 'Soybean health signal';
     final confidence = ((diagnosis['confidence'] as num?)?.toDouble() ?? 0) * 100;
     final diagnosisId = data?['diagnosis_id']?.toString();
+    final state = data?['result_state']?.toString();
+    if (state == 'insufficient_evidence' || state == 'failed') return ResultStateScreen(title: state == 'failed' ? 'Scan could not complete' : 'Video needs another try', icon: Icons.videocam_off_outlined, statusColor: RakshakColors.warning, description: data?['retake_guidance']?.toString() ?? 'Please capture another video.', detail: 'No diagnosis was created for this scan.', action: 'Scan another area');
+    if (state == 'unknown') return const UncertainResultScreen();
     return AppPage(title: 'Crop health report', onBack: () => Navigator.pop(context), child: PageContent(children: [
       AppCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Row(children: [Expanded(child: Text(disease, style: Theme.of(context).textTheme.headlineSmall)), const StatusBadge(label: 'AI indication', color: RakshakColors.warning, textColor: RakshakColors.warningText)]), const SizedBox(height: 8), Text(data == null ? 'North plot · Today' : 'Review recommended'), const SizedBox(height: 20), Text('${confidence.round()}%', style: Theme.of(context).textTheme.displaySmall), Text('Confidence across ${evidence['supporting_frames'] ?? 0} supporting frames')])),
       const SizedBox(height: 24), const SectionHeading(title: 'What we saw'), const SizedBox(height: 8), AppCard(child: Text(data == null ? 'A similar signal appeared across multiple leaves. This is an indication for review, not a confirmed diagnosis.' : 'The signal was aggregated across multiple frames. Treat it as decision support, not a confirmed diagnosis.')),

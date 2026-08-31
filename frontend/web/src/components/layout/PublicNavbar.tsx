@@ -23,23 +23,23 @@ export const PublicNavbar: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-pure-surface/95 backdrop-blur-md border-b border-structural">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[4.5rem] flex items-center justify-between">
+    <header className="sticky top-0 z-50 bg-pure-surface/80 backdrop-blur-md">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[5.25rem] flex items-center justify-between">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2.5 group">
-          <div className="w-10 h-10 rounded-xl bg-field-ink text-lime-signal flex items-center justify-center font-bold text-xl shadow-xs group-hover:scale-105 transition">
+          <div className="w-10 h-10 rounded-2xl bg-field-ink text-lime-signal flex items-center justify-center font-bold text-xl shadow-[0_10px_26px_rgba(20,35,29,.14)] group-hover:scale-105 transition">
             <Sprout size={22} className="text-lime-signal" />
           </div>
           <div>
             <div className="flex items-center gap-1.5">
               <span className="font-extrabold text-lg tracking-tight text-field-ink">Rakshak AI</span>
             </div>
-            <p className="text-[10px] font-medium text-muted-leaf">Fasal Rakshak Intelligence</p>
+            <p className="text-[10px] font-medium text-muted-leaf">Field intelligence console</p>
           </div>
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-8">
+        <nav className="hidden md:flex items-center gap-7">
           {navLinks.map((link) => {
             const isActive = location.pathname === link.path;
             return (
@@ -47,7 +47,7 @@ export const PublicNavbar: React.FC = () => {
                 key={link.path}
                 to={link.path}
                 aria-current={isActive ? 'page' : undefined}
-                className={`relative py-2 text-sm font-medium transition ${
+                className={`relative py-2 text-[13px] font-medium transition ${
                   isActive ? 'text-field-ink font-semibold after:absolute after:left-0 after:right-0 after:-bottom-1 after:h-0.5 after:bg-lime-signal after:content-[""]' : 'text-muted-leaf hover:text-field-ink'
                 }`}
               >

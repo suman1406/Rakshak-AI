@@ -50,44 +50,21 @@ class DashboardTab extends StatelessWidget {
   Widget build(BuildContext context) => PageContent(children: [
         const SizedBox(height: 8),
         Row(children: [
-          Expanded(
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                Text('Good morning',
-                    style: Theme.of(context).textTheme.bodyMedium),
-                Text('Arjun', style: Theme.of(context).textTheme.headlineSmall)
-              ])),
-          IconButton(
-              onPressed: () {},
-              icon: const Icon(Icons.notifications_none_rounded))
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Tuesday, 28 August', style: Theme.of(context).textTheme.labelMedium),
+            const SizedBox(height: 3),
+            Text('Good morning, Arjun', style: Theme.of(context).textTheme.headlineSmall)
+          ])),
+          Container(width: 44, height: 44, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)), child: IconButton(onPressed: () {}, icon: const Icon(Icons.notifications_none_rounded)))
         ]),
         const SizedBox(height: 22),
-        AppCard(
-            color: RakshakColors.ink,
-            child: Row(children: [
-              Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                      color: RakshakColors.signal,
-                      borderRadius: BorderRadius.circular(14)),
-                  child:
-                      const Icon(Icons.eco_rounded, color: RakshakColors.ink)),
-              const SizedBox(width: 12),
-              const Expanded(
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                    Text('Field health overview',
-                        style: TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.w800)),
-                    SizedBox(height: 4),
-                    Text('2 fields updated today',
-                        style: TextStyle(color: Color(0xffc8d5cc)))
-                  ])),
-              const Icon(Icons.arrow_forward_rounded, color: Colors.white)
-            ])),
+        AppCard(color: RakshakColors.ink, padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [Container(width: 42, height: 42, decoration: BoxDecoration(color: RakshakColors.signal, borderRadius: BorderRadius.circular(15)), child: const Icon(Icons.eco_rounded, color: RakshakColors.ink)), const Spacer(), const StatusBadge(label: 'LIVE', color: Color(0x26d8f36a), textColor: RakshakColors.signal)]),
+          const SizedBox(height: 22),
+          const Text('Your fields are telling a clearer story.', style: TextStyle(color: Colors.white, fontSize: 21, height: 1.15, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 7),
+          const Text('2 field updates are ready to review today.', style: TextStyle(color: Color(0xffc8d5cc))),
+        ])),
         const SizedBox(height: 28),
         const SectionHeading(title: 'Your fields'),
         const SizedBox(height: 8),

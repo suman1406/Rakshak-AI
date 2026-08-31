@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 
 class RakshakColors {
   static const ink = Color(0xff14231d);
-  static const canvas = Color(0xfff7faf4);
+  static const canvas = Color(0xfff3f6ef);
   static const leaf = Color(0xff526259);
-  static const signal = Color(0xffd4ee66);
+  static const signal = Color(0xffd8f36a);
   static const border = Color(0xffdfe7dc);
   static const healthy = Color(0xffe6f0d8);
   static const warning = Color(0xffffead8);
@@ -36,17 +36,17 @@ ThemeData buildRakshakTheme() {
     ),
     textTheme: const TextTheme(
       displaySmall: TextStyle(
-          fontSize: 36,
+          fontSize: 40,
           height: 1.08,
           fontWeight: FontWeight.w800,
           color: RakshakColors.ink),
       headlineSmall: TextStyle(
-          fontSize: 26,
+          fontSize: 28,
           height: 1.2,
           fontWeight: FontWeight.w800,
           color: RakshakColors.ink),
       titleLarge: TextStyle(
-          fontSize: 20,
+          fontSize: 19,
           height: 1.3,
           fontWeight: FontWeight.w800,
           color: RakshakColors.ink),
@@ -70,19 +70,19 @@ ThemeData buildRakshakTheme() {
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
       labelStyle: const TextStyle(color: RakshakColors.leaf),
       border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: RakshakColors.border)),
       enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: RakshakColors.border)),
       focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: RakshakColors.ink, width: 2)),
       errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: RakshakColors.errorText)),
       focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(16),
           borderSide:
               const BorderSide(color: RakshakColors.errorText, width: 2)),
     ),
@@ -92,7 +92,7 @@ ThemeData buildRakshakTheme() {
             backgroundColor: RakshakColors.signal,
             foregroundColor: RakshakColors.ink,
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14)),
+                borderRadius: BorderRadius.circular(18)),
             elevation: 0,
             textStyle: const TextStyle(fontWeight: FontWeight.w800))),
     outlinedButtonTheme: OutlinedButtonThemeData(
@@ -101,7 +101,7 @@ ThemeData buildRakshakTheme() {
             foregroundColor: RakshakColors.ink,
             side: const BorderSide(color: RakshakColors.ink),
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14)))),
+                borderRadius: BorderRadius.circular(18)))),
     navigationBarTheme: NavigationBarThemeData(
         backgroundColor: Colors.white,
         indicatorColor: RakshakColors.healthy,

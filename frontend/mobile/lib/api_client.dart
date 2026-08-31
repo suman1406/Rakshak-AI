@@ -44,8 +44,10 @@ class ApiClient {
   }
 
   Future<Map<String, dynamic>> currentUser() async => (await _get('/api/v1/auth/me')) as Map<String, dynamic>;
+  Future<Map<String, dynamic>> updateProfile(Map<String, dynamic> payload) async => (await _patch('/api/v1/auth/me', payload)) as Map<String, dynamic>;
   Map<String, String> get mediaHeaders => _authHeaders();
   Future<List<Map<String, dynamic>>> listFields() async => (await _get('/api/v1/fields')).cast<Map<String, dynamic>>();
+  Future<List<Map<String, dynamic>>> listVideos() async => (await _get('/api/v1/videos')).cast<Map<String, dynamic>>();
 
   Future<Map<String, dynamic>> uploadVideo({required String fieldId, required String filePath, required bool consent}) async {
     final request = http.MultipartRequest('POST', _uri('/api/v1/videos'));
@@ -64,6 +66,7 @@ class ApiClient {
   Future<Map<String, dynamic>> diagnosis(String diagnosisId) async => (await _get('/api/v1/diagnosis/$diagnosisId')) as Map<String, dynamic>;
   Future<List<Map<String, dynamic>>> evidenceFrames(String videoId) async => (await _get('/api/v1/videos/$videoId/frames')).cast<Map<String, dynamic>>();
   Future<Map<String, dynamic>> submitFeedback(String diagnosisId, {required String correctionType, String? note}) async => (await _post('/api/v1/diagnosis/$diagnosisId/feedback', {'correction_type': correctionType, 'note': note})) as Map<String, dynamic>;
+  Future<Map<String, dynamic>> requestReview(String diagnosisId) async => (await _post('/api/v1/diagnosis/$diagnosisId/review-requests', {})) as Map<String, dynamic>;
 
   Future<void> signOut() async { _accessToken = null; await _secureStorage.deleteAll(); }
 
@@ -80,6 +83,12 @@ class ApiClient {
     if (response.statusCode == 401 && await refreshSession()) {
       response = await http.post(_uri(path), headers: {..._jsonHeaders(), ..._authHeaders()}, body: jsonEncode(payload));
     }
+    final body = _decode(response); _ensureSuccess(response, body); return body;
+  }
+
+  Future<dynamic> _patch(String path, Map<String, dynamic> payload) async {
+    var response = await http.patch(_uri(path), headers: {..._jsonHeaders(), ..._authHeaders()}, body: jsonEncode(payload));
+    if (response.statusCode == 401 && await refreshSession()) response = await http.patch(_uri(path), headers: {..._jsonHeaders(), ..._authHeaders()}, body: jsonEncode(payload));
     final body = _decode(response); _ensureSuccess(response, body); return body;
   }
 
