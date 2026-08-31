@@ -1,4 +1,5 @@
 import pytest
+from app.core.security import create_refresh_token
 from app.core.security import create_access_token, decode_token, get_password_hash, verify_password
 
 def test_password_hashing():
@@ -23,7 +24,6 @@ async def test_auth_register_and_login_flow(client):
     register_payload = {
         "email": "testfarmer@rakshak.ai",
         "password": "Password123!",
-        "role": "farmer",
         "display_name": "Test Farmer",
     }
     reg_response = await client.post("/api/v1/auth/register", json=register_payload)
@@ -49,3 +49,37 @@ async def test_auth_register_and_login_flow(client):
     assert me_response.status_code == 200
     me_data = me_response.json()
     assert me_data["email"] == "testfarmer@rakshak.ai"
+
+
+@pytest.mark.asyncio
+async def test_public_registration_cannot_assign_a_privileged_role(client):
+    response = await client.post(
+        "/api/v1/auth/register",
+        json={"email": "admin-attempt@rakshak.ai", "password": "Password123!", "role": "admin"},
+    )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_public_registration_rejects_short_password(client):
+    response = await client.post(
+        "/api/v1/auth/register",
+        json={"email": "short-password@rakshak.ai", "password": "short"},
+    )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_refresh_token_cannot_access_protected_routes(client):
+    registration = await client.post(
+        "/api/v1/auth/register",
+        json={"email": "refresh-misuse@rakshak.ai", "password": "Password123!"},
+    )
+    user_id = registration.json()["id"]
+    refresh_token = create_refresh_token(user_id)
+
+    response = await client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {refresh_token}"})
+
+    assert response.status_code == 401

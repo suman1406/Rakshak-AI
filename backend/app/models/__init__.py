@@ -9,7 +9,7 @@ from .prediction import (
     FrameDiagnosis,
     VideoDiagnosis,
 )
-from .verification import CorrectionType, Feedback, SourceChannel, VerifiedLabel
+from .verification import CorrectionType, Feedback, ReviewStatus, ReviewWorkItem, SourceChannel, VerifiedLabel
 from .video import Frame, Video, VideoStatus
 
 __all__ = [
@@ -34,6 +34,8 @@ __all__ = [
     "CorrectionType",
     "VerifiedLabel",
     "Feedback",
+    "ReviewStatus",
+    "ReviewWorkItem",
     "DeploymentStatus",
     "GoldenSubset",
     "DatasetSplit",

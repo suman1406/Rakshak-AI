@@ -7,6 +7,7 @@ from __future__ import annotations
 from datetime import datetime
 from pydantic import BaseModel, Field
 from ..models.prediction import ConfidenceBand, DecisionAuthorityStatus
+from ..models.verification import CorrectionType
 
 class DiagnosisEvidence(BaseModel):
     frames_analyzed: int
@@ -24,6 +25,7 @@ class DiagnosisOut(BaseModel):
     video_diagnosis_id: str
     video_id: str
     crop: str = "soybean"
+    result_state: str
     disease: str
     headline: str
     is_unknown: bool
@@ -48,8 +50,8 @@ DiagnosisReportResponse = DiagnosisOut
 
 
 class FeedbackCreate(BaseModel):
-    correction_type: str = Field(..., description="disease_change | healthy_override | severity_change | other")
-    note: str | None = None
+    correction_type: CorrectionType
+    note: str | None = Field(default=None, max_length=2000)
 
 
 FarmerFeedbackCreate = FeedbackCreate
@@ -71,7 +73,7 @@ class VerifyCreate(BaseModel):
     severity_level: int = Field(..., ge=0, le=3)
     affected_plant_estimate_independent: float = Field(..., ge=0.0, le=1.0)
     is_blind_relabel: bool = False
-    notes: str | None = None
+    notes: str | None = Field(default=None, max_length=2000)
 
 
 AgronomistVerifyCreate = VerifyCreate

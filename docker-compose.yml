@@ -30,12 +30,15 @@ services:
       REDIS_URL: redis://redis:6379/0
       S3_ENDPOINT_URL: http://minio:9000
       S3_BUCKET_NAME: rakshak-evidence
+      LOCAL_STORAGE_DIR: /app/storage
       MAX_UPLOAD_BYTES: 104857600
       CELERY_CPU_QUEUE: cpu_processing
       CELERY_GPU_QUEUE: gpu_inference
       JWT_SECRET_KEY: change-me
       ENVIRONMENT: docker
     ports: ["8000:8000"]
+    volumes:
+      - rakshak-evidence-local:/app/storage
     depends_on:
       postgres:
         condition: service_healthy
@@ -51,11 +54,15 @@ services:
       REDIS_URL: redis://redis:6379/0
       CELERY_CPU_QUEUE: cpu_processing
       CELERY_GPU_QUEUE: gpu_inference
+      LOCAL_STORAGE_DIR: /app/storage
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_started
+    volumes:
+      - rakshak-evidence-local:/app/storage
 volumes:
   rakshak-postgres:
   rakshak-minio:
+  rakshak-evidence-local:

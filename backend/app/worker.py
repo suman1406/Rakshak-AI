@@ -4,7 +4,7 @@ from celery import Celery
 from .core.config import settings
 from .db.session import async_session_factory
 from .models.video import Video, VideoStatus
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 celery_app = Celery("rakshak", broker=settings.REDIS_URL, backend=settings.REDIS_URL)
 celery_app.conf.task_default_queue = settings.CELERY_CPU_QUEUE
@@ -18,11 +18,13 @@ def process_video(self, video_id: str) -> str:
 
     async def run() -> None:
         async with async_session_factory() as db:
-            video = (await db.execute(select(Video).where(Video.id == video_id))).scalar_one_or_none()
-            if not video or video.status in (VideoStatus.ready, VideoStatus.insufficient_evidence):
+            claim = await db.execute(
+                update(Video)
+                .where(Video.id == video_id, Video.status.in_((VideoStatus.uploaded, VideoStatus.failed)))
+                .values(status=VideoStatus.validating, retry_count=self.request.retries, job_started_at=datetime.now(timezone.utc))
+            )
+            if claim.rowcount != 1:
                 return
-            video.retry_count = self.request.retries
-            video.job_started_at = datetime.now(timezone.utc)
             await db.commit()
         await ingestion_service.execute_processing_pipeline(video_id)
 

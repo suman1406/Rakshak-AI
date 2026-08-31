@@ -42,6 +42,9 @@ rakshak.db
 /models/
 work/
 
+# Local, redacted API request/response proof bundles.
+.local-proof/
+
 # Local agent tooling installed outside the application
 .agents/
 skills-lock.json

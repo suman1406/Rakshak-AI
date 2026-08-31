@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 from pydantic import BaseModel, ConfigDict
 from ..models.video import VideoStatus
 
@@ -24,7 +25,6 @@ class VideoStatusResponse(BaseModel):
 class VideoAnalysisEvidence(BaseModel):
     frames_analyzed: int
     supporting_frames: int
-    leaf_regions_analyzed: int
     quality_score: float | None = None
 
 class VideoAnalysisDiagnosis(BaseModel):
@@ -39,7 +39,8 @@ class VideoAnalysisResponse(BaseModel):
     video_id: str
     diagnosis_id: str | None = None
     crop: str
-    crop_confidence: float
-    diagnosis: VideoAnalysisDiagnosis
+    result_state: Literal["ready", "healthy", "unknown", "insufficient_evidence", "failed"]
+    diagnosis: VideoAnalysisDiagnosis | None = None
     evidence: VideoAnalysisEvidence
-    model_versions: dict[str, str]
+    model_versions: dict[str, str] = {}
+    retake_guidance: str | None = None

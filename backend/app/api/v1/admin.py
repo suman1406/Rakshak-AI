@@ -5,12 +5,13 @@ admin.py — Model Governance & Admin Management API
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user, require_role, get_db
+from app.models.governance import DeploymentStatus, GoldenSetItem, ModelVersion
 from app.models.identity import User, UserRole
-from app.modules.inference.classifier import CLASSIFIER_MODEL_VERSION
-from app.modules.inference.detector import DETECTOR_MODEL_VERSION
 
 router = APIRouter(prefix="/admin", tags=["Admin & Governance"])
 
@@ -23,7 +24,7 @@ class ModelVersionCreate(BaseModel):
 
 
 class DeploymentStatusUpdate(BaseModel):
-    deployment_status: str = Field(..., description="canary | production | retired")
+    deployment_status: DeploymentStatus
     release_gate_record_id: str | None = None
 
 
@@ -32,22 +33,7 @@ async def list_model_versions(
     current_user: Annotated[User, Depends(require_role(UserRole.admin))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    return [
-        {
-            "id": "mv-detector-001",
-            "model_name": "FasterRCNN-ResNet50-Detector",
-            "version_hash": DETECTOR_MODEL_VERSION,
-            "deployment_status": "production",
-            "created_at": "2026-08-27T00:00:00Z",
-        },
-        {
-            "id": "mv-classifier-001",
-            "model_name": "EfficientNet-B0-Soybean-Classifier",
-            "version_hash": CLASSIFIER_MODEL_VERSION,
-            "deployment_status": "production",
-            "created_at": "2026-08-27T00:00:00Z",
-        },
-    ]
+    return (await db.execute(select(ModelVersion).order_by(ModelVersion.created_at.desc()))).scalars().all()
 
 
 @router.post("/model-versions", status_code=201)
@@ -56,13 +42,15 @@ async def register_model_version(
     current_user: Annotated[User, Depends(require_role(UserRole.admin))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    return {
-        "id": "mv-new-002",
-        "model_name": payload.model_name,
-        "version_hash": payload.version_hash,
-        "deployment_status": "shadow",
-        "message": "Model version registered in shadow deployment mode",
-    }
+    model_version = ModelVersion(model_name=payload.model_name, version_hash=payload.version_hash, training_dataset_version=payload.training_dataset_version, eval_metrics=payload.eval_metrics)
+    db.add(model_version)
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="Model version already exists")
+    await db.refresh(model_version)
+    return model_version
 
 
 @router.patch("/model-versions/{model_version_id}/deployment-status")
@@ -72,16 +60,18 @@ async def update_deployment_status(
     current_user: Annotated[User, Depends(require_role(UserRole.admin))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    if payload.deployment_status == "production" and not payload.release_gate_record_id:
+    if payload.deployment_status == DeploymentStatus.production and not payload.release_gate_record_id:
         raise HTTPException(
             status_code=400,
             detail="Cannot promote to production without passing release_gate_record_id",
         )
-    return {
-        "id": model_version_id,
-        "deployment_status": payload.deployment_status,
-        "release_gate_record_id": payload.release_gate_record_id,
-    }
+    model_version = (await db.execute(select(ModelVersion).where(ModelVersion.id == model_version_id))).scalar_one_or_none()
+    if not model_version:
+        raise HTTPException(status_code=404, detail="Model version not found")
+    model_version.deployment_status = payload.deployment_status
+    await db.commit()
+    await db.refresh(model_version)
+    return model_version
 
 
 @router.get("/golden-set")
@@ -89,11 +79,5 @@ async def get_golden_set(
     current_user: Annotated[User, Depends(require_role(UserRole.admin))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    return [
-        {
-            "id": "gs-001",
-            "subset": "frozen_regression",
-            "set_version": "v1.0",
-            "item_count": 10,
-        }
-    ]
+    rows = (await db.execute(select(GoldenSetItem.subset, GoldenSetItem.set_version, func.count(GoldenSetItem.id)).group_by(GoldenSetItem.subset, GoldenSetItem.set_version))).all()
+    return [{"subset": subset, "set_version": version, "item_count": count} for subset, version, count in rows]

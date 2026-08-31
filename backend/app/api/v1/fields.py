@@ -7,7 +7,7 @@ from app.core.scopes import field_scope
 from app.core.audit import write_audit_log
 from app.models.farm import Farm, Field
 from app.models.identity import User
-from app.schemas.farm import FieldCreate, FieldHealthScoreOut, FieldOut
+from app.schemas.farm import FieldCreate, FieldHealthScoreOut, FieldOut, FieldUpdate
 
 router = APIRouter(tags=["Fields"])
 
@@ -34,7 +34,13 @@ async def create_field(
     if not farm:
         raise HTTPException(status_code=404, detail="Farm not found")
 
-    if farm.owner_user_id != current_user.id and current_user.role.value not in ("admin", "enterprise"):
+    is_owner = farm.owner_user_id == current_user.id
+    is_same_org_operator = (
+        current_user.role.value in ("admin", "enterprise")
+        and current_user.org_id is not None
+        and current_user.org_id == farm.org_id
+    )
+    if not is_owner and not is_same_org_operator:
         raise HTTPException(status_code=403, detail="Forbidden: Cannot add field to this farm")
 
     field = Field(
@@ -63,6 +69,18 @@ async def get_field(
     if not field:
         raise HTTPException(status_code=404, detail="Field not found")
 
+    return field
+
+@router.patch("/fields/{field_id}", response_model=FieldOut)
+async def update_field(field_id: str, payload: FieldUpdate, current_user: Annotated[User, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db)]):
+    field = (await db.execute(select(Field).join(Field.farm).where(Field.id == field_id, field_scope(current_user)))).scalar_one_or_none()
+    if not field:
+        raise HTTPException(status_code=404, detail="Field not found")
+    for key, value in payload.model_dump(exclude_unset=True).items():
+        setattr(field, key, value)
+    await write_audit_log(db, actor_user_id=current_user.id, action="field.updated", entity_type="field", entity_id=field.id)
+    await db.commit()
+    await db.refresh(field)
     return field
 
 @router.get("/fields/{field_id}/health", response_model=FieldHealthScoreOut)

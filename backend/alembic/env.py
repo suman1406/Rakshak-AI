@@ -11,7 +11,9 @@ if config.config_file_name:
 target_metadata = Base.metadata
 
 def _sync_url() -> str:
-    return settings.DATABASE_URL.replace("+asyncpg", "").replace("+psycopg", "").replace("+aiosqlite", "")
+    # Alembic is synchronous. Keep the installed psycopg v3 driver instead of
+    # stripping it (which makes SQLAlchemy select unavailable psycopg2).
+    return settings.DATABASE_URL.replace("+asyncpg", "+psycopg").replace("+aiosqlite", "")
 
 def run_migrations_offline() -> None:
     context.configure(url=_sync_url(), target_metadata=target_metadata, literal_binds=True, compare_type=True)

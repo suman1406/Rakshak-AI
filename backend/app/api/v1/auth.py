@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_current_user, get_db
 from app.core.security import create_access_token, create_refresh_token, decode_token, get_password_hash, verify_password
 from app.models.identity import User, UserRole
-from app.schemas.auth import TokenResponse, UserLogin, UserOut, UserRegister
+from app.schemas.auth import TokenResponse, UserLogin, UserOut, UserRegister, UserUpdate
 from app.core.audit import write_audit_log
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -43,7 +43,7 @@ async def register(payload: UserRegister, db: Annotated[AsyncSession, Depends(ge
         email=payload.email,
         phone=payload.phone,
         password_hash=get_password_hash(payload.password),
-        role=payload.role or UserRole.farmer,
+        role=UserRole.farmer,
         display_name=payload.display_name,
     )
     db.add(new_user)
@@ -100,4 +100,19 @@ async def refresh_token(payload: RefreshRequest, db: Annotated[AsyncSession, Dep
 
 @router.get("/me", response_model=UserOut)
 async def get_me(current_user: Annotated[User, Depends(get_current_user)]):
+    return current_user
+
+
+@router.patch("/me", response_model=UserOut)
+async def update_me(payload: UserUpdate, current_user: Annotated[User, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db)]):
+    if payload.display_name is not None:
+        current_user.display_name = payload.display_name
+    if payload.phone is not None and payload.phone != current_user.phone:
+        existing = (await db.execute(select(User).where(User.phone == payload.phone, User.id != current_user.id))).scalar_one_or_none()
+        if existing:
+            raise HTTPException(status_code=409, detail="User with this phone already exists")
+        current_user.phone = payload.phone
+    await write_audit_log(db, actor_user_id=current_user.id, action="user.profile_updated", entity_type="user", entity_id=current_user.id)
+    await db.commit()
+    await db.refresh(current_user)
     return current_user

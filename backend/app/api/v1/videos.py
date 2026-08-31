@@ -1,5 +1,5 @@
 from typing import Annotated
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse
 from pathlib import Path
 from sqlalchemy import select
@@ -13,6 +13,7 @@ from app.models.identity import User
 from app.models.prediction import VideoDiagnosis
 from app.models.video import Frame, Video, VideoStatus
 from app.modules.ingestion.service import ingestion_service
+from app.modules.reporting.result_contract import disease_slug, result_state, severity_name
 from app.schemas.video import (
     VideoAnalysisDiagnosis,
     VideoAnalysisEvidence,
@@ -23,6 +24,34 @@ from app.schemas.video import (
 from app.worker import process_video
 
 router = APIRouter(prefix="/videos", tags=["Videos"])
+
+@router.get("")
+async def list_videos(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    field_id: str | None = Query(None),
+    status_filter: VideoStatus | None = Query(None, alias="status"),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+):
+    stmt = select(Video).join(Video.field).join(Field.farm).where(video_scope(current_user))
+    if field_id:
+        stmt = stmt.where(Video.field_id == field_id)
+    if status_filter:
+        stmt = stmt.where(Video.status == status_filter)
+    videos = (await db.execute(stmt.order_by(Video.created_at.desc()).offset(offset).limit(limit))).scalars().all()
+    return [{"video_id": video.id, "field_id": video.field_id, "status": video.status, "created_at": video.created_at, "duration_seconds": video.duration_seconds, "error_detail": video.error_detail} for video in videos]
+
+@router.get("/{video_id}")
+async def get_video(
+    video_id: str,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    video = (await db.execute(select(Video).join(Video.field).join(Field.farm).where(Video.id == video_id, video_scope(current_user)))).scalar_one_or_none()
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+    return {"video_id": video.id, "field_id": video.field_id, "status": video.status, "created_at": video.created_at, "duration_seconds": video.duration_seconds, "quality_score": video.quality_score, "usable_frames_count": video.usable_frames_count, "total_frames_extracted": video.total_frames_extracted, "error_detail": video.error_detail}
 
 @router.post("", response_model=VideoUploadResponse, status_code=status.HTTP_201_CREATED)
 async def upload_video(
@@ -42,6 +71,15 @@ async def upload_video(
         consent=consent,
         db=db,
     )
+    await write_audit_log(
+        db,
+        actor_user_id=current_user.id,
+        action="video.uploaded",
+        entity_type="video",
+        entity_id=video.id,
+        metadata={"field_id": field_id},
+    )
+    await db.commit()
 
     # Launch processing pipeline as background task
     process_video.delay(video.id)
@@ -81,44 +119,72 @@ async def get_video_analysis(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    stmt = select(Video).join(Video.field).join(Field.farm).options(selectinload(Video.diagnoses)).where(Video.id == video_id, video_scope(current_user))
+    stmt = (
+        select(Video)
+        .join(Video.field).join(Field.farm)
+        .options(selectinload(Video.diagnoses).selectinload(VideoDiagnosis.disease))
+        .where(Video.id == video_id, video_scope(current_user))
+    )
     result = await db.execute(stmt)
     video = result.scalar_one_or_none()
     if not video:
         raise HTTPException(status_code=404, detail="Video not found")
 
-    if video.status not in (VideoStatus.ready, VideoStatus.insufficient_evidence):
+    if video.status == VideoStatus.insufficient_evidence:
+        return VideoAnalysisResponse(
+            video_id=video.id,
+            crop="soybean",
+            result_state="insufficient_evidence",
+            evidence=VideoAnalysisEvidence(
+                frames_analyzed=video.total_frames_extracted or 0,
+                supporting_frames=0,
+                quality_score=video.quality_score,
+            ),
+            retake_guidance=video.error_detail or "Retake the video in better light with steady coverage of the crop canopy.",
+        )
+
+    if video.status == VideoStatus.failed:
+        return VideoAnalysisResponse(
+            video_id=video.id,
+            crop="soybean",
+            result_state="failed",
+            evidence=VideoAnalysisEvidence(
+                frames_analyzed=video.total_frames_extracted or 0,
+                supporting_frames=0,
+                quality_score=video.quality_score,
+            ),
+            retake_guidance=video.error_detail or "The scan could not be completed. Retry or upload a new video.",
+        )
+
+    if video.status != VideoStatus.ready:
         raise HTTPException(
-            status_code=400,
+            status_code=409,
             detail=f"Analysis not ready. Current status: {video.status.value}",
         )
 
     diagnosis_row = video.diagnoses[0] if video.diagnoses else None
     if not diagnosis_row:
-        raise HTTPException(status_code=404, detail="Diagnosis not found for video")
+        raise HTTPException(status_code=409, detail="Analysis completed without a persisted diagnosis")
 
     return VideoAnalysisResponse(
         video_id=video.id,
-        diagnosis_id=diagnosis_row.id if diagnosis_row else None,
+        diagnosis_id=diagnosis_row.id,
         crop="soybean",
-        crop_confidence=0.95,
+        result_state=result_state(diagnosis_row),
         diagnosis=VideoAnalysisDiagnosis(
-            disease=diagnosis_row.disease_id or "soybean_rust",
+            disease=disease_slug(diagnosis_row),
             is_unknown=diagnosis_row.is_unknown,
             confidence=diagnosis_row.confidence,
             confidence_band=diagnosis_row.confidence_band.value,
-            severity="moderate" if diagnosis_row.severity_level == 2 else "mild",
+            severity=severity_name(diagnosis_row.severity_level),
             affected_plant_estimate=diagnosis_row.affected_plant_estimate or 0.0,
         ),
         evidence=VideoAnalysisEvidence(
             frames_analyzed=video.total_frames_extracted or 0,
             supporting_frames=diagnosis_row.supporting_frames or 0,
-            leaf_regions_analyzed=(diagnosis_row.supporting_frames or 0) * 3,
             quality_score=video.quality_score,
         ),
         model_versions={
-            "detector": "yolo11n-plantdoc-v1.0",
-            "classifier": "effnet-b0-soybean-v1.0",
             "aggregation": diagnosis_row.aggregation_model_version,
         },
     )
@@ -157,8 +223,6 @@ async def get_frame_content(
         .join(Frame.video).join(Video.field).join(Field.farm)
         .where(Frame.id == frame_id, Frame.video_id == video_id, video_scope(current_user))
     )
-    await write_audit_log(db, actor_user_id=current_user.id, action="video.uploaded", entity_type="video", entity_id=video.id, metadata={"field_id": field_id})
-    await db.commit()
     result = await db.execute(stmt)
     frame = result.scalar_one_or_none()
     if not frame or not Path(frame.storage_path).is_file():

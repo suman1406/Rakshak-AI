@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     LOCAL_STORAGE_DIR: str = "./storage"
     MAX_UPLOAD_BYTES: int = 100 * 1024 * 1024
     ALLOWED_VIDEO_EXTENSIONS: str = ".mp4,.mov,.m4v,.avi"
+    MIN_VIDEO_DURATION_SECONDS: float = 10.0
+    MAX_VIDEO_DURATION_SECONDS: float = 30.0
+    MAX_VIDEO_WIDTH: int = 1920
+    MAX_VIDEO_HEIGHT: int = 1080
     CELERY_CPU_QUEUE: str = "cpu_processing"
     CELERY_GPU_QUEUE: str = "gpu_inference"
     

@@ -18,6 +18,20 @@ class CorrectionType(str, enum.Enum):
     severity_change = "severity_change"
     other = "other"
 
+class ReviewStatus(str, enum.Enum):
+    pending = "pending"
+    in_review = "in_review"
+    completed = "completed"
+
+class ReviewWorkItem(Base):
+    __tablename__ = "review_work_items"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    video_diagnosis_id: Mapped[str] = mapped_column(String(36), ForeignKey("video_diagnoses.id"), nullable=False, unique=True, index=True)
+    status: Mapped[ReviewStatus] = mapped_column(Enum(ReviewStatus), nullable=False, default=ReviewStatus.pending, index=True)
+    assigned_agronomist_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id"), nullable=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
 class VerifiedLabel(Base):
     __tablename__ = "verified_labels"
 
@@ -33,6 +47,7 @@ class VerifiedLabel(Base):
     is_gold: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_blind_relabel: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     ai_suggestion_was_shown: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 
     video_diagnosis: Mapped["VideoDiagnosis"] = relationship("VideoDiagnosis", back_populates="verified_labels")

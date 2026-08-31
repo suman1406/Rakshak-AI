@@ -3,12 +3,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 from fastapi import HTTPException, UploadFile
-from sqlalchemy import select
+import cv2
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from ...core.config import settings
 from ...core.logging import logger
 from ...db.session import async_session_factory
-from ...models.farm import Field
+from ...models.farm import Disease, Field
 from ...models.prediction import ConfidenceBand, DecisionAuthorityStatus, VideoDiagnosis
 from ...models.video import Frame, Video, VideoStatus
 from ..processing.extractor import VideoFrameExtractor
@@ -26,6 +27,27 @@ class VideoIngestionService:
             max_selected_frames=15,
         )
         self._inference = InferenceService()
+
+    def _validate_video_file(self, path: Path) -> float:
+        """Reject mislabeled, undecodable, or out-of-contract captures early."""
+        capture = cv2.VideoCapture(str(path))
+        try:
+            if not capture.isOpened():
+                raise HTTPException(status_code=422, detail="Uploaded file is not a decodable video")
+            fps = float(capture.get(cv2.CAP_PROP_FPS) or 0)
+            frames = int(capture.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
+            width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
+            height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
+            if fps <= 0 or frames <= 0 or width <= 0 or height <= 0:
+                raise HTTPException(status_code=422, detail="Video metadata could not be read")
+            duration = frames / fps
+            if not settings.MIN_VIDEO_DURATION_SECONDS <= duration <= settings.MAX_VIDEO_DURATION_SECONDS:
+                raise HTTPException(status_code=422, detail=f"Video duration must be {settings.MIN_VIDEO_DURATION_SECONDS:g}–{settings.MAX_VIDEO_DURATION_SECONDS:g} seconds")
+            if width > settings.MAX_VIDEO_WIDTH or height > settings.MAX_VIDEO_HEIGHT:
+                raise HTTPException(status_code=422, detail="Video resolution exceeds the capture limit")
+            return duration
+        finally:
+            capture.release()
 
     async def init_upload(
         self,
@@ -57,12 +79,29 @@ class VideoIngestionService:
         file_suffix = Path(file.filename or "video.mp4").suffix or ".mp4"
         video_file_path = upload_dir / f"video{file_suffix}"
 
-        # Write uploaded chunks to disk
-        with open(video_file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        if video_file_path.stat().st_size > settings.MAX_UPLOAD_BYTES:
-            video_file_path.unlink(missing_ok=True)
-            raise HTTPException(status_code=413, detail="Video exceeds the maximum upload size")
+        # Bound the write itself: checking only after copy permits an oversized
+        # request to exhaust local storage before rejection.
+        bytes_written = 0
+        try:
+            with open(video_file_path, "wb") as buffer:
+                while chunk := await file.read(1024 * 1024):
+                    bytes_written += len(chunk)
+                    if bytes_written > settings.MAX_UPLOAD_BYTES:
+                        raise HTTPException(status_code=413, detail="Video exceeds the maximum upload size")
+                    buffer.write(chunk)
+        except Exception:
+            shutil.rmtree(upload_dir, ignore_errors=True)
+            try:
+                upload_dir.parent.rmdir()
+            except OSError:
+                pass
+            raise
+
+        try:
+            duration_seconds = self._validate_video_file(video_file_path)
+        except Exception:
+            shutil.rmtree(upload_dir, ignore_errors=True)
+            raise
 
         video = Video(
             id=video_id,
@@ -70,6 +109,7 @@ class VideoIngestionService:
             uploaded_by=user_id,
             status=VideoStatus.uploaded,
             storage_path=str(video_file_path),
+            duration_seconds=duration_seconds,
             usable_frames_count=0,
             total_frames_extracted=0,
         )
@@ -85,6 +125,9 @@ class VideoIngestionService:
         video = result.scalar_one_or_none()
         if not video:
             logger.error(f"Video {video_id} not found for background processing")
+            return
+        if video.status in (VideoStatus.ready, VideoStatus.insufficient_evidence):
+            logger.info(f"Video {video_id} is already terminal ({video.status.value}); skipping duplicate delivery")
             return
 
         # 1. State: Validating
@@ -110,6 +153,12 @@ class VideoIngestionService:
         quality_results, usable_count, avg_quality = self.quality_filter.evaluate_and_filter_frames(
             extracted_frames
         )
+
+        # A retry may follow a crash after frames were committed but before the
+        # diagnosis was persisted. Replace that attempt's derived rows so frame
+        # records remain idempotent for a video.
+        await db.execute(delete(Frame).where(Frame.video_id == video_id))
+        await db.flush()
 
         # Store Frame rows in DB
         for q in quality_results:
@@ -237,9 +286,37 @@ class VideoIngestionService:
                 "This is an AI estimate, not a confirmed diagnosis."
             )
 
+        # Persist a database disease identity only when the classifier's launch
+        # taxonomy can be matched to the active, versioned catalogue. An
+        # unmatched class is safer as "unknown" than as an invented diagnosis.
+        disease_id = None
+        if not is_unknown:
+            taxonomy_names = {
+                "soybean_rust": "Soybean Rust",
+                "frogeye_leaf_spot": "Frogeye Leaf Spot",
+                "healthy": "Healthy",
+            }
+            disease_name = taxonomy_names.get(top_class)
+            if disease_name:
+                disease = (
+                    await db.execute(
+                        select(Disease).where(Disease.name == disease_name, Disease.active.is_(True))
+                    )
+                ).scalar_one_or_none()
+                if disease:
+                    disease_id = disease.id
+                else:
+                    is_unknown = True
+            else:
+                is_unknown = True
+
+        if is_unknown:
+            severity_level = 0
+            affected_estimate = 0.0
+
         diagnosis = VideoDiagnosis(
             video_id=video_id,
-            disease_id=None,
+            disease_id=disease_id,
             is_unknown=is_unknown,
             confidence=top_conf,
             confidence_band=band,

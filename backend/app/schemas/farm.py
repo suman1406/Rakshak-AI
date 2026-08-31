@@ -21,6 +21,11 @@ class FarmCreate(BaseModel):
     state: str | None = None
     district: str | None = None
 
+class FarmUpdate(BaseModel):
+    name: str | None = PydanticField(default=None, min_length=1, max_length=255)
+    state: str | None = None
+    district: str | None = None
+
 class FarmOut(BaseModel):
     id: str
     owner_user_id: str
@@ -35,6 +40,11 @@ class FieldCreate(BaseModel):
     name: str = PydanticField(min_length=1, max_length=255)
     crop_id: str | None = None
     area_hectares: float | None = None
+
+class FieldUpdate(BaseModel):
+    name: str | None = PydanticField(default=None, min_length=1, max_length=255)
+    crop_id: str | None = None
+    area_hectares: float | None = PydanticField(default=None, ge=0)
 
 class FieldOut(BaseModel):
     id: str
