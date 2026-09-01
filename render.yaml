@@ -13,9 +13,10 @@ services:
       - key: API_V1_STR
         value: /api/v1
       - key: DATABASE_URL
+        sync: false
         value: sqlite+aiosqlite:////tmp/rakshak.db
       - key: JWT_SECRET_KEY
-        generateValue: true
+        sync: false
       - key: QUALITY_BLUR_THRESHOLD
         value: "80.0"
       - key: MIN_USABLE_FRAMES_THRESHOLD
