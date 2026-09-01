@@ -44,3 +44,5 @@ class VideoAnalysisResponse(BaseModel):
     evidence: VideoAnalysisEvidence
     model_versions: dict[str, str] = {}
     retake_guidance: str | None = None
+    action_items: str | None = None
+    explanation: str | None = None

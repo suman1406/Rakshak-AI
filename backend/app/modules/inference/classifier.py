@@ -59,6 +59,14 @@ EXPECTED_TAXONOMY_CLASSES: list[str] = [
     "unknown_other",
 ]
 
+# Module-level taxonomy classes for use before model is loaded.
+# This is the fallback when classes.json can't be read (e.g., in tests).
+# The actual classes are loaded at runtime from classes.json when the model loads.
+TAXONOMY_CLASSES = EXPECTED_TAXONOMY_CLASSES
+
+# Number of classes in the taxonomy
+NUM_CLASSES = len(EXPECTED_TAXONOMY_CLASSES)
+
 WEIGHTS_DIR = pathlib.Path(__file__).resolve().parents[2] / "weights"  # backend/app/weights
 WEIGHTS_PATH = WEIGHTS_DIR / "soybean_classifier_effnet_b0.pt"
 CLASSES_PATH = WEIGHTS_DIR / "classes.json"

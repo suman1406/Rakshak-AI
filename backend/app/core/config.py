@@ -43,6 +43,10 @@ class Settings(BaseSettings):
     LLM_API_KEY: str | None = None
     LLM_MODEL: str = "gemini-1.5-flash"
     
+    # Groq (for LLM advisor)
+    GROQ_API_KEY: str | None = None
+    GROQ_MODEL: str = "llama-3.1-70b-versatile"
+    
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

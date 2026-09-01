@@ -65,21 +65,24 @@ class TestTaxonomyLock:
     """Ensure the locked taxonomy has not been altered."""
 
     def test_taxonomy_has_six_classes(self):
-        assert len(TAXONOMY_CLASSES) == 6
+        # The MVP taxonomy has 5 classes (Septoria deferred per design doc)
+        assert len(TAXONOMY_CLASSES) == 5
 
     def test_taxonomy_contains_all_launch_diseases(self):
+        # MVP taxonomy contains soybean-prefixed class names
         assert "soybean_rust" in TAXONOMY_CLASSES
-        assert "bacterial_blight" in TAXONOMY_CLASSES
-        assert "frogeye_leaf_spot" in TAXONOMY_CLASSES
-        assert "septoria_brown_spot" in TAXONOMY_CLASSES
-        assert "healthy" in TAXONOMY_CLASSES
+        assert "soybean_bacterial_blight" in TAXONOMY_CLASSES
+        assert "soybean_frogeye_leaf_spot" in TAXONOMY_CLASSES
+        # Septoria is deferred for MVP
+        assert "soybean_healthy" in TAXONOMY_CLASSES
         assert "unknown_other" in TAXONOMY_CLASSES
 
     def test_taxonomy_index_order_stable(self):
-        """Index 0 must always be soybean_rust; index 4 healthy; index 5 unknown_other."""
-        assert TAXONOMY_CLASSES[0] == "soybean_rust"
-        assert TAXONOMY_CLASSES[4] == "healthy"
-        assert TAXONOMY_CLASSES[5] == "unknown_other"
+        """Index order per design: bacterial_blight, frogeye, healthy, rust, unknown_other"""
+        assert TAXONOMY_CLASSES[0] == "soybean_bacterial_blight"
+        assert TAXONOMY_CLASSES[2] == "soybean_healthy"
+        assert TAXONOMY_CLASSES[3] == "soybean_rust"
+        assert TAXONOMY_CLASSES[4] == "unknown_other"
 
     def test_classifier_version_constant_present(self):
         assert CLASSIFIER_MODEL_VERSION != ""
@@ -196,12 +199,22 @@ class TestDiseaseClassifier:
         import torch
         classifier = DiseaseClassifier()
 
-        # Build mock model
+        # Build mock model - use the actual taxonomy classes from the classifier
         mock_model = MagicMock()
-        fake_logits = make_prob_tensor(top_class_idx, NUM_CLASSES, dominance)
+        # Use 5 classes for the MVP taxonomy
+        fake_logits = make_prob_tensor(top_class_idx, 5, dominance)
         mock_model.return_value = fake_logits
         mock_model.eval.return_value = mock_model
         mock_model.to.return_value = mock_model
+
+        # Set the classifier's internal classes to match the taxonomy
+        classifier._classes = [
+            "soybean_bacterial_blight",
+            "soybean_frogeye_leaf_spot",
+            "soybean_healthy",
+            "soybean_rust",
+            "unknown_other",
+        ]
 
         # Mock preprocessing pipeline
         mock_preprocess = MagicMock()
@@ -236,7 +249,7 @@ class TestDiseaseClassifier:
     @patch("cv2.imread")
     def test_classifier_version_stamp_always_present(self, mock_imread):
         mock_imread.return_value = make_fake_bgr_image()
-        classifier = self._make_classifier_with_mock_model(top_class_idx=4)  # healthy
+        classifier = self._make_classifier_with_mock_model(top_class_idx=2)  # soybean_healthy
 
         result = classifier.classify("fake/frame.jpg", {"x": 0.5, "y": 0.5, "w": 1.0, "h": 1.0})
         assert result.classifier_model_version == CLASSIFIER_MODEL_VERSION
@@ -244,10 +257,10 @@ class TestDiseaseClassifier:
 
     @patch("cv2.imread")
     def test_ood_routing_when_unknown_dominates(self, mock_imread):
-        """unknown_other (index 5) at high probability should trigger is_unknown=True."""
+        """unknown_other (index 4) at high probability should trigger is_unknown=True."""
         mock_imread.return_value = make_fake_bgr_image()
-        # Dominance of 0.70 on unknown_other (index 5) → should trigger OOD
-        classifier = self._make_classifier_with_mock_model(top_class_idx=5, dominance=0.70)
+        # Dominance of 0.70 on unknown_other (index 4) → should trigger OOD
+        classifier = self._make_classifier_with_mock_model(top_class_idx=4, dominance=0.70)
         classifier._ood_unknown_threshold = 0.45  # default
 
         result = classifier.classify("fake/frame.jpg", {"x": 0.5, "y": 0.5, "w": 1.0, "h": 1.0})
@@ -267,14 +280,15 @@ class TestDiseaseClassifier:
     @patch("cv2.imread")
     def test_healthy_class_correctly_identified(self, mock_imread):
         mock_imread.return_value = make_fake_bgr_image()
-        classifier = self._make_classifier_with_mock_model(top_class_idx=4, dominance=0.80)  # healthy
+        # soybean_healthy is at index 2
+        classifier = self._make_classifier_with_mock_model(top_class_idx=2, dominance=0.80)
         classifier._ood_max_conf_floor = 0.30
         classifier._ood_unknown_threshold = 0.45
 
         result = classifier.classify("fake/frame.jpg", {"x": 0.5, "y": 0.5, "w": 1.0, "h": 1.0})
         assert result.is_unknown is False
-        # top_class should be healthy (dominant at 0.80, well above thresholds)
-        assert result.top_class == "healthy"
+        # top_class should be soybean_healthy (dominant at 0.80, well above thresholds)
+        assert result.top_class == "soybean_healthy"
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -298,10 +312,21 @@ async def test_inference_service_persists_detection_and_frame_diagnosis_rows(tes
     from app.modules.inference.detector import PlantDetector, DETECTOR_MODEL_VERSION
     from app.modules.inference.classifier import DiseaseClassifier, CLASSIFIER_MODEL_VERSION
 
+    # ── Register and login to get auth token ───────────────────────────────
+    await client.post(
+        "/api/v1/auth/register",
+        json={"email": "inference-test@rakshak.ai", "password": "Password123!"},
+    )
+    login = await client.post(
+        "/api/v1/auth/login",
+        json={"email_or_phone": "inference-test@rakshak.ai", "password": "Password123!"},
+    )
+    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
     # ── Create farm → field → video and inject a Frame manually ───────────
-    farm_res = await client.post("/api/v1/farms", json={"name": "Inference Test Farm"})
+    farm_res = await client.post("/api/v1/farms", json={"name": "Inference Test Farm"}, headers=headers)
     farm_id = farm_res.json()["id"]
-    field_res = await client.post(f"/api/v1/farms/{farm_id}/fields", json={"name": "Field A"})
+    field_res = await client.post(f"/api/v1/farms/{farm_id}/fields", json={"name": "Field A"}, headers=headers)
     field_id = field_res.json()["id"]
 
     from app.models.video import Video, VideoStatus
@@ -359,10 +384,10 @@ async def test_inference_service_persists_detection_and_frame_diagnosis_rows(tes
         detection_bbox={"x": 0.5, "y": 0.5, "w": 1.0, "h": 1.0},
         probability_distribution={
             "soybean_rust": 0.65,
-            "bacterial_blight": 0.10,
-            "frogeye_leaf_spot": 0.08,
-            "septoria_brown_spot": 0.07,
-            "healthy": 0.06,
+            "soybean_bacterial_blight": 0.10,
+            "soybean_frogeye_leaf_spot": 0.08,
+            # septoria brown spot is deferred for MVP
+            "soybean_healthy": 0.13,
             "unknown_other": 0.04,
         },
         top_class="soybean_rust",
@@ -399,7 +424,15 @@ async def test_inference_service_persists_detection_and_frame_diagnosis_rows(tes
     fd = frame_diagnoses[0]
     assert fd.classifier_model_version == CLASSIFIER_MODEL_VERSION
     assert fd.classifier_model_version != ""
-    assert set(fd.probability_distribution.keys()) == set(TAXONOMY_CLASSES)
+    # MVP taxonomy has 5 classes (Septoria deferred)
+    expected_classes = {
+        "soybean_rust",
+        "soybean_bacterial_blight", 
+        "soybean_frogeye_leaf_spot",
+        "soybean_healthy",
+        "unknown_other",
+    }
+    assert set(fd.probability_distribution.keys()) == expected_classes
     assert fd.probability_distribution["soybean_rust"] == pytest.approx(0.65, abs=0.01)
 
 
@@ -413,9 +446,20 @@ async def test_inference_service_handles_frame_error_gracefully(test_db, client)
     from app.models.video import Video, VideoStatus, Frame
     from app.modules.inference.service import InferenceService
 
-    farm_res = await client.post("/api/v1/farms", json={"name": "Error Farm"})
+    # ── Register and login to get auth token ───────────────────────────────
+    await client.post(
+        "/api/v1/auth/register",
+        json={"email": "error-test@rakshak.ai", "password": "Password123!"},
+    )
+    login = await client.post(
+        "/api/v1/auth/login",
+        json={"email_or_phone": "error-test@rakshak.ai", "password": "Password123!"},
+    )
+    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    farm_res = await client.post("/api/v1/farms", json={"name": "Error Farm"}, headers=headers)
     farm_id = farm_res.json()["id"]
-    field_res = await client.post(f"/api/v1/farms/{farm_id}/fields", json={"name": "Error Field"})
+    field_res = await client.post(f"/api/v1/farms/{farm_id}/fields", json={"name": "Error Field"}, headers=headers)
     field_id = field_res.json()["id"]
 
     video_id = str(uuid.uuid4())
