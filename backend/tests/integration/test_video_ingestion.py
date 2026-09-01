@@ -39,33 +39,56 @@ def create_synthetic_mp4(num_frames=30, is_blurry=False, is_dark=False):
 
 @pytest.mark.asyncio
 async def test_video_upload_consent_required(client):
+    # Register and login first
+    await client.post(
+        "/api/v1/auth/register",
+        json={"email": "consent-test@rakshak.ai", "password": "Password123!"},
+    )
+    login = await client.post(
+        "/api/v1/auth/login",
+        json={"email_or_phone": "consent-test@rakshak.ai", "password": "Password123!"},
+    )
+    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
     # Create farm & field first
-    farm_res = await client.post("/api/v1/farms", json={"name": "Test Farm"})
+    farm_res = await client.post("/api/v1/farms", json={"name": "Test Farm"}, headers=headers)
     farm_id = farm_res.json()["id"]
-    field_res = await client.post(f"/api/v1/farms/{farm_id}/fields", json={"name": "Field 1"})
+    field_res = await client.post(f"/api/v1/farms/{farm_id}/fields", json={"name": "Field 1"}, headers=headers)
     field_id = field_res.json()["id"]
 
-    video_data = create_synthetic_mp4(5)
+    video_data = create_synthetic_mp4(55)  # 11 seconds at 5 fps
     files = {"file": ("video.mp4", video_data, "video/mp4")}
     data = {"field_id": field_id, "consent": "false"}
 
-    res = await client.post("/api/v1/videos", data=data, files=files)
+    res = await client.post("/api/v1/videos", data=data, files=files, headers=headers)
     assert res.status_code == 400
-    assert "consent is required" in res.json()["detail"].lower()
+    assert "consent is required" in res.json()["message"].lower()
 
 @pytest.mark.asyncio
 async def test_video_upload_and_pipeline_success(client, test_db):
-    farm_res = await client.post("/api/v1/farms", json={"name": "Indore Soy Farm"})
+    # Register and login first
+    await client.post(
+        "/api/v1/auth/register",
+        json={"email": "pipeline-test@rakshak.ai", "password": "Password123!"},
+    )
+    login = await client.post(
+        "/api/v1/auth/login",
+        json={"email_or_phone": "pipeline-test@rakshak.ai", "password": "Password123!"},
+    )
+    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    farm_res = await client.post("/api/v1/farms", json={"name": "Indore Soy Farm"}, headers=headers)
     farm_id = farm_res.json()["id"]
-    field_res = await client.post(f"/api/v1/farms/{farm_id}/fields", json={"name": "Soy Plot Alpha"})
+    field_res = await client.post(f"/api/v1/farms/{farm_id}/fields", json={"name": "Soy Plot Alpha"}, headers=headers)
     field_id = field_res.json()["id"]
 
-    # 35 frames at 5 fps = 7 seconds -> extracts 7 frames (>= 5 threshold)
-    video_bytes = create_synthetic_mp4(num_frames=35, is_blurry=False)
+    # 35 frames at 5 fps = 7 seconds (less than minimum 10s)
+    # Need at least 50 frames at 5 fps = 10 seconds
+    video_bytes = create_synthetic_mp4(num_frames=55, is_blurry=False)  # 11 seconds at 5 fps
     files = {"file": ("good_video.mp4", video_bytes, "video/mp4")}
     data = {"field_id": field_id, "consent": "true"}
 
-    upload_res = await client.post("/api/v1/videos", data=data, files=files)
+    upload_res = await client.post("/api/v1/videos", data=data, files=files, headers=headers)
     assert upload_res.status_code == 201
     upload_data = upload_res.json()
     video_id = upload_data["video_id"]
@@ -75,7 +98,7 @@ async def test_video_upload_and_pipeline_success(client, test_db):
     await ingestion_service.execute_processing_pipeline(video_id, db_session=test_db)
 
     # Check status endpoint
-    status_res = await client.get(f"/api/v1/videos/{video_id}/status")
+    status_res = await client.get(f"/api/v1/videos/{video_id}/status", headers=headers)
     assert status_res.status_code == 200
     status_data = status_res.json()
     assert status_data["status"] == "ready"
@@ -83,35 +106,46 @@ async def test_video_upload_and_pipeline_success(client, test_db):
     assert status_data["quality_score"] > 50.0
 
     # Check frames endpoint
-    frames_res = await client.get(f"/api/v1/videos/{video_id}/frames")
+    frames_res = await client.get(f"/api/v1/videos/{video_id}/frames", headers=headers)
     assert frames_res.status_code == 200
     frames = frames_res.json()
     assert len(frames) >= 5
     assert any(f["is_selected"] for f in frames)
 
     # Check analysis endpoint
-    analysis_res = await client.get(f"/api/v1/videos/{video_id}/analysis")
+    analysis_res = await client.get(f"/api/v1/videos/{video_id}/analysis", headers=headers)
     assert analysis_res.status_code == 200
     analysis = analysis_res.json()
     assert analysis["crop"] == "soybean"
     assert "diagnosis" in analysis
     assert "evidence" in analysis
     assert "model_versions" in analysis
-    assert analysis["model_versions"]["detector"] != ""
+    assert analysis["model_versions"]["aggregation"] != ""
 
 @pytest.mark.asyncio
 async def test_video_insufficient_evidence_routing(client, test_db):
-    farm_res = await client.post("/api/v1/farms", json={"name": "Dark Field Farm"})
+    # Register and login first
+    await client.post(
+        "/api/v1/auth/register",
+        json={"email": "evidence-test@rakshak.ai", "password": "Password123!"},
+    )
+    login = await client.post(
+        "/api/v1/auth/login",
+        json={"email_or_phone": "evidence-test@rakshak.ai", "password": "Password123!"},
+    )
+    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    farm_res = await client.post("/api/v1/farms", json={"name": "Dark Field Farm"}, headers=headers)
     farm_id = farm_res.json()["id"]
-    field_res = await client.post(f"/api/v1/farms/{farm_id}/fields", json={"name": "Dark Field"})
+    field_res = await client.post(f"/api/v1/farms/{farm_id}/fields", json={"name": "Dark Field"}, headers=headers)
     field_id = field_res.json()["id"]
 
-    # 30 dark/unusable frames -> all fail exposure check (< 5 usable)
-    dark_video_bytes = create_synthetic_mp4(num_frames=30, is_dark=True)
+    # 55 frames at 5 fps = 11 seconds (>= 10s minimum) but all dark/unusable frames
+    dark_video_bytes = create_synthetic_mp4(num_frames=55, is_dark=True)
     files = {"file": ("dark_video.mp4", dark_video_bytes, "video/mp4")}
     data = {"field_id": field_id, "consent": "true"}
 
-    upload_res = await client.post("/api/v1/videos", data=data, files=files)
+    upload_res = await client.post("/api/v1/videos", data=data, files=files, headers=headers)
     assert upload_res.status_code == 201
     video_id = upload_res.json()["video_id"]
 
@@ -119,7 +153,7 @@ async def test_video_insufficient_evidence_routing(client, test_db):
     await ingestion_service.execute_processing_pipeline(video_id, db_session=test_db)
 
     # Check status endpoint -> must be insufficient_evidence
-    status_res = await client.get(f"/api/v1/videos/{video_id}/status")
+    status_res = await client.get(f"/api/v1/videos/{video_id}/status", headers=headers)
     assert status_res.status_code == 200
     status_data = status_res.json()
     assert status_data["status"] == "insufficient_evidence"

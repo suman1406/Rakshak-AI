@@ -14,6 +14,7 @@ from app.models.prediction import VideoDiagnosis
 from app.models.video import Frame, Video, VideoStatus
 from app.modules.ingestion.service import ingestion_service
 from app.modules.reporting.result_contract import disease_slug, result_state, severity_name
+from app.modules.reporting.templates import get_canned_report
 from app.schemas.video import (
     VideoAnalysisDiagnosis,
     VideoAnalysisEvidence,
@@ -131,6 +132,7 @@ async def get_video_analysis(
         raise HTTPException(status_code=404, detail="Video not found")
 
     if video.status == VideoStatus.insufficient_evidence:
+        canned = get_canned_report("unknown_other")
         return VideoAnalysisResponse(
             video_id=video.id,
             crop="soybean",
@@ -141,9 +143,12 @@ async def get_video_analysis(
                 quality_score=video.quality_score,
             ),
             retake_guidance=video.error_detail or "Retake the video in better light with steady coverage of the crop canopy.",
+            explanation=canned["explanation"],
+            action_items=canned["action_items"],
         )
 
     if video.status == VideoStatus.failed:
+        canned = get_canned_report("unknown_other")
         return VideoAnalysisResponse(
             video_id=video.id,
             crop="soybean",
@@ -154,6 +159,8 @@ async def get_video_analysis(
                 quality_score=video.quality_score,
             ),
             retake_guidance=video.error_detail or "The scan could not be completed. Retry or upload a new video.",
+            explanation=canned["explanation"],
+            action_items=canned["action_items"],
         )
 
     if video.status != VideoStatus.ready:
@@ -165,6 +172,9 @@ async def get_video_analysis(
     diagnosis_row = video.diagnoses[0] if video.diagnoses else None
     if not diagnosis_row:
         raise HTTPException(status_code=409, detail="Analysis completed without a persisted diagnosis")
+
+    slug = disease_slug(diagnosis_row)
+    canned = get_canned_report(slug)
 
     return VideoAnalysisResponse(
         video_id=video.id,
@@ -187,6 +197,8 @@ async def get_video_analysis(
         model_versions={
             "aggregation": diagnosis_row.aggregation_model_version,
         },
+        explanation=diagnosis_row.explanation or canned["explanation"],
+        action_items=canned["action_items"],
     )
 
 @router.get("/{video_id}/frames")

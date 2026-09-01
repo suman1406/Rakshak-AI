@@ -12,7 +12,10 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-# Prohibited overconfident phrases
+# Prohibited overconfident phrases (patterns that should FAIL)
+# Diseases/conditions that should trigger "confirmed {disease}" pattern
+DISEASE_TERMS = r"(rust|blight|mildew|spot|rot|wilts?|(?:leaf|stem)(?:\s+)?spot|cancer|lesion)"
+
 PROHIBITED_CERTAINTY_PATTERNS = [
     r"\b100%\b",
     r"\bdefinitely\b",
@@ -23,6 +26,15 @@ PROHIBITED_CERTAINTY_PATTERNS = [
     r"\balways works\b",
     r"\bno doubt\b",
     r"\bexact diagnosis\b",
+    # Task required patterns
+    r"definitely have\s+\w+",          # "definitely have {disease}"
+    rf"confirmed\s+(?:that\s+)?{DISEASE_TERMS}",  # "confirmed {disease}"
+    r"you definitely have",              # "you definitely have"
+    r"prescribe.*pesticide",             # "prescribe.*pesticide"
+    r"apply.*fertilizer.*dose",          # "apply.*fertilizer.*dose"
+    r"use.*chemical.*amount",           # "use.*chemical.*amount"
+    r"cure.*disease",                    # "cure.*disease"
+    r"guaranteed.*treatment",            # "guaranteed.*treatment"
 ]
 
 # Mandatory safety phrases (at least one must be present if a diagnosis is stated)

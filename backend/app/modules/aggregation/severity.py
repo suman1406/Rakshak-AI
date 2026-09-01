@@ -34,7 +34,7 @@ class SeverityEstimator:
         total_frames = len(frame_results)
         diseased_frames = [
             fr for fr in frame_results
-            if not fr.is_unknown and fr.top_class not in ("healthy", "unknown_other")
+            if not fr.is_unknown and fr.top_class not in ("soybean_healthy", "unknown_other")
         ]
         ratio = len(diseased_frames) / total_frames if total_frames > 0 else 0.0
 

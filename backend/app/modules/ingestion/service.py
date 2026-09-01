@@ -10,12 +10,17 @@ from ...core.config import settings
 from ...core.logging import logger
 from ...db.session import async_session_factory
 from ...models.farm import Disease, Field
-from ...models.prediction import ConfidenceBand, DecisionAuthorityStatus, VideoDiagnosis
+from ...models.prediction import ConfidenceBand, DecisionAuthorityStatus, Detection, VideoDiagnosis
 from ...models.video import Frame, Video, VideoStatus
 from ..processing.extractor import VideoFrameExtractor
 from ..processing.quality import QualityFilterService
 from ..inference.service import InferenceService
 from ..inference.classifier import TAXONOMY_CLASSES
+from ..aggregation.bayes import BayesianAggregator
+from ..aggregation.severity import SeverityEstimator
+from ..reporting.llm_advisor import generate_advisory_report
+from ..reporting.templates import get_canned_report
+from ...guardrails.certainty_filter import CertaintyGuardrailFilter
 
 class VideoIngestionService:
     def __init__(self):
@@ -158,6 +163,10 @@ class VideoIngestionService:
         # diagnosis was persisted. Replace that attempt's derived rows so frame
         # records remain idempotent for a video.
         await db.execute(delete(Frame).where(Frame.video_id == video_id))
+        # Also clean up any detection/diagnosis records from previous attempts
+        await db.execute(delete(Detection).where(Detection.frame_id.in_(
+            select(Frame.id).where(Frame.video_id == video_id)
+        )))
         await db.flush()
 
         # Store Frame rows in DB
@@ -197,39 +206,20 @@ class VideoIngestionService:
         # Run detection + classification on all selected frames (Grade 3)
         frame_results = await self._inference.run_frame_inference(video_id, db)
 
-        # 6. Aggregation: simple confidence-weighted vote across frames
+        # 6. Aggregation: Bayesian temporal aggregation
         video.status = VideoStatus.aggregating
         await db.commit()
         logger.info(f"Video {video_id} -> aggregating ({len(frame_results)} frame results)")
 
-        # Aggregate probability distributions weighted by per-frame quality score
-        agg_dist: dict[str, float] = {cls: 0.0 for cls in TAXONOMY_CLASSES}
-        weight_sum = 0.0
-        known_frame_count = 0
+        # Use BayesianAggregator for intelligent frame combination
+        aggregator = BayesianAggregator()
+        agg_result = aggregator.aggregate(frame_results)
 
-        for fr in frame_results:
-            if fr.is_unknown:
-                continue
-            weight = max(fr.quality_score, 1.0)
-            for cls, prob in fr.avg_probability_distribution.items():
-                agg_dist[cls] = agg_dist.get(cls, 0.0) + prob * weight
-            weight_sum += weight
-            known_frame_count += 1
-
-        if weight_sum > 0:
-            agg_dist = {cls: round(v / weight_sum, 6) for cls, v in agg_dist.items()}
-        else:
-            # All frames unknown: uniform distribution
-            n = len(TAXONOMY_CLASSES)
-            agg_dist = {cls: round(1.0 / n, 6) for cls in TAXONOMY_CLASSES}
-
-        # Top-1 from aggregated distribution
-        top_class = max(agg_dist, key=lambda k: agg_dist[k])
-        top_conf  = agg_dist[top_class]
-
-        # OOD routing: if unknown_other wins or top confidence too low
-        all_unknown = all(fr.is_unknown for fr in frame_results)
-        is_unknown  = all_unknown or top_class == "unknown_other" or top_conf < 0.30
+        top_class = agg_result.top_class
+        top_conf = agg_result.top_confidence
+        agg_dist = agg_result.probability_distribution
+        is_unknown = agg_result.is_unknown
+        known_frame_count = agg_result.supporting_frames
 
         # Confidence band mapping
         if top_conf >= 0.90:
@@ -239,62 +229,96 @@ class VideoIngestionService:
         else:
             band = ConfidenceBand.low
 
-        # Severity heuristic: fraction of non-unknown frames × avg detection density
-        if len(frame_results) > 0:
-            diseased_fraction = known_frame_count / len(frame_results)
-        else:
-            diseased_fraction = 0.0
+        # Severity estimation using dedicated module
+        severity_estimator = SeverityEstimator()
+        severity = severity_estimator.estimate(frame_results, is_unknown)
+        severity_level = severity.severity_level
+        affected_estimate = severity.affected_plant_estimate
 
-        if is_unknown:
-            severity_level = 0
-            affected_estimate = 0.0
-        elif diseased_fraction >= 0.70:
-            severity_level = 3    # Severe
-            affected_estimate = round(min(diseased_fraction, 0.95), 2)
-        elif diseased_fraction >= 0.40:
-            severity_level = 2    # Moderate
-            affected_estimate = round(diseased_fraction * 0.8, 2)
-        elif diseased_fraction >= 0.15:
-            severity_level = 1    # Mild
-            affected_estimate = round(diseased_fraction * 0.5, 2)
-        else:
-            severity_level = 0
-            affected_estimate = 0.0
+        # 7. LLM Advisory Generation with Guardrails
+        action_items: list[str] = []
+        guardrail_filter = CertaintyGuardrailFilter()
+        disease_slug = top_class  # Use the classifier output as the slug
+        disease_display = top_class.replace("_", " ").title()  # Define before LLM call
 
-        # Build explanation (will be replaced by LLM in Grade 5)
+        try:
+            llm_result = await generate_advisory_report(
+                crop="soybean",
+                disease=disease_display,
+                confidence=top_conf,
+                confidence_band=band.value,
+                severity_level=severity_level,
+                affected_plant_estimate=affected_estimate,
+                supporting_frames=known_frame_count,
+            )
+            
+            if llm_result:
+                # Run LLM explanation through guardrail filter
+                llm_explanation = llm_result.get("explanation", "")
+                guardrail_result = guardrail_filter.evaluate(llm_explanation)
+                if guardrail_result.passed:
+                    explanation = llm_explanation
+                    action_items = llm_result.get("action_items", [])
+                    logger.info(f"Video {video_id} -> LLM advisory generated and passed guardrails")
+                else:
+                    logger.warning(f"Video {video_id} -> LLM output failed guardrails: {guardrail_result.violations}, using template fallback")
+                    template = get_canned_report(disease_slug)
+                    explanation = template.get("explanation", "")
+                    action_items_str = template.get("action_items", "")
+                    action_items = action_items_str.split("\n") if isinstance(action_items_str, str) else []
+            else:
+                # LLM returned None (API key missing or call failed), use template
+                template = get_canned_report(disease_slug)
+                explanation = template.get("explanation", "")
+                action_items_str = template.get("action_items", "")
+                action_items = action_items_str.split("\n") if isinstance(action_items_str, str) else []
+                
+        except Exception as e:
+            logger.warning(f"Video {video_id} -> LLM advisory generation failed: {e}, using template fallback")
+            template = get_canned_report(disease_slug)
+            explanation = template.get("explanation", "")
+            action_items_str = template.get("action_items", "")
+            action_items = action_items_str.split("\n") if isinstance(action_items_str, str) else []
+
+        # Build explanation - use LLM result if available, otherwise fallback to default template
         disease_display = top_class.replace("_", " ").title()
-        if is_unknown:
-            explanation = (
-                "Visual evidence is insufficient to confidently classify a disease. "
-                "Please consult an agronomist for a manual inspection."
-            )
-        elif band == ConfidenceBand.high:
-            explanation = (
-                f"Strong visual indicators of {disease_display} detected across "
-                f"{known_frame_count} frame(s). "
-                "This is an AI estimate, not a confirmed diagnosis. Verify with an agronomist."
-            )
-        elif band == ConfidenceBand.medium:
-            explanation = (
-                f"Possible signs of {disease_display} observed in {known_frame_count} frame(s). "
-                "Confidence is moderate. This is an AI estimate, not a confirmed diagnosis."
-            )
-        else:
-            explanation = (
-                f"Weak visual indicators suggest possible {disease_display}. "
-                "Low confidence — inspect field manually. "
-                "This is an AI estimate, not a confirmed diagnosis."
-            )
+        
+        # Only use default explanation as fallback if LLM didn't produce one
+        if not explanation or explanation.strip() == "":
+            if is_unknown:
+                explanation = (
+                    "Visual evidence is insufficient to confidently classify a disease. "
+                    "Please consult an agronomist for a manual inspection."
+                )
+            elif band == ConfidenceBand.high:
+                explanation = (
+                    f"Strong visual indicators of {disease_display} detected across "
+                    f"{known_frame_count} frame(s). "
+                    "This is an AI estimate, not a confirmed diagnosis. Verify with an agronomist."
+                )
+            elif band == ConfidenceBand.medium:
+                explanation = (
+                    f"Possible signs of {disease_display} observed in {known_frame_count} frame(s). "
+                    "Confidence is moderate. This is an AI estimate, not a confirmed diagnosis."
+                )
+            else:
+                explanation = (
+                    f"Weak visual indicators suggest possible {disease_display}. "
+                    "Low confidence — inspect field manually. "
+                    "This is an AI estimate, not a confirmed diagnosis."
+                )
 
         # Persist a database disease identity only when the classifier's launch
         # taxonomy can be matched to the active, versioned catalogue. An
         # unmatched class is safer as "unknown" than as an invented diagnosis.
         disease_id = None
         if not is_unknown:
+            # Map classifier output class names (from classes.json) to Disease names in DB
             taxonomy_names = {
                 "soybean_rust": "Soybean Rust",
-                "frogeye_leaf_spot": "Frogeye Leaf Spot",
-                "healthy": "Healthy",
+                "soybean_frogeye_leaf_spot": "Frogeye Leaf Spot",
+                "soybean_healthy": "Healthy",
+                "soybean_bacterial_blight": "Sudden Death Syndrome",
             }
             disease_name = taxonomy_names.get(top_class)
             if disease_name:
