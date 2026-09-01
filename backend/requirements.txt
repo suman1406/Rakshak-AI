@@ -5,6 +5,7 @@ sqlalchemy==2.0.36
 alembic==1.14.0
 greenlet>=3.1.0
 psycopg[binary]==3.2.3
+asyncpg>=0.29.0
 aiosqlite==0.20.0
 python-multipart==0.0.20
 passlib[bcrypt]==1.7.4
