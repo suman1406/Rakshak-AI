@@ -14,21 +14,16 @@ COPY alembic.ini .
 COPY alembic ./alembic
 COPY tests ./tests
 
-# Drop existing ENUM types if they exist (handles re-deploy scenarios)
-CMD ["sh", "-c", """
-    # Drop existing custom types to handle re-deploys
-    psql "$DATABASE_URL" -c 'DROP TYPE IF EXISTS reviewstatus CASCADE;' || true
-    psql "$DATABASE_URL" -c 'DROP TYPE IF EXISTS videostatus CASCADE;' || true
-    psql "$DATABASE_URL" -c 'DROP TYPE IF EXISTS confidenceband CASCADE;' || true
-    psql "$DATABASE_URL" -c 'DROP TYPE IF EXISTS decisionauthoritystatus CASCADE;' || true
-    psql "$DATABASE_URL" -c 'DROP TYPE IF EXISTS userrole CASCADE;' || true
-    
-    # Run migrations
-    alembic upgrade head
-    
-    # Seed database
-    python -m app.db.seed
-    
-    # Start server
-    python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
-"""]
+# Create startup script
+RUN echo '#!/bin/sh' > /app/start.sh && \
+    echo 'psql "$DATABASE_URL" -c "DROP TYPE IF EXISTS reviewstatus CASCADE;" || true' >> /app/start.sh && \
+    echo 'psql "$DATABASE_URL" -c "DROP TYPE IF EXISTS videostatus CASCADE;" || true' >> /app/start.sh && \
+    echo 'psql "$DATABASE_URL" -c "DROP TYPE IF EXISTS confidenceband CASCADE;" || true' >> /app/start.sh && \
+    echo 'psql "$DATABASE_URL" -c "DROP TYPE IF EXISTS decisionauthoritystatus CASCADE;" || true' >> /app/start.sh && \
+    echo 'psql "$DATABASE_URL" -c "DROP TYPE IF EXISTS userrole CASCADE;" || true' >> /app/start.sh && \
+    echo 'alembic upgrade head' >> /app/start.sh && \
+    echo 'python -m app.db.seed' >> /app/start.sh && \
+    echo 'python -m uvicorn app.main:app --host 0.0.0.0 --port 8000' >> /app/start.sh && \
+    chmod +x /app/start.sh
+
+CMD ["/app/start.sh"]
