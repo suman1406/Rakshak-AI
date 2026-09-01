@@ -2,30 +2,42 @@
 classifier.py — Soybean Disease Classifier
 
 Design goals:
-  - Launch-locked disease taxonomy (6 classes). New classes require a taxonomy
-    version bump and a new `classifier_model_version` — never silent expansion.
+  - Launch-locked disease taxonomy, loaded from classes.json bundled with the
+    model weights — never hardcoded and trusted blind. Startup asserts the
+    manifest matches the model's output dimension (fail loud, not lazy).
   - Always outputs the *full probability distribution* over all classes, not
     just top-1. This is stored in `frame_diagnoses.probability_distribution`.
-  - CPU-safe on Mac M2 dev (uses EfficientNet-B0 pretrained on ImageNet as
-    feature backbone; fine-tuning on soybean data is a later production step).
+  - Real fine-tuned weights (EfficientNet-B0 via timm), trained on ASDID
+    (Auburn Soybean Disease Image Dataset), single-source MVP.
+  - Post-hoc temperature scaling applied at inference (see calibration.json).
   - Lazy-loaded model to keep test collection fast.
 
-Taxonomy (locked, v1.0):
-  0 → soybean_rust
-  1 → bacterial_blight
-  2 → frogeye_leaf_spot
-  3 → septoria_brown_spot
-  4 → healthy
-  5 → unknown_other
+Taxonomy (locked, v1.1-mvp5):
+  MVP taxonomy excludes soybean_septoria_brown_spot — no volume source was
+  available at MVP scope (ASDID doesn't include it). Adding it back is a
+  Rule 5 append-only change: new class appended at the next index, model
+  retrained with an expanded output layer (warm-start old class weights,
+  random-init the new row), and BOTH CLASSIFIER_MODEL_VERSION and
+  TAXONOMY_VERSION bumped together. Never insert mid-list, never silently
+  re-add without a version bump.
 
-The class-index ordering is stable and referenced in TAXONOMY_CLASSES below.
-Any model retrain that changes this ordering MUST bump CLASSIFIER_MODEL_VERSION.
+  Actual class order is NOT hardcoded here — it's loaded from classes.json
+  at model-load time and asserted to match the model's output dimension.
+  The list below is documentation of what's *expected*, not the source of
+  truth:
+    0 → soybean_bacterial_blight
+    1 → soybean_frogeye_leaf_spot
+    2 → soybean_healthy
+    3 → soybean_rust
+    4 → unknown_other
 """
 
 from __future__ import annotations
 
+import json
 import logging
-from dataclasses import dataclass
+import pathlib
+from dataclasses import dataclass, field
 from typing import Optional
 
 import numpy as np
@@ -33,30 +45,32 @@ import numpy as np
 logger = logging.getLogger("rakshak")
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Locked taxonomy (Grade 3 — v1.0)
+# Locked taxonomy (v1.1-mvp5 — Septoria deferred, see module docstring)
 # ──────────────────────────────────────────────────────────────────────────────
-CLASSIFIER_MODEL_VERSION = "effnet-b0-soybean-v1.0"
+CLASSIFIER_MODEL_VERSION = "effnet-b0-soybean-asdid-v1.1-mvp5"
+TAXONOMY_VERSION = "v1.1-mvp5"
 
-TAXONOMY_VERSION = "v1.0"
-
-# Class index → canonical slug mapping (never reorder without bumping version)
-TAXONOMY_CLASSES: list[str] = [
+# Documentation only — actual order comes from classes.json at load time.
+EXPECTED_TAXONOMY_CLASSES: list[str] = [
+    "soybean_bacterial_blight",
+    "soybean_frogeye_leaf_spot",
+    "soybean_healthy",
     "soybean_rust",
-    "bacterial_blight",
-    "frogeye_leaf_spot",
-    "septoria_brown_spot",
-    "healthy",
     "unknown_other",
 ]
 
-NUM_CLASSES = len(TAXONOMY_CLASSES)
+WEIGHTS_DIR = pathlib.Path(__file__).resolve().parents[2] / "weights"  # backend/app/weights
+WEIGHTS_PATH = WEIGHTS_DIR / "soybean_classifier_effnet_b0.pt"
+CLASSES_PATH = WEIGHTS_DIR / "classes.json"
+CALIBRATION_PATH = WEIGHTS_DIR / "calibration.json"
 
-# OOD routing: if `unknown_other` probability exceeds this OR max non-unknown
-# class probability falls below this, route to `is_unknown=True`.
+# OOD routing thresholds — inherited from the original scaffold, NOT yet
+# re-validated or tuned against this real model. Revisit as a follow-up pass
+# before relying on these for production certainty guardrails.
 OOD_UNKNOWN_THRESHOLD = 0.45
 OOD_MAX_CONFIDENCE_FLOOR = 0.30
 
-# ImageNet normalisation (standard for pretrained torchvision models)
+# ImageNet normalisation (standard for pretrained torchvision/timm models)
 _IMAGENET_MEAN = [0.485, 0.456, 0.406]
 _IMAGENET_STD  = [0.229, 0.224, 0.225]
 _INPUT_SIZE = 224
@@ -72,18 +86,18 @@ class ClassificationResult:
     top_confidence: float
     is_unknown: bool
     classifier_model_version: str = CLASSIFIER_MODEL_VERSION
+    taxonomy_version: str = TAXONOMY_VERSION
 
 
 class DiseaseClassifier:
     """
-    Wraps an EfficientNet-B0 ImageNet backbone fine-tuned for soybean disease
-    classification over the locked 6-class taxonomy.
+    Wraps a timm EfficientNet-B0 backbone fine-tuned on ASDID for soybean
+    disease classification over the locked 5-class MVP taxonomy.
 
-    At MVP launch the head is randomly initialised (simulating the shape of a
-    fine-tuned model) because we have no labelled soybean dataset yet.  The
-    softmax outputs are therefore not calibrated, but the architecture, DB
-    schema, version stamping, and OOD routing are fully production-ready so
-    that swapping in real weights requires only replacing the state_dict.
+    Class order and count are loaded from classes.json bundled next to the
+    weights, not hardcoded — startup fails loud if the manifest doesn't match
+    the model's actual output dimension (Rule 6 of the taxonomy governance
+    doc), rather than silently misreading indices at inference time.
     """
 
     def __init__(
@@ -97,57 +111,90 @@ class DiseaseClassifier:
         self._ood_max_conf_floor = ood_max_confidence_floor
         self._model = None          # lazy-loaded
         self._preprocess = None
+        self._classes: list[str] = []
+        self._temperature: float = 1.0
 
     # ──────────────────────────────────────────────────────────────────────────
     # Internal helpers
     # ──────────────────────────────────────────────────────────────────────────
 
     def _load_model(self):
-        """Lazy-load EfficientNet-B0 with a custom classification head."""
+        """Lazy-load the fine-tuned EfficientNet-B0 + bundled manifest."""
         if self._model is not None:
             return
 
         try:
             import torch
-            import torch.nn as nn
-            from torchvision.models import efficientnet_b0, EfficientNet_B0_Weights
+            import timm
             from torchvision import transforms
 
-            weights = EfficientNet_B0_Weights.DEFAULT
-            backbone = efficientnet_b0(weights=weights)
+            if not WEIGHTS_PATH.exists():
+                raise FileNotFoundError(
+                    f"Trained weights not found at {WEIGHTS_PATH}. "
+                    "Copy soybean_classifier_effnet_b0.pt into backend/app/weights/."
+                )
+            if not CLASSES_PATH.exists():
+                raise FileNotFoundError(
+                    f"classes.json not found at {CLASSES_PATH}. "
+                    "Copy it alongside the weights file."
+                )
 
-            # Replace the head with a soybean-disease head (NUM_CLASSES outputs)
-            in_features = backbone.classifier[1].in_features
-            backbone.classifier = nn.Sequential(
-                nn.Dropout(p=0.2, inplace=True),
-                nn.Linear(in_features, NUM_CLASSES),
-            )
-            backbone.eval()
+            classes = json.load(open(CLASSES_PATH))
 
             # Device selection (MPS → CUDA → CPU)
             if torch.backends.mps.is_available():
-                self._device = torch.device("mps")
+                device = torch.device("mps")
             elif torch.cuda.is_available():
-                self._device = torch.device("cuda")
+                device = torch.device("cuda")
             else:
-                self._device = torch.device("cpu")
+                device = torch.device("cpu")
 
-            self._model = backbone.to(self._device)
+            model = timm.create_model(
+                "efficientnet_b0", pretrained=False, num_classes=len(classes)
+            )
+            state_dict = torch.load(WEIGHTS_PATH, map_location=device)
+            model.load_state_dict(state_dict)
+            model.eval()
+            model = model.to(device)
+
+            # Rule 6 — fail loud at load time, not lazily on the first weird prediction.
+            expected_dim = model.get_classifier().out_features
+            assert len(classes) == expected_dim, (
+                f"classes.json has {len(classes)} entries but the loaded model "
+                f"outputs {expected_dim} classes — taxonomy/model mismatch. Refusing to serve."
+            )
+            assert "unknown_other" in classes, (
+                "classes.json is missing the 'unknown_other' sentinel class."
+            )
+
+            # Calibration (optional — defaults to no-op if file is missing)
+            temperature = 1.0
+            if CALIBRATION_PATH.exists():
+                calib = json.load(open(CALIBRATION_PATH))
+                temperature = float(calib.get("temperature", 1.0))
+            self._temperature = temperature
+
+            self._device = device
+            self._model = model
             self._torch = torch
+            self._classes = classes
 
-            # Standard ImageNet preprocessing pipeline
             self._preprocess = transforms.Compose([
                 transforms.Resize((_INPUT_SIZE, _INPUT_SIZE)),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=_IMAGENET_MEAN, std=_IMAGENET_STD),
             ])
 
-            logger.info(f"Classifier loaded on device={self._device}: {self._model_version}")
+            logger.info(
+                f"Classifier loaded on device={self._device}: {self._model_version} "
+                f"| taxonomy_version={TAXONOMY_VERSION} | classes={self._classes} "
+                f"| temperature={self._temperature}"
+            )
 
         except ImportError as exc:
             raise RuntimeError(
-                "torch/torchvision required. Install with: "
-                "pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu"
+                "torch/torchvision/timm required. Install with: "
+                "pip install torch torchvision timm --index-url https://download.pytorch.org/whl/cpu"
             ) from exc
 
     def _crop_region(self, image_bgr, bbox: dict):
@@ -186,7 +233,7 @@ class DiseaseClassifier:
 
         Returns:
             ClassificationResult with full probability_distribution dict and
-            mandatory classifier_model_version stamp.
+            mandatory classifier_model_version / taxonomy_version stamps.
         """
         self._load_model()
 
@@ -199,20 +246,23 @@ class DiseaseClassifier:
         tensor = self._bgr_crop_to_tensor(crop)
 
         with self._torch.no_grad():
-            logits = self._model(tensor)            # [1, NUM_CLASSES]
-            probs  = self._torch.softmax(logits, dim=1).squeeze(0).cpu().numpy()
+            logits = self._model(tensor)                          # [1, NUM_CLASSES]
+            scaled_logits = logits / self._temperature             # calibration (no-op if T=1.0)
+            probs = self._torch.softmax(scaled_logits, dim=1).squeeze(0).cpu().numpy()
 
-        # Build full probability distribution dict (always all classes)
+        # Build full probability distribution dict (always all classes, in
+        # the exact order loaded from classes.json — never re-derived).
         prob_dist: dict[str, float] = {
             cls: float(round(float(probs[i]), 6))
-            for i, cls in enumerate(TAXONOMY_CLASSES)
+            for i, cls in enumerate(self._classes)
         }
 
         top_idx = int(np.argmax(probs))
-        top_class = TAXONOMY_CLASSES[top_idx]
+        top_class = self._classes[top_idx]
         top_conf  = float(probs[top_idx])
 
-        # OOD routing: unknown_other dominates OR max non-unknown conf too low
+        # OOD routing — thresholds inherited as-is, not yet re-tuned (see
+        # module-level note above this is a deferred follow-up pass).
         unknown_prob = prob_dist.get("unknown_other", 0.0)
         max_known_conf = max(
             v for k, v in prob_dist.items() if k != "unknown_other"
@@ -230,6 +280,7 @@ class DiseaseClassifier:
             top_confidence=top_conf,
             is_unknown=is_unknown,
             classifier_model_version=self._model_version,
+            taxonomy_version=TAXONOMY_VERSION,
         )
 
     @property
@@ -238,7 +289,8 @@ class DiseaseClassifier:
 
     @property
     def taxonomy_classes(self) -> list[str]:
-        return list(TAXONOMY_CLASSES)
+        self._load_model()
+        return list(self._classes)
 
     @property
     def taxonomy_version(self) -> str:

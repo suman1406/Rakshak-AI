@@ -1,0 +1,8 @@
+# taxonomy/class_manifest.yaml
+asdid:
+  bacterial_blight: soybean_bacterial_blight
+  frogeye_leaf_spot: soybean_frogeye_leaf_spot
+  soybean_rust: soybean_rust
+  healthy: soybean_healthy
+  potassium_deficiency: other   # sampled ~150-250 only, not full folder
+  downy_mildew: other            # sampled ~150-250 only, not full folder

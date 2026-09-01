@@ -48,5 +48,9 @@ work/
 # Local agent tooling installed outside the application
 .agents/
 skills-lock.json
-model/dataset
-model/dataset_split
+
+# Model
+model/dataset/
+model/dataset_split/
+model/weights/*.pt
+model/raw_downloads/
