@@ -18,6 +18,7 @@ COPY tests ./tests
 RUN echo '#!/usr/bin/env python3' > /app/start.py && \
     echo 'import os' >> /app/start.py && \
     echo 'import sys' >> /app/start.py && \
+    echo 'import ssl' >> /app/start.py && \
     echo '' >> /app/start.py && \
     echo 'ENUM_TYPES = ["reviewstatus", "videostatus", "confidenceband", "decisionauthoritystatus", "userrole"]' >> /app/start.py && \
     echo '' >> /app/start.py && \
@@ -28,8 +29,25 @@ RUN echo '#!/usr/bin/env python3' > /app/start.py && \
     echo '        if not db_url:' >> /app/start.py && \
     echo '            print("DATABASE_URL not set, skipping type cleanup")' >> /app/start.py && \
     echo '            return' >> /app/start.py && \
-    echo '        # NeonDB connection string needs sslmode=require handled' >> /app/start.py && \
-    echo '        conn = psycopg.connect(db_url)' >> /app/start.py && \
+    echo '        # Handle NeonDB SSL and strip driver prefix for psycopg' >> /app/start.py && \
+    echo '        ssl_context = None' >> /app/start.py && \
+    echo '        # Strip driver prefix: postgresql+asyncpg:// -> postgresql://' >> /app/start.py && \
+    echo '        if "postgresql+" in db_url:' >> /app/start.py && \
+    echo '            db_url = db_url.replace("postgresql+asyncpg://", "postgresql://")' >> /app/start.py && \
+    echo '        # Handle sslmode query param' >> /app/start.py && \
+    echo '        if "sslmode=" in db_url:' >> /app/start.py && \
+    echo '            if "sslmode=require" in db_url:' >> /app/start.py && \
+    echo '                ssl_context = ssl.create_default_context()' >> /app/start.py && \
+    echo '            # Remove sslmode from URL' >> /app/start.py && \
+    echo '            db_url = db_url.split("?sslmode")[0]' >> /app/start.py && \
+    echo '        try:' >> /app/start.py && \
+    echo '            if ssl_context:' >> /app/start.py && \
+    echo '                conn = psycopg.connect(db_url, ssl=ssl_context)' >> /app/start.py && \
+    echo '            else:' >> /app/start.py && \
+    echo '                conn = psycopg.connect(db_url)' >> /app/start.py && \
+    echo '        except Exception as e:' >> /app/start.py && \
+    echo '            print(f"Database connection failed: {e}")' >> /app/start.py && \
+    echo '            return' >> /app/start.py && \
     echo '        cur = conn.cursor()' >> /app/start.py && \
     echo '        for t in ENUM_TYPES:' >> /app/start.py && \
     echo '            try:' >> /app/start.py && \
