@@ -4,7 +4,7 @@ Older production databases were created before this column existed.  The
 initial schema migration uses ``checkfirst``, so it does not evolve an already
 existing ``video_diagnoses`` table when the ORM model gains a field.
 
-Revision ID: 0006_add_video_diagnosis_confidence_band
+Revision ID: 0006_confidence_band
 Revises: 0005_add_videos_status_column
 """
 
@@ -12,7 +12,7 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision = "0006_add_video_diagnosis_confidence_band"
+revision = "0006_confidence_band"
 down_revision = "0005_add_videos_status_column"
 branch_labels = None
 depends_on = None
