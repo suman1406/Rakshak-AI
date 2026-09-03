@@ -42,7 +42,7 @@ export interface EvidenceFrame {
 }
 
 export interface Case {
-  id: string; // e.g. "FASAL-10482"
+  id: string;
   farmId: string;
   farmName: string;
   fieldId: string;

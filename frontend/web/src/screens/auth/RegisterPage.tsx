@@ -2,15 +2,32 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Sprout } from 'lucide-react';
 import { PublicNavbar } from '../../components/layout/PublicNavbar';
+import { apiClient } from '../../services/apiClient';
 
 export const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    navigate('/contact');
+    if (!apiClient.isConfigured()) {
+      setError('Registration service is not configured. Set NEXT_PUBLIC_API_URL and try again.');
+      return;
+    }
+    setError('');
+    setSubmitting(true);
+    try {
+      await apiClient.register({ display_name: name.trim(), email: email.trim(), password });
+      navigate('/login', { replace: true, state: { registered: true } });
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'We could not create the account. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -25,7 +42,7 @@ export const RegisterPage: React.FC = () => {
             </div>
           </Link>
           <h1 className="text-2xl font-extrabold text-field-ink">Register for Rakshak AI</h1>
-          <p className="text-xs text-muted-leaf">Create your workspace account</p>
+          <p className="text-xs text-muted-leaf">Create a farmer account for the Rakshak mobile app</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
@@ -42,6 +59,22 @@ export const RegisterPage: React.FC = () => {
           </div>
 
           <div>
+            <label className="block font-semibold mb-1">Password</label>
+            <input
+              type="password"
+              required
+              minLength={8}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
+              placeholder="At least 8 characters"
+              className="w-full p-2.5 rounded-xl border border-structural bg-field-canvas text-xs outline-none"
+            />
+          </div>
+
+          {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-alert-red">{error}</p>}
+
+          <div>
             <label className="block font-semibold mb-1">Email Address</label>
             <input
               type="email"
@@ -55,14 +88,15 @@ export const RegisterPage: React.FC = () => {
 
           <button
             type="submit"
-            className="w-full py-3 bg-field-ink text-white font-bold rounded-xl hover:bg-opacity-90 transition"
+            disabled={submitting}
+            className="w-full py-3 bg-field-ink text-white font-bold rounded-xl hover:bg-opacity-90 disabled:opacity-60 transition"
           >
-            Request access
+            {submitting ? 'Creating account...' : 'Create farmer account'}
           </button>
         </form>
 
         <div className="text-center text-xs text-muted-leaf pt-2 border-t border-structural">
-          Already registered?{' '}
+          Already registered for a workspace?{' '}
           <Link to="/login" className="font-bold text-field-ink hover:underline">
             Sign in
           </Link>
@@ -74,8 +108,6 @@ export const RegisterPage: React.FC = () => {
 };
 
 export const ForgotPasswordPage: React.FC = () => {
-  const [sent, setSent] = useState(false);
-
   return (
     <div className="min-h-screen bg-field-canvas font-sans">
       <PublicNavbar />
@@ -88,37 +120,11 @@ export const ForgotPasswordPage: React.FC = () => {
         </Link>
         <h1 className="text-2xl font-extrabold text-field-ink">Reset Password</h1>
 
-        {sent ? (
-          <div className="space-y-4">
-            <p className="text-emerald-700 bg-emerald-50 p-4 rounded-xl border border-emerald-200">
-              If an account exists for this email, password reset instructions will be sent shortly.
-            </p>
-            <Link to="/login" className="block py-2.5 bg-field-ink text-white font-bold rounded-xl">
-              Return to Login
-            </Link>
-          </div>
-        ) : (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              setSent(true);
-            }}
-            className="space-y-4 text-left"
-          >
-            <div>
-              <label className="block font-semibold mb-1">Email Address</label>
-              <input
-                type="email"
-                required
-                placeholder="name@example.com"
-                className="w-full p-2.5 rounded-xl border border-structural bg-field-canvas text-xs outline-none"
-              />
-            </div>
-            <button type="submit" className="w-full py-3 bg-field-ink text-white font-bold rounded-xl">
-              Send Password Reset Link
-            </button>
-          </form>
-        )}
+        <p className="text-muted-leaf leading-relaxed">
+          Password reset is not available in this deployment yet. Contact your workspace administrator or the Fasal Rakshak support team to regain access.
+        </p>
+        <Link to="/contact" className="block py-2.5 bg-field-ink text-white font-bold rounded-xl">Contact support</Link>
+        <Link to="/login" className="block py-2.5 border border-structural font-bold rounded-xl">Return to login</Link>
       </div>
       </div>
     </div>

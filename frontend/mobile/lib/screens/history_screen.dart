@@ -50,4 +50,3 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
                 'Start another scan when you visit a different area of the field.')
       ]));
 }
-}

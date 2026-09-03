@@ -11,7 +11,6 @@ import {
   User,
   Settings,
   LogOut,
-  Bell,
   Shield,
   Menu,
   X,
@@ -21,7 +20,6 @@ export const AppLayout: React.FC = () => {
   const { user, role, logout } = useAuth();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   const navItems = role === 'agronomist'
       ? [
@@ -139,53 +137,12 @@ export const AppLayout: React.FC = () => {
         <header className="bg-pure-surface/80 backdrop-blur-md border-b border-structural px-6 py-4 flex items-center justify-between gap-4 sticky top-0 z-20">
           <div className="hidden sm:block"><p className="eyebrow">Rakshak / workspace</p><p className="text-sm font-semibold mt-1">Evidence-led field intelligence</p></div>
 
-          {/* Top Actions: fixed workspace context & notifications */}
+          {/* Top Actions: current workspace context */}
           <div className="flex items-center gap-3">
                 <span className="hidden sm:inline-flex items-center gap-2 px-3 py-2 bg-field-canvas border border-structural rounded-2xl text-xs font-semibold text-field-ink capitalize">
               <Shield size={14} className="text-muted-leaf" /> {role?.replace('_', ' ')} workspace
             </span>
 
-            {/* Notifications Button */}
-            <div className="relative">
-              <button
-                onClick={() => setNotificationsOpen(!notificationsOpen)}
-                className="p-2.5 rounded-2xl bg-field-canvas hover:bg-gray-200/70 border border-structural text-field-ink relative transition"
-              >
-                <Bell size={18} />
-                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-alert-red"></span>
-              </button>
-
-              {notificationsOpen && (
-                <div className="absolute right-0 mt-2 w-80 bg-pure-surface border border-structural rounded-2xl shadow-xl p-4 z-50 space-y-3">
-                  <div className="flex items-center justify-between pb-2 border-b border-structural">
-                    <span className="font-bold text-xs text-field-ink">Field Alerts</span>
-                    <span className="text-[10px] bg-alert-red text-white px-1.5 py-0.5 rounded-full font-mono">
-                      2 Unread
-                    </span>
-                  </div>
-                  <div className="space-y-2 max-h-60 overflow-y-auto text-xs">
-                    <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl space-y-1">
-                      <div className="flex items-center justify-between text-amber-900 font-semibold">
-                        <span>High Risk Signal</span>
-                        <span className="text-[10px] text-amber-700">10m ago</span>
-                      </div>
-                      <p className="text-[11px] text-amber-800">
-                        Soybean rust signal detected in North Plot (Patil Farm). Case #FASAL-10482 awaiting review.
-                      </p>
-                    </div>
-                    <div className="p-2.5 bg-field-canvas border border-structural rounded-xl space-y-1">
-                      <div className="flex items-center justify-between font-semibold text-field-ink">
-                        <span>Agronomist Verified</span>
-                        <span className="text-[10px] text-muted-leaf">2h ago</span>
-                      </div>
-                      <p className="text-[11px] text-muted-leaf">
-                        Dr. Anita Deshmukh verified Case #FASAL-10450 as Cercospora Leaf Blight.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
         </header>
 

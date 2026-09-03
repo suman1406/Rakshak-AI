@@ -1,4 +1,5 @@
 import asyncio
+import concurrent.futures
 from datetime import datetime, timezone
 from celery import Celery
 from .core.config import settings
@@ -11,6 +12,18 @@ celery_app.conf.task_default_queue = settings.CELERY_CPU_QUEUE
 celery_app.conf.task_routes = {
     "app.worker.process_video": {"queue": settings.CELERY_CPU_QUEUE},
 }
+
+def _run_sync(coro):
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    if loop and loop.is_running():
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            return pool.submit(asyncio.run, coro).result()
+    else:
+        return asyncio.run(coro)
 
 @celery_app.task(bind=True, max_retries=2, default_retry_delay=10, acks_late=True)
 def process_video(self, video_id: str) -> str:
@@ -29,7 +42,7 @@ def process_video(self, video_id: str) -> str:
         await ingestion_service.execute_processing_pipeline(video_id)
 
     try:
-        asyncio.run(run())
+        _run_sync(run())
     except Exception as exc:
         async def mark_failure() -> None:
             async with async_session_factory() as db:
@@ -39,7 +52,7 @@ def process_video(self, video_id: str) -> str:
                     video.last_failure_at = datetime.now(timezone.utc)
                     video.error_detail = str(exc)[:1000]
                     await db.commit()
-        asyncio.run(mark_failure())
+        _run_sync(mark_failure())
         raise self.retry(exc=exc)
 
     async def mark_complete() -> None:
@@ -48,5 +61,5 @@ def process_video(self, video_id: str) -> str:
             if video:
                 video.job_completed_at = datetime.now(timezone.utc)
                 await db.commit()
-    asyncio.run(mark_complete())
+    _run_sync(mark_complete())
     return video_id

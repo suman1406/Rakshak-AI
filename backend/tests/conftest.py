@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -14,6 +15,11 @@ from app.db.base import Base
 from app.main import app
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+
+@pytest.fixture(autouse=True)
+def mock_celery_delay(monkeypatch):
+    from app.worker import process_video
+    monkeypatch.setattr(process_video, "delay", lambda *args, **kwargs: None)
 
 @pytest_asyncio.fixture
 async def test_db():

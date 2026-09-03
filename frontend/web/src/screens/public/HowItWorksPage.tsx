@@ -28,30 +28,30 @@ export const HowItWorksPage: React.FC = () => {
           <div className="p-6 bg-pure-surface rounded-2xl border border-structural space-y-3">
             <div className="flex items-center gap-3">
               <span className="w-8 h-8 rounded-lg bg-field-ink text-lime-signal font-bold flex items-center justify-center text-sm">1</span>
-              <h3 className="text-lg font-bold text-field-ink">10-Second Field Video Recording</h3>
+              <h3 className="text-lg font-bold text-field-ink">Short Field Video Recording</h3>
             </div>
             <p className="text-xs text-muted-leaf leading-relaxed pl-11">
-              Farmers record a short sweep across upper, middle, and lower leaf canopies using the mobile app interface.
+              Farmers record a short 10–30 second sweep across upper, middle, and lower leaf canopies using the mobile app interface.
             </p>
           </div>
 
           <div className="p-6 bg-pure-surface rounded-2xl border border-structural space-y-3">
             <div className="flex items-center gap-3">
               <span className="w-8 h-8 rounded-lg bg-field-ink text-lime-signal font-bold flex items-center justify-center text-sm">2</span>
-              <h3 className="text-lg font-bold text-field-ink">16-Frame Extraction & Quality Filtering</h3>
+              <h3 className="text-lg font-bold text-field-ink">Evidence Sampling & Quality Checks</h3>
             </div>
             <p className="text-xs text-muted-leaf leading-relaxed pl-11">
-              The engine samples 16 distinct high-resolution frames, discarding out-of-focus or motion-blurred captures.
+              The service samples usable frames from the video and reports when there is not enough usable evidence to continue.
             </p>
           </div>
 
           <div className="p-6 bg-pure-surface rounded-2xl border border-structural space-y-3">
             <div className="flex items-center gap-3">
               <span className="w-8 h-8 rounded-lg bg-field-ink text-lime-signal font-bold flex items-center justify-center text-sm">3</span>
-              <h3 className="text-lg font-bold text-field-ink">Foliar Lesion Region Segmentation</h3>
+              <h3 className="text-lg font-bold text-field-ink">Evidence-Backed Scan Result</h3>
             </div>
             <p className="text-xs text-muted-leaf leading-relaxed pl-11">
-              Deep convolutional nets detect leaf boundaries and isolate rust pustules, bacterial spots, or chlorotic halos across 40+ leaf sub-regions.
+              Available disease indications, confidence, severity, and evidence remain attached to the submitted scan rather than being replaced with a sample result.
             </p>
           </div>
 

@@ -34,7 +34,9 @@ services:
       MAX_UPLOAD_BYTES: 104857600
       CELERY_CPU_QUEUE: cpu_processing
       CELERY_GPU_QUEUE: gpu_inference
-      JWT_SECRET_KEY: change-me
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Set JWT_SECRET_KEY in .env before starting Docker Compose}
+      DEMO_GATE_PASSWORD: ${DEMO_GATE_PASSWORD:?Set DEMO_GATE_PASSWORD in .env before starting Docker Compose}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
       ENVIRONMENT: docker
     ports: ["8000:8000"]
     volumes:

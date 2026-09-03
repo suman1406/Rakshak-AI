@@ -13,13 +13,23 @@ services:
       - key: API_V1_STR
         value: /api/v1
       - key: DATABASE_URL
-        sync: false  # Set from NeonDB dashboard
+        sync: false
       - key: REDIS_URL
-        sync: false  # Set from Render Redis
+        sync: false
       - key: JWT_SECRET_KEY
-        sync: false  # Generate and set manually
+        sync: false
+      - key: DEMO_GATE_PASSWORD
+        sync: false
+      - key: S3_BUCKET_NAME
+        value: fasal-rakshak-evidence
+      - key: S3_ENDPOINT_URL
+        sync: false
+      - key: S3_ACCESS_KEY
+        sync: false
+      - key: S3_SECRET_KEY
+        sync: false
       - key: GROQ_API_KEY
-        sync: false  # Optional - for LLM advisor
+        sync: false
       - key: QUALITY_BLUR_THRESHOLD
         value: "80.0"
       - key: MIN_USABLE_FRAMES_THRESHOLD

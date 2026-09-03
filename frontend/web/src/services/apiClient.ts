@@ -46,6 +46,14 @@ const request = async (path: string, init: RequestInit = {}, canRefresh = true):
 
 export const apiClient = {
   isConfigured: () => Boolean(process.env.NEXT_PUBLIC_API_URL),
+  register: async (payload: { display_name: string; email: string; password: string }) => {
+    const data = await request('/api/v1/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...payload, role: 'farmer' }),
+    });
+    return data as { id: string; email?: string; role: UserRole; display_name?: string };
+  },
   login: async (emailOrPhone: string, password: string) => {
     const data = await request('/api/v1/auth/login', {
       method: 'POST',
@@ -72,6 +80,9 @@ export const apiClient = {
   getField: (fieldId: string) => request(`/api/v1/fields/${fieldId}`),
   getFieldHealth: (fieldId: string) => request(`/api/v1/fields/${fieldId}/health`),
   getFarm: (farmId: string) => request(`/api/v1/farms/${farmId}`),
+  listFarms: () => request('/api/v1/farms'),
+  listVideos: (fieldId?: string) => request(`/api/v1/videos${fieldId ? `?field_id=${encodeURIComponent(fieldId)}` : ''}`),
+  getVideo: (videoId: string) => request(`/api/v1/videos/${videoId}`),
   uploadVideo: (fieldId: string, file: File, consent: boolean) => {
     const formData = new FormData();
     formData.append('field_id', fieldId);
@@ -85,4 +96,20 @@ export const apiClient = {
   getB2BDashboard: () => request('/api/v1/b2b/dashboard'),
   getAgronomistQueue: (limit = 50) => request(`/api/v1/agronomist/queue?limit=${limit}`),
   getAgronomistCase: (diagnosisId: string) => request(`/api/v1/agronomist/cases/${diagnosisId}`),
+  getAgronomistCaseHistory: (diagnosisId: string) => request(`/api/v1/agronomist/cases/${diagnosisId}/history`),
+  claimAgronomistCase: (diagnosisId: string) => request(`/api/v1/agronomist/cases/${diagnosisId}/claim`, { method: 'POST' }),
+  verifyAgronomistCase: (diagnosisId: string, payload: { disease_id?: string | null; is_healthy_override: boolean; severity_level: number; affected_plant_estimate_independent: number; notes?: string }) => request(`/api/v1/diagnosis/${diagnosisId}/verify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  }),
+  getDiagnosis: (diagnosisId: string) => request(`/api/v1/diagnosis/${diagnosisId}`),
+  getB2BDrilldown: (params: { district?: string; farmId?: string; fieldId?: string } = {}) => {
+    const query = new URLSearchParams();
+    if (params.district) query.set('district', params.district);
+    if (params.farmId) query.set('farm_id', params.farmId);
+    if (params.fieldId) query.set('field_id', params.fieldId);
+    const suffix = query.toString();
+    return request(`/api/v1/b2b/drilldown${suffix ? `?${suffix}` : ''}`);
+  },
 };

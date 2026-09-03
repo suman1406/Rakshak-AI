@@ -4,7 +4,7 @@ import { PublicNavbar } from '../../components/layout/PublicNavbar';
 import { PublicFooter } from '../../components/layout/PublicFooter';
 import { SafetyBanner } from '../../components/shared/SafetyBanner';
 import { SafeImage } from '../../components/shared/SafeImage';
-import { PRICING_PLANS } from '../../data/mockData';
+import { PRICING_PLANS } from '../../content/pricingPlans';
 import {
   Video,
   Layers,
@@ -78,7 +78,7 @@ export const LandingPage: React.FC = () => {
               <div className="flex items-center justify-between pb-3 border-b border-structural">
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-alert-red animate-ping" />
-                  <span className="font-mono text-xs font-bold text-field-ink">FIELD REVIEW #FASAL-10482</span>
+                  <span className="font-mono text-xs font-bold text-field-ink">EVIDENCE-FIRST REVIEW</span>
                 </div>
                 <span className="text-[10px] font-mono bg-soft-healthy text-emerald-800 px-2 py-0.5 rounded font-bold">
                   SOYBEAN
@@ -89,20 +89,13 @@ export const LandingPage: React.FC = () => {
               <div className="relative aspect-16/10 rounded-2xl overflow-hidden bg-field-ink border border-structural">
                 <SafeImage
                   src="/rakshak-leaf.svg"
-                  alt="Soybean Leaf Detection"
+                  alt="Illustrated soybean canopy"
                   className="w-full h-full object-cover opacity-90"
                 />
 
-                {/* Simulated Bounding Box Overlay */}
-                <div className="absolute top-[28%] left-[24%] w-[38%] h-[40%] border-2 border-alert-red bg-alert-red/20 rounded-lg flex items-start p-1.5">
-                  <span className="bg-alert-red text-white text-[9px] font-mono font-bold px-1.5 py-0.5 rounded">
-                    Soybean Rust (87%)
-                  </span>
-                </div>
-
                 <div className="absolute bottom-3 left-3 bg-field-ink/80 backdrop-blur-md px-3 py-1 rounded-lg text-white font-mono text-[10px] flex items-center gap-2">
                   <Scan size={12} className="text-lime-signal" />
-                  <span>16 Frames Analyzed • 43 Leaf Regions</span>
+                  <span>Live evidence appears after a field scan</span>
                 </div>
               </div>
 
@@ -110,15 +103,15 @@ export const LandingPage: React.FC = () => {
               <div className="grid grid-cols-3 gap-3 text-center">
                 <div className="p-2.5 bg-field-canvas rounded-xl border border-structural">
                   <span className="text-[10px] text-muted-leaf block">AI Indication</span>
-                  <span className="font-bold text-xs text-alert-red">Soybean Rust</span>
+                  <span className="font-bold text-xs text-alert-red">Available after scan</span>
                 </div>
                 <div className="p-2.5 bg-field-canvas rounded-xl border border-structural">
                   <span className="text-[10px] text-muted-leaf block">Confidence</span>
-                  <span className="font-bold text-xs text-field-ink">87% Score</span>
+                  <span className="font-bold text-xs text-field-ink">Measured per scan</span>
                 </div>
                 <div className="p-2.5 bg-field-canvas rounded-xl border border-structural">
                   <span className="text-[10px] text-muted-leaf block">Severity</span>
-                  <span className="font-bold text-xs text-warning-orange">Moderate (~20%)</span>
+                  <span className="font-bold text-xs text-warning-orange">Shown when available</span>
                 </div>
               </div>
             </div>
@@ -154,7 +147,7 @@ export const LandingPage: React.FC = () => {
               </div>
               <h3 className="text-lg font-bold text-field-ink">Analyze</h3>
               <p className="text-xs text-muted-leaf leading-relaxed">
-                Computer vision extracts 16 key frames, evaluates 40+ leaf regions, and identifies lesion patterns with confidence metrics.
+                Computer vision extracts usable evidence frames, evaluates visible crop signals, and returns confidence metrics.
               </p>
             </div>
 
@@ -180,9 +173,9 @@ export const LandingPage: React.FC = () => {
             <p className="text-sm text-muted-leaf leading-relaxed max-w-xl">Every indication carries its evidence frames, confidence band, and a clear path to agronomist review. That gives growers context before they act.</p>
             <div className="grid sm:grid-cols-3 gap-3 pt-2">
               {[
-                ['16', 'evidence frames'],
-                ['40+', 'leaf regions'],
-                ['1', 'review queue'],
+                ['Evidence', 'available per scan'],
+                ['Confidence', 'reported when measured'],
+                ['Review', 'available when needed'],
               ].map(([value, label]) => <div key={label} className="surface-card rounded-2xl p-4"><p className="metric-value text-2xl font-black text-field-ink">{value}</p><p className="text-[11px] text-muted-leaf mt-1">{label}</p></div>)}
             </div>
           </div>
@@ -210,28 +203,28 @@ export const LandingPage: React.FC = () => {
               Multi-frame visual intelligence, not single-photo guesses
             </h2>
             <p className="text-sm text-muted-leaf leading-relaxed">
-              Single photographs often miss early fungal pustules or suffer from lighting glare. Rakshak AI breaks down video streams into 16 distinct frame captures to inspect leaf surfaces from multiple angles.
+              Single photographs can miss early symptoms or suffer from lighting glare. Rakshak AI samples usable frames from a field video so leaf surfaces can be reviewed from multiple angles.
             </p>
             <ul className="space-y-2 text-xs text-field-ink pt-2">
               <li className="flex items-center gap-2">
                 <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
-                <span>Extracts 16 high-clarity sampling frames per field video</span>
+                <span>Uses usable sampling frames from each submitted field video</span>
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
-                <span>Filters out blurred, out-of-focus, or glare-heavy frames automatically</span>
+                <span>Reports when there is not enough usable evidence for analysis</span>
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
-                <span>Provides full spatial region bounding boxes for agronomist audit</span>
+                <span>Keeps scan evidence available for authorised review</span>
               </li>
             </ul>
           </div>
 
           <div className="bg-pure-surface p-6 rounded-2xl border border-structural shadow-sm space-y-3">
             <div className="flex items-center justify-between text-xs font-bold text-field-ink pb-2 border-b border-structural">
-              <span>Extracted Evidence Gallery</span>
-              <span className="text-muted-leaf font-mono">16 Frames</span>
+              <span>Evidence Gallery Preview</span>
+              <span className="text-muted-leaf font-mono">Illustrative</span>
             </div>
             <div className="grid grid-cols-4 gap-2">
               {Array.from({ length: 8 }).map((_, i) => (
@@ -241,9 +234,6 @@ export const LandingPage: React.FC = () => {
                     alt=""
                     className="w-full h-full object-cover"
                   />
-                  <span className="absolute bottom-1 right-1 bg-field-ink/80 text-white text-[9px] font-mono px-1 rounded">
-                    #{i + 1}
-                  </span>
                 </div>
               ))}
             </div>
@@ -253,37 +243,9 @@ export const LandingPage: React.FC = () => {
         {/* Disease Confidence & Severity Estimation */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div className="order-2 lg:order-1 bg-pure-surface p-6 rounded-2xl border border-structural shadow-sm space-y-4">
-            <h4 className="text-xs font-bold text-muted-leaf uppercase tracking-wider">
-              Sample AI Probability Output
-            </h4>
-            <div className="space-y-3 text-xs">
-              <div>
-                <div className="flex justify-between font-semibold mb-1">
-                  <span>Soybean Rust</span>
-                  <span className="text-alert-red font-mono">87%</span>
-                </div>
-                <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                  <div className="bg-alert-red h-full w-[87%] rounded-full" />
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between font-semibold mb-1">
-                  <span>Bacterial Blight</span>
-                  <span className="text-muted-leaf font-mono">5%</span>
-                </div>
-                <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                  <div className="bg-warning-orange h-full w-[5%] rounded-full" />
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between font-semibold mb-1">
-                  <span>Healthy Canopy</span>
-                  <span className="text-muted-leaf font-mono">4%</span>
-                </div>
-                <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                  <div className="bg-soft-healthy h-full w-[4%] rounded-full" />
-                </div>
-              </div>
+            <h4 className="text-xs font-bold text-muted-leaf uppercase tracking-wider">Results are scan-specific</h4>
+            <div className="rounded-xl border border-dashed border-structural bg-field-canvas p-5 text-xs text-muted-leaf leading-relaxed">
+              Disease indications, confidence, severity, and evidence are shown only after a video is analysed. Rakshak does not display sample probability scores in place of a real result.
             </div>
           </div>
 
@@ -321,7 +283,7 @@ export const LandingPage: React.FC = () => {
             <div className="p-4 bg-white/5 rounded-2xl border border-white/10 space-y-2">
               <span className="text-lime-signal font-mono font-bold text-sm">Step 2</span>
               <p className="font-semibold text-white">Frame Inspection</p>
-              <p className="text-slate-300">Agronomists audit 16 evidence frames and leaf region bounding boxes.</p>
+              <p className="text-slate-300">Agronomists audit the evidence produced for the submitted scan.</p>
             </div>
             <div className="p-4 bg-white/5 rounded-2xl border border-white/10 space-y-2">
               <span className="text-lime-signal font-mono font-bold text-sm">Step 3</span>

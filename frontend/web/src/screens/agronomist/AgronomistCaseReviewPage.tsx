@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { mockApi } from '../../services/mockApi';
+import { liveWorkspaceApi } from '../../services/liveWorkspaceApi';
 import { Case, AgronomistVerification } from '../../types';
 import { SafetyBanner } from '../../components/shared/SafetyBanner';
 import { EvidenceViewer } from '../../components/shared/EvidenceViewer';
@@ -38,11 +38,10 @@ export const AgronomistCaseReviewPage: React.FC = () => {
 
   useEffect(() => {
     const fetchCase = async () => {
-      const found = await mockApi.getCaseById(id || 'FASAL-10482');
-      if (found) {
-        setCaseData(found);
-        setVerifiedDisease(found.aiIndication.replace('Possible ', ''));
-      }
+      if (!id) throw new Error('A diagnosis identifier is required.');
+      const found = await liveWorkspaceApi.getCaseById(id);
+      setCaseData(found);
+      setVerifiedDisease(found.aiIndication.replace('Possible ', ''));
       setLoading(false);
     };
     fetchCase();
@@ -56,19 +55,12 @@ export const AgronomistCaseReviewPage: React.FC = () => {
     e.preventDefault();
     setSubmitting(true);
 
-    const verificationPayload: Omit<AgronomistVerification, 'verifiedAt'> = {
-      verifiedBy: user?.name || 'Dr. Anita Deshmukh',
-      decision,
-      verifiedDisease: decision === 'marked_healthy' ? 'Healthy Crop' : verifiedDisease,
-      expertNotes:
-        expertNote.trim() ||
-        (decision === 'confirmed'
-          ? 'Confirmed Soybean Rust symptoms. Advised selective pruning & application of bio-fungicide.'
-          : 'Verified case adjustment per expert visual audit.'),
-    };
-
-    const updated = await mockApi.verifyCase(caseData.id, verificationPayload);
-    setCaseData(updated);
+    await liveWorkspaceApi.verifyCase(caseData, {
+      is_healthy_override: decision === 'marked_healthy',
+      severity_level: decision === 'marked_healthy' ? 0 : decision === 'marked_uncertain' ? 1 : caseData.severity === 'Severe' ? 3 : caseData.severity === 'Moderate' ? 2 : 1,
+      notes: expertNote.trim() || undefined,
+    });
+    setCaseData(await liveWorkspaceApi.getCaseById(caseData.id));
     setSubmitting(false);
     setVerifiedSuccess(true);
   };
@@ -188,7 +180,7 @@ export const AgronomistCaseReviewPage: React.FC = () => {
           <div className="p-4 bg-soft-healthy border border-emerald-300 rounded-2xl flex items-center justify-between text-emerald-950 font-bold">
             <div className="flex items-center gap-2">
               <CheckCircle2 size={18} className="text-emerald-700" />
-              <span>Verification recorded. The review queue has been updated.</span>
+              <span>Verification was recorded in the backend review queue.</span>
             </div>
             <Link to="/agronomist/dashboard" className="px-3 py-1 bg-field-ink text-white text-xs rounded-lg font-mono">
               Return to Queue

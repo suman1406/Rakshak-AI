@@ -55,3 +55,4 @@ model/dataset/
 model/dataset_split/
 model/weights/*.pt
 model/raw_downloads/
+*.tsbuildinfo

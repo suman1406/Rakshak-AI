@@ -3,7 +3,6 @@ import '../api_client.dart';
 import '../core/app_theme.dart';
 import '../widgets/app_components.dart';
 import 'dashboard_screen.dart';
-import 'onboarding_screens.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -67,7 +66,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   setState(() { submitting = true; error = null; });
                   try {
                     await ApiClient.instance.login(email.text.trim(), password.text);
-                    if (mounted) navigateTo(context, const HomeScreen());
+                    if (!mounted) return;
+                    navigateTo(context, const HomeScreen());
                   } catch (exception) {
                     if (mounted) setState(() => error = exception.toString());
                   } finally {
@@ -95,6 +95,12 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final formKey = GlobalKey<FormState>();
+  final name = TextEditingController();
+  final phone = TextEditingController();
+  final email = TextEditingController();
+  final password = TextEditingController();
+  bool submitting = false;
+  String? error;
   @override
   Widget build(BuildContext context) => AppPage(
         title: 'Create account',
@@ -108,23 +114,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
           Form(
               key: formKey,
               child: Column(children: [
-                TextFormField(
+                TextFormField(controller: name,
                     decoration: const InputDecoration(labelText: 'Full name'),
                     validator: requiredField),
                 const SizedBox(height: 14),
-                TextFormField(
+                TextFormField(controller: phone,
                     decoration: const InputDecoration(labelText: 'Phone number'),
                     validator: requiredField),
                 const SizedBox(height: 14),
-                TextFormField(
+                TextFormField(controller: email,
                     decoration: const InputDecoration(labelText: 'Email address'),
                     validator: requiredField),
-                const SizedBox(height: 24),
+                const SizedBox(height: 14),
+                TextFormField(controller: password, obscureText: true, decoration: const InputDecoration(labelText: 'Password'), validator: requiredField),
+                const SizedBox(height: 16),
+                if (error != null) ...[AppCard(color: RakshakColors.error, child: Text(error!, style: const TextStyle(color: RakshakColors.errorText))), const SizedBox(height: 12)],
                 PrimaryAction(
-                    label: 'Continue',
-                    onPressed: () {
-                      if (formKey.currentState!.validate())
-                        navigateTo(context, const OnboardingScreen());
+                    label: submitting ? 'Creating account...' : 'Create account',
+                    onPressed: submitting ? null : () async {
+                      if (!formKey.currentState!.validate()) return;
+                      setState(() { submitting = true; error = null; });
+                      try {
+                        await ApiClient.instance.register(name: name.text.trim(), phone: phone.text.trim(), email: email.text.trim(), password: password.text);
+                        await ApiClient.instance.login(email.text.trim(), password.text);
+                        if (!mounted) return;
+                        navigateTo(context, const HomeScreen());
+                      } catch (exception) { if (mounted) setState(() => error = exception.toString()); }
+                      finally { if (mounted) setState(() => submitting = false); }
                     }),
               ])),
         ]),

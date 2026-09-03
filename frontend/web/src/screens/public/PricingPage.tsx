@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PublicNavbar } from '../../components/layout/PublicNavbar';
 import { PublicFooter } from '../../components/layout/PublicFooter';
-import { PRICING_PLANS } from '../../data/mockData';
+import { PRICING_PLANS } from '../../content/pricingPlans';
 import { CheckCircle2, ShieldCheck, Sparkles, HelpCircle } from 'lucide-react';
 
 export const PricingPage: React.FC = () => {

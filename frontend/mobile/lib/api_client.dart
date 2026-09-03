@@ -21,6 +21,13 @@ class ApiClient {
     return body;
   }
 
+  Future<Map<String, dynamic>> register({required String name, required String email, required String phone, required String password}) async {
+    final response = await http.post(_uri('/api/v1/auth/register'), headers: _jsonHeaders(), body: jsonEncode({'display_name': name, 'email': email, 'phone': phone, 'password': password, 'role': 'farmer'}));
+    final body = _decode(response);
+    _ensureSuccess(response, body);
+    return body as Map<String, dynamic>;
+  }
+
   Future<bool> restoreSession() async {
     _accessToken = await _secureStorage.read(key: 'access_token');
     if (_accessToken == null) return false;
@@ -47,7 +54,7 @@ class ApiClient {
   Future<Map<String, dynamic>> updateProfile(Map<String, dynamic> payload) async => (await _patch('/api/v1/auth/me', payload)) as Map<String, dynamic>;
   Map<String, String> get mediaHeaders => _authHeaders();
   Future<List<Map<String, dynamic>>> listFields() async => (await _get('/api/v1/fields')).cast<Map<String, dynamic>>();
-  Future<List<Map<String, dynamic>>> listVideos() async => (await _get('/api/v1/videos')).cast<Map<String, dynamic>>();
+  Future<List<Map<String, dynamic>>> listVideos({String? fieldId}) async => (await _get('/api/v1/videos${fieldId == null ? '' : '?field_id=${Uri.encodeQueryComponent(fieldId)}'}')).cast<Map<String, dynamic>>();
 
   Future<Map<String, dynamic>> uploadVideo({required String fieldId, required String filePath, required bool consent}) async {
     final request = http.MultipartRequest('POST', _uri('/api/v1/videos'));

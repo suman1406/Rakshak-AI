@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { mockApi } from '../../services/mockApi';
+import { liveWorkspaceApi } from '../../services/liveWorkspaceApi';
 import { Field, Case } from '../../types';
 import { EvidenceViewer } from '../../components/shared/EvidenceViewer';
 import { SafetyBanner } from '../../components/shared/SafetyBanner';
@@ -15,9 +15,9 @@ export const OrgFieldDetailsPage: React.FC = () => {
 
   useEffect(() => {
     const fetchFieldData = async () => {
-      const f = await mockApi.getFieldById(id || 'field-north-plot');
-      const c = await mockApi.getCaseById('FASAL-10482');
-      setField(f || (await mockApi.getFieldById('field-north-plot')));
+      if (!id) throw new Error('A field identifier is required.');
+      const [f, c] = await Promise.all([liveWorkspaceApi.getFieldById(id), liveWorkspaceApi.getLatestFieldCase(id)]);
+      setField(f);
       setActiveCase(c);
       setLoading(false);
     };

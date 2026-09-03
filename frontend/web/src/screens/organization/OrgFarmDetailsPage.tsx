@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { mockApi } from '../../services/mockApi';
+import { liveWorkspaceApi } from '../../services/liveWorkspaceApi';
 import { Farm } from '../../types';
 import { SeverityBadge } from '../../components/shared/RoleBadge';
 import { ArrowLeft, Building2, MapPin, ExternalLink, ShieldAlert, FileText } from 'lucide-react';
@@ -12,8 +12,8 @@ export const OrgFarmDetailsPage: React.FC = () => {
 
   useEffect(() => {
     const fetchFarm = async () => {
-      const found = await mockApi.getFarmById(id || 'farm-001');
-      setFarm(found || (await mockApi.getFarmById('farm-001')));
+      if (!id) throw new Error('A farm identifier is required.');
+      setFarm(await liveWorkspaceApi.getFarmById(id));
       setLoading(false);
     };
     fetchFarm();

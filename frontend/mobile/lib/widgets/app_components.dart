@@ -90,7 +90,7 @@ class AppCard extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
           color: color,
-          border: Border.all(color: RakshakColors.border.withOpacity(.75)),
+          border: Border.all(color: RakshakColors.border.withValues(alpha: .75)),
           borderRadius: BorderRadius.circular(22),
           boxShadow: const [BoxShadow(color: Color(0x0c14231d), blurRadius: 28, offset: Offset(0, 12))]),
       child: child);

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/app_theme.dart';
 import '../widgets/app_components.dart';
-import 'dashboard_screen.dart';
 import 'authentication_screens.dart';
 
 class OnboardingScreen extends StatelessWidget {
@@ -13,7 +12,7 @@ class OnboardingScreen extends StatelessWidget {
 class OnboardingIntroScreen extends StatelessWidget {
   const OnboardingIntroScreen({super.key});
   @override
-  Widget build(BuildContext context) => _OnboardingPage(
+  Widget build(BuildContext context) => const _OnboardingPage(
         title: 'Walk through your field',
         body: 'Capture a short video while moving steadily across the crop.',
         icon: Icons.video_camera_back_outlined,

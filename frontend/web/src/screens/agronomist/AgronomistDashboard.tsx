@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { mockApi } from '../../services/mockApi';
-import { apiClient } from '../../services/apiClient';
+import { liveWorkspaceApi } from '../../services/liveWorkspaceApi';
 import { Case, AgronomistMetrics, ReviewStatus } from '../../types';
 import { SeverityBadge, ReviewStatusBadge } from '../../components/shared/RoleBadge';
 import {
@@ -33,21 +32,16 @@ export const AgronomistDashboard: React.FC = () => {
 
   const fetchQueue = async () => {
     setLoading(true);
-    const m = await mockApi.getAgronomistMetrics();
-    let c = await mockApi.getCases({
-      status: statusFilter,
-      severity: severityFilter,
-      crop: cropFilter,
-      disease: diseaseFilter,
-      confidenceMin: confidenceMin > 0 ? confidenceMin : undefined,
-      search: search,
-    });
-    try {
-      const live = await apiClient.getAgronomistQueue();
-      if (Array.isArray(live) && live.length > 0) {
-        c = live.map((item: any) => ({ ...cases[0], id: item.video_diagnosis_id, aiIndication: item.disease, confidence: Math.round((item.confidence || 0) * 100), severity: item.severity_level >= 3 ? 'Severe' : item.severity_level > 0 ? 'Moderate' : 'Healthy', submittedAt: item.created_at, reviewStatus: 'awaiting_review', priority: item.confidence < 0.65 ? 'high' : 'medium' }));
-      }
-    } catch (_) { /* Keep fixture queue when the API is unavailable. */ }
+    let c = await liveWorkspaceApi.getCases();
+    c = c.filter((item) =>
+      (statusFilter === 'all' || item.reviewStatus === statusFilter) &&
+      (severityFilter === 'all' || item.severity === severityFilter) &&
+      (cropFilter === 'all' || item.crop.toLowerCase() === cropFilter.toLowerCase()) &&
+      (diseaseFilter === 'all' || item.aiIndication.toLowerCase().includes(diseaseFilter.toLowerCase())) &&
+      (!confidenceMin || item.confidence >= confidenceMin) &&
+      (!search.trim() || [item.id, item.farmName, item.fieldName, item.fpoName].some((value) => value.toLowerCase().includes(search.trim().toLowerCase())))
+    );
+    const m = await liveWorkspaceApi.getAgronomistMetrics(c);
 
     // Sorting
     let sorted = [...c];
