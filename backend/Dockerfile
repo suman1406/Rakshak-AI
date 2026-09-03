@@ -14,4 +14,4 @@ COPY alembic.ini .
 COPY alembic ./alembic
 COPY tests ./tests
 
-CMD ["sh", "-c", "alembic upgrade head || true && exec python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+CMD ["sh", "-c", "alembic upgrade head && exec python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"]

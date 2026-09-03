@@ -72,7 +72,10 @@ async def general_exception_handler(request: Request, exc: Exception):
     )
 
 
-# Middlewares - Add CORS first
+# CORS must be the outermost middleware so error responses from logging or a
+# route still include the browser's required access-control headers. FastAPI
+# wraps middleware in reverse registration order, so it is added last.
+app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[origin.strip() for origin in settings.CORS_ORIGINS.split(",") if origin.strip()],
@@ -80,7 +83,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.add_middleware(RequestLoggingMiddleware)
 
 # Core Health Checks (Arch Ref / Backlog FR-P1-05)
 @app.get("/healthz", tags=["Health"])
