@@ -14,14 +14,4 @@ COPY alembic.ini .
 COPY alembic ./alembic
 COPY tests ./tests
 
-# Simple startup - skip type cleanup, just run migrations with error handling
-CMD ["sh", "-c", """
-    # Run migrations, ignoring duplicate type errors (types already exist from previous deploys)
-    alembic upgrade head || true
-    
-    # Seed database
-    python -m app.db.seed || true
-    
-    # Start server
-    python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
-"""]
+CMD ["sh", "-c", "alembic upgrade head || true && python -m app.db.seed || true && exec python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"]
