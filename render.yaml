@@ -22,6 +22,8 @@ services:
         sync: false
       - key: BOOTSTRAP_DEMO_ACCOUNTS
         value: "true"
+      - key: CORS_ORIGINS
+        value: "https://stail-rakshakai.vercel.app"
       - key: S3_BUCKET_NAME
         value: fasal-rakshak-evidence
       - key: S3_ENDPOINT_URL

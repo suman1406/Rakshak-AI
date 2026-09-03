@@ -1,20 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { liveWorkspaceApi } from '../../services/liveWorkspaceApi';
-import { OrgDashboardMetrics, Farm, Case } from '../../types';
+import { OrgDashboardMetrics, Farm } from '../../types';
 import { SeverityBadge } from '../../components/shared/RoleBadge';
 import {
   PieChart,
   Pie,
   Cell,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
   Tooltip,
   ResponsiveContainer,
-  LineChart,
-  Line,
 } from 'recharts';
 import {
   Building2,
@@ -30,7 +24,6 @@ import {
 export const OrgDashboard: React.FC = () => {
   const [metrics, setMetrics] = useState<OrgDashboardMetrics | null>(null);
   const [farms, setFarms] = useState<Farm[]>([]);
-  const [recentCases, setRecentCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Filters
@@ -41,10 +34,9 @@ export const OrgDashboard: React.FC = () => {
 
   useEffect(() => {
     const fetchOrgData = async () => {
-      const [m, f, c] = await Promise.all([liveWorkspaceApi.getOrgMetrics(), liveWorkspaceApi.getFarms(district), liveWorkspaceApi.getCases()]);
+      const [m, f] = await Promise.all([liveWorkspaceApi.getOrgMetrics(), liveWorkspaceApi.getFarms(district)]);
       setMetrics(m);
       setFarms(f);
-      setRecentCases(c);
       setLoading(false);
     };
     fetchOrgData();
@@ -78,9 +70,9 @@ export const OrgDashboard: React.FC = () => {
               <h1 className="text-2xl font-extrabold text-field-ink">Organization Command Center</h1>
             </div>
             <p className="text-xs text-muted-leaf mt-1">
-              FPO & Regional Agricultural Field Health Intelligence • Shinde FPO Collective
+              Organization field health intelligence
             </p>
-            <p className="mt-2 text-[10px] font-mono uppercase tracking-wider text-muted-leaf">Last updated 2 minutes ago · {timeRange === '30d' ? '30-day view' : timeRange}</p>
+            <p className="mt-2 text-[10px] font-mono uppercase tracking-wider text-muted-leaf">Live backend data · {timeRange === '30d' ? '30-day view' : timeRange}</p>
           </div>
 
           <div className="flex items-center gap-2 text-xs">
@@ -116,10 +108,8 @@ export const OrgDashboard: React.FC = () => {
               onChange={(e) => setDistrict(e.target.value)}
               className="w-full p-2 rounded-xl border border-structural bg-field-canvas text-xs font-medium outline-none"
             >
-              <option value="all">All Districts (Latur, Amravati, Indore)</option>
-              <option value="Latur">Latur District</option>
-              <option value="Amravati">Amravati District</option>
-              <option value="Indore">Indore District</option>
+              <option value="all">All districts</option>
+              {Array.from(new Set(farms.map((farm) => farm.district).filter(Boolean))).map((value) => <option key={value} value={value}>{value}</option>)}
             </select>
           </div>
 
@@ -130,10 +120,8 @@ export const OrgDashboard: React.FC = () => {
               onChange={(e) => setFpo(e.target.value)}
               className="w-full p-2 rounded-xl border border-structural bg-field-canvas text-xs font-medium outline-none"
             >
-              <option value="all">All FPOs (Shinde, Kisan, Swaraj)</option>
-              <option value="Shinde FPO">Shinde FPO</option>
-              <option value="Kisan Collective">Kisan Collective</option>
-              <option value="Swaraj Agri">Swaraj Agri FPO</option>
+              <option value="all">All organizations</option>
+              {Array.from(new Set(farms.map((farm) => farm.fpoName).filter((value) => value && value !== 'Not available'))).map((value) => <option key={value} value={value}>{value}</option>)}
             </select>
           </div>
 
@@ -186,10 +174,9 @@ export const OrgDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Charts Row: Disease Distribution & Time Trends */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Disease Distribution Pie & Legend (5 cols) */}
-        <div className="lg:col-span-5 bg-pure-surface border border-structural p-6 rounded-3xl shadow-xs space-y-4">
+      {/* Backend-provided disease distribution */}
+      <div className="grid grid-cols-1 gap-6">
+        <div className="bg-pure-surface border border-structural p-6 rounded-3xl shadow-xs space-y-4">
           <h3 className="font-bold text-xs text-field-ink">Top Disease Signals Breakdown</h3>
           <div className="h-48 w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -226,25 +213,6 @@ export const OrgDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Disease Trend Line Chart (7 cols) */}
-        <div className="lg:col-span-7 bg-pure-surface border border-structural p-6 rounded-3xl shadow-xs space-y-4">
-          <div className="flex items-center justify-between border-b border-structural pb-3">
-            <h3 className="font-bold text-xs text-field-ink">Regional Outbreak & Health Scans Trend</h3>
-            <span className="text-[10px] text-muted-leaf font-mono">Monthly Aggregates</span>
-          </div>
-
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={metrics.timeTrends}>
-                <XAxis dataKey="month" stroke="#66766D" fontSize={11} />
-                <YAxis stroke="#66766D" fontSize={11} />
-                <Tooltip />
-                <Line type="monotone" dataKey="rustCases" name="Soybean Rust" stroke="#A84B45" strokeWidth={3} />
-                <Line type="monotone" dataKey="blightCases" name="Bacterial Blight" stroke="#B86B36" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
       </div>
 
       {/* High-Risk Farms Table */}
@@ -275,13 +243,13 @@ export const OrgDashboard: React.FC = () => {
               {farms.map((farm) => (
                 <tr key={farm.id} className="hover:bg-field-canvas/60 transition">
                   <td className="p-3 font-bold text-field-ink">{farm.name} ({farm.ownerName})</td>
-                  <td className="p-3 text-muted-leaf">{farm.fields[0]?.name || 'North Plot'}</td>
+                  <td className="p-3 text-muted-leaf">{farm.fields[0]?.name || 'No fields'}</td>
                   <td className="p-3 text-muted-leaf">{farm.fpoName} • {farm.district}</td>
                   <td className="p-3 font-semibold text-alert-red">
-                    {farm.fields[0]?.primaryDiseaseSignal || 'Soybean Rust'}
+                    {farm.fields[0]?.primaryDiseaseSignal || 'No scan result'}
                   </td>
                   <td className="p-3">
-                    <SeverityBadge severity={farm.fields[0]?.severity || 'Moderate'} />
+                    <SeverityBadge severity={farm.fields[0]?.severity || 'Uncertain'} />
                   </td>
                   <td className="p-3 text-right">
                     <Link
