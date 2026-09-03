@@ -16,7 +16,8 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day for dev
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
-    DEMO_GATE_PASSWORD: str = "rakshak2026"
+    DEMO_GATE_PASSWORD: str | None = None
+    BOOTSTRAP_DEMO_ACCOUNTS: bool = False
     
     # Object Storage (S3 / R2 / B2)
     S3_ENDPOINT_URL: str | None = None

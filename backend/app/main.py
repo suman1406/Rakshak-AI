@@ -10,7 +10,8 @@ from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.logging import RequestLoggingMiddleware, logger
 from app.db.base import Base
-from app.db.session import engine
+from app.db.bootstrap_accounts import ensure_bootstrap_access_accounts
+from app.db.session import async_session_factory, engine
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -18,6 +19,16 @@ async def lifespan(app: FastAPI):
     # Initialize DB tables
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    if settings.BOOTSTRAP_DEMO_ACCOUNTS:
+        if not settings.DEMO_GATE_PASSWORD or settings.DEMO_GATE_PASSWORD == "change-this-demo-password":
+            logger.error("Bootstrap accounts were requested but DEMO_GATE_PASSWORD is not configured; no accounts were created.")
+        else:
+            async with async_session_factory() as session:
+                created_accounts = await ensure_bootstrap_access_accounts(session, settings.DEMO_GATE_PASSWORD)
+            if created_accounts:
+                logger.info("Created bootstrap access accounts: %s", ", ".join(created_accounts))
+            else:
+                logger.info("Bootstrap access accounts already exist.")
     logger.info("Database schema initialized successfully.")
     yield
     logger.info("Shutting down Fasal Rakshak API...")
