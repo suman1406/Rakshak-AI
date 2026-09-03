@@ -4,7 +4,7 @@ Older production databases were created before this column existed.  The
 initial schema migration uses ``checkfirst``, so it does not evolve an already
 existing ``video_diagnoses`` table when the ORM model gains a field.
 
-Revision ID: 0006_confidence_band
+Revision ID: 0006_add_video_diag_cols
 Revises: 0005_add_videos_status_column
 """
 
