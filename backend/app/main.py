@@ -61,15 +61,26 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     return _error_response(request, 422, "Request validation failed", "VALIDATION_ERROR")
 
-# Middlewares
-app.add_middleware(RequestLoggingMiddleware)
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    """Catch all unhandled exceptions and return proper error with CORS headers."""
+    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"error_code": "INTERNAL_ERROR", "message": "An internal error occurred"},
+    )
+
+
+# Middlewares - Add CORS first
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[origin.strip() for origin in settings.CORS_ORIGINS.split(",") if origin.strip()],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
+app.add_middleware(RequestLoggingMiddleware)
 
 # Core Health Checks (Arch Ref / Backlog FR-P1-05)
 @app.get("/healthz", tags=["Health"])
