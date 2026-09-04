@@ -36,6 +36,8 @@ services:
       CELERY_GPU_QUEUE: gpu_inference
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Set JWT_SECRET_KEY in .env before starting Docker Compose}
       DEMO_GATE_PASSWORD: ${DEMO_GATE_PASSWORD:?Set DEMO_GATE_PASSWORD in .env before starting Docker Compose}
+      INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:-}
+      INITIAL_ADMIN_PASSPHRASE: ${INITIAL_ADMIN_PASSPHRASE:-}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       ENVIRONMENT: docker
       # Keep local browser and deployed web origins explicit; never use a

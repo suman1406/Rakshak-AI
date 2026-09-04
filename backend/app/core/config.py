@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
     DEMO_GATE_PASSWORD: str | None = None
     BOOTSTRAP_DEMO_ACCOUNTS: bool = False
+    INITIAL_ADMIN_EMAIL: str | None = None
+    INITIAL_ADMIN_PASSPHRASE: str | None = None
     CORS_ORIGINS: str = "http://localhost:3000,http://localhost:3005"
     
     # Object Storage (S3 / R2 / B2)

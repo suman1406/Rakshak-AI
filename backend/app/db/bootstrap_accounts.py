@@ -18,6 +18,28 @@ BOOTSTRAP_ACCOUNTS = (
 )
 
 
+async def ensure_initial_admin_account(db: AsyncSession, email: str, passphrase: str) -> bool:
+    """Create one explicit, personal platform-admin account if it is absent.
+
+    This is intentionally separate from demo access accounts: the email and
+    passphrase are deployment secrets and an existing account is never reset.
+    """
+    normalized_email = email.strip().lower()
+    if not normalized_email or "@" not in normalized_email or len(passphrase) < 12:
+        raise ValueError("Initial admin email and a 12-character passphrase are required")
+    existing = (await db.execute(select(User).where(User.email == normalized_email))).scalar_one_or_none()
+    if existing:
+        return False
+    db.add(User(
+        email=normalized_email,
+        password_hash=get_password_hash(passphrase),
+        role=UserRole.admin,
+        display_name="Platform Administrator",
+    ))
+    await db.commit()
+    return True
+
+
 async def ensure_bootstrap_access_accounts(db: AsyncSession, password: str) -> list[str]:
     """Create the authorized test-access accounts if they are missing.
 

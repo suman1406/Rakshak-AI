@@ -10,7 +10,7 @@ from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.logging import RequestLoggingMiddleware, logger
 from app.db.base import Base
-from app.db.bootstrap_accounts import ensure_bootstrap_access_accounts
+from app.db.bootstrap_accounts import ensure_bootstrap_access_accounts, ensure_initial_admin_account
 from app.db.session import async_session_factory, engine
 
 @asynccontextmanager
@@ -19,6 +19,13 @@ async def lifespan(app: FastAPI):
     # Initialize DB tables
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    if settings.INITIAL_ADMIN_EMAIL or settings.INITIAL_ADMIN_PASSPHRASE:
+        if not settings.INITIAL_ADMIN_EMAIL or not settings.INITIAL_ADMIN_PASSPHRASE:
+            logger.error("Initial admin configuration is incomplete; no admin account was created.")
+        else:
+            async with async_session_factory() as session:
+                created = await ensure_initial_admin_account(session, settings.INITIAL_ADMIN_EMAIL, settings.INITIAL_ADMIN_PASSPHRASE)
+            logger.info("Initial platform-admin account %s.", "created" if created else "already exists")
     if settings.BOOTSTRAP_DEMO_ACCOUNTS:
         if not settings.DEMO_GATE_PASSWORD or settings.DEMO_GATE_PASSWORD == "change-this-demo-password":
             logger.error("Bootstrap accounts were requested but DEMO_GATE_PASSWORD is not configured; no accounts were created.")
