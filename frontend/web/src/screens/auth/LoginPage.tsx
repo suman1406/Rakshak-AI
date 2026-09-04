@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { PublicNavbar } from '../../components/layout/PublicNavbar';
 import { UserRole } from '../../types';
 
-const dashboardFor = (role: UserRole) => role === 'agronomist' ? '/agronomist/dashboard' : '/organization/dashboard';
+const dashboardFor = (role: UserRole) => role === 'agronomist' ? '/agronomist/dashboard' : role === 'admin' ? '/admin/dashboard' : '/organization/dashboard';
 
 export const LoginPage: React.FC = () => {
   const { login } = useAuth();

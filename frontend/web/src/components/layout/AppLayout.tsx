@@ -21,7 +21,12 @@ export const AppLayout: React.FC = () => {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const navItems = role === 'agronomist'
+  const navItems = role === 'admin'
+      ? [
+          { name: 'Access & pilot plans', path: '/admin/dashboard', icon: Shield },
+          { name: 'Account & Security', path: '/settings/security', icon: Settings },
+        ]
+      : role === 'agronomist'
       ? [
           { name: 'Review Queue', path: '/agronomist/dashboard', icon: ClipboardList },
           { name: 'Agronomist Reports', path: '/agronomist/reports', icon: FileBarChart },

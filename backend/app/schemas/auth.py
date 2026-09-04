@@ -16,6 +16,7 @@ class UserRegister(BaseModel):
     password: str = Field(min_length=8, max_length=72)
     role: UserRole = UserRole.farmer
     display_name: str | None = Field(default=None, max_length=255)
+    consent_to_data_processing: bool
 
     @field_validator("role")
     @classmethod
@@ -71,5 +72,6 @@ class UserOut(BaseModel):
     role: UserRole
     org_id: str | None = None
     display_name: str | None = None
+    account_status: str
 
     model_config = ConfigDict(from_attributes=True)

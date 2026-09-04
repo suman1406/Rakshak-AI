@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useRef, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Sprout, Menu, X, ArrowRight, ShieldCheck, Sparkles } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export const PublicNavbar: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const logoClicks = useRef(0);
+  const logoClickTimer = useRef<number | null>(null);
   const { isAuthenticated, user, role } = useAuth();
 
   const navLinks = [
@@ -19,7 +22,19 @@ export const PublicNavbar: React.FC = () => {
   const getDashboardPath = () => {
     if (role === 'farmer') return '/login';
     if (role === 'agronomist') return '/agronomist/dashboard';
+    if (role === 'admin') return '/admin/dashboard';
     return '/organization/dashboard';
+  };
+
+  const handleLogoTextClick = (event: React.MouseEvent<HTMLSpanElement>) => {
+    logoClicks.current += 1;
+    if (logoClickTimer.current) window.clearTimeout(logoClickTimer.current);
+    logoClickTimer.current = window.setTimeout(() => { logoClicks.current = 0; }, 550);
+    if (logoClicks.current === 3) {
+      event.preventDefault();
+      logoClicks.current = 0;
+      navigate('/admin/access');
+    }
   };
 
   return (
@@ -32,7 +47,7 @@ export const PublicNavbar: React.FC = () => {
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="font-extrabold text-lg tracking-tight text-field-ink">Rakshak AI</span>
+              <span onClick={handleLogoTextClick} className="font-extrabold text-lg tracking-tight text-field-ink">Rakshak AI</span>
             </div>
             <p className="text-[10px] font-medium text-muted-leaf">Field intelligence console</p>
           </div>

@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 # Explicit absolute imports for robust container execution
-from app.models import farm, identity, video, prediction, verification, governance  # Register all models with Base.metadata
+from app.models import billing, farm, identity, video, prediction, verification, governance  # Register all models with Base.metadata
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.logging import RequestLoggingMiddleware, logger

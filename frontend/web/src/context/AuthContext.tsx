@@ -21,7 +21,9 @@ const toUser = (account: { id: string; email?: string; phone?: string; role: Use
   name: account.display_name || account.email || account.phone || 'Workspace member',
   email: account.email || account.phone || '',
   role: account.role,
-  organization: account.org_id || undefined,
+  // The API currently returns an organization identifier for authorization;
+  // it is not a human-facing organization name and must never be rendered.
+  organization: account.org_id ? 'Organization workspace' : undefined,
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {

@@ -11,6 +11,7 @@ from .prediction import (
 )
 from .verification import CorrectionType, Feedback, ReviewStatus, ReviewWorkItem, SourceChannel, VerifiedLabel
 from .video import Frame, Video, VideoStatus
+from .billing import OrganizationSubscription, Plan, SubscriptionStatus
 
 __all__ = [
     "UserRole",
@@ -43,4 +44,7 @@ __all__ = [
     "GoldenSetItem",
     "DatasetSplitItem",
     "AuditLog",
+    "Plan",
+    "OrganizationSubscription",
+    "SubscriptionStatus",
 ]

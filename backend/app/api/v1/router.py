@@ -6,11 +6,13 @@ from .b2b import router as b2b_router
 from .diagnosis import router as diagnosis_router
 from .farms import router as farms_router
 from .fields import router as fields_router
+from .onboarding import router as onboarding_router
 from .videos import router as videos_router
 
 api_router = APIRouter()
 
 api_router.include_router(auth_router)
+api_router.include_router(onboarding_router)
 api_router.include_router(farms_router)
 api_router.include_router(fields_router)
 api_router.include_router(videos_router)

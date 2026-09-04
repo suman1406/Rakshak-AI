@@ -25,6 +25,8 @@ export const OrgDashboard: React.FC = () => {
   const [metrics, setMetrics] = useState<OrgDashboardMetrics | null>(null);
   const [farms, setFarms] = useState<Farm[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   // Filters
   const [timeRange, setTimeRange] = useState('30d');
@@ -33,20 +35,52 @@ export const OrgDashboard: React.FC = () => {
   const [severity, setSeverity] = useState('all');
 
   useEffect(() => {
+    let isCurrent = true;
     const fetchOrgData = async () => {
-      const [m, f] = await Promise.all([liveWorkspaceApi.getOrgMetrics(), liveWorkspaceApi.getFarms(district)]);
-      setMetrics(m);
-      setFarms(f);
-      setLoading(false);
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const [m, f] = await Promise.all([liveWorkspaceApi.getOrgMetrics(), liveWorkspaceApi.getFarms(district)]);
+        if (!isCurrent) return;
+        setMetrics(m);
+        setFarms(f);
+      } catch (error) {
+        if (!isCurrent) return;
+        setLoadError(error instanceof Error ? error.message : 'The organization dashboard could not be loaded.');
+      } finally {
+        if (isCurrent) setLoading(false);
+      }
     };
     fetchOrgData();
-  }, [district, timeRange]);
+    return () => {
+      isCurrent = false;
+    };
+  }, [district, timeRange, reloadKey]);
 
-  if (loading || !metrics) {
+  if (loading) {
     return <div className="space-y-6 p-6" aria-busy="true" aria-label="Loading organization command center">
       <div className="h-28 animate-pulse rounded-3xl bg-white/70 border border-structural" />
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">{Array.from({ length: 5 }).map((_, index) => <div key={index} className="h-24 animate-pulse rounded-2xl bg-white/70 border border-structural" />)}</div>
       <div className="h-80 animate-pulse rounded-3xl bg-white/70 border border-structural" />
+    </div>;
+  }
+
+  if (loadError || !metrics) {
+    return <div className="mx-auto max-w-xl space-y-4 rounded-3xl border border-red-200 bg-red-50 p-6 text-center" role="alert">
+      <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-red-100 text-alert-red">
+        <AlertTriangle size={22} aria-hidden="true" />
+      </div>
+      <div className="space-y-1">
+        <h1 className="text-base font-bold text-field-ink">Organization dashboard is unavailable</h1>
+        <p className="text-sm text-muted-leaf">{loadError || 'The dashboard returned no data. Please try again.'}</p>
+      </div>
+      <button
+        type="button"
+        onClick={() => setReloadKey((value) => value + 1)}
+        className="rounded-xl bg-field-ink px-4 py-2 text-sm font-bold text-white transition hover:bg-opacity-90"
+      >
+        Try again
+      </button>
     </div>;
   }
 

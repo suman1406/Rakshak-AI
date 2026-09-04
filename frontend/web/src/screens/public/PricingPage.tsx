@@ -1,12 +1,18 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PublicNavbar } from '../../components/layout/PublicNavbar';
 import { PublicFooter } from '../../components/layout/PublicFooter';
-import { PRICING_PLANS } from '../../content/pricingPlans';
-import { CheckCircle2, ShieldCheck, Sparkles, HelpCircle } from 'lucide-react';
+import { CheckCircle2, ShieldCheck, Sparkles } from 'lucide-react';
+import { apiClient } from '../../services/apiClient';
 
 export const PricingPage: React.FC = () => {
   const [annual, setAnnual] = useState(false);
+  const [plans, setPlans] = useState<Array<{ code: string; name: string; monthly_price_paise: number | null; annual_price_paise: number | null; farm_limit: number | null; scan_limit: number | null }>>([]);
+  const [loadError, setLoadError] = useState('');
+  useEffect(() => {
+    apiClient.listPublicPlans().then(setPlans).catch(() => setLoadError('Pilot plans are not available right now. Please contact field operations for current rollout options.'));
+  }, []);
+  const price = (value: number | null) => value == null ? 'Custom' : `₹${(value / 100).toLocaleString('en-IN')}`;
   return (
     <div className="min-h-screen bg-field-canvas text-field-ink flex flex-col font-sans">
       <PublicNavbar />
@@ -34,16 +40,16 @@ export const PricingPage: React.FC = () => {
 
         {/* Pricing Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {PRICING_PLANS.map((plan) => (
+          {plans.map((plan, index) => (
             <div
-              key={plan.id}
+              key={plan.code}
               className={`p-8 rounded-3xl border flex flex-col justify-between transition ${
-                plan.isPopular
+                index === 1
                   ? 'border-2 border-field-ink bg-white shadow-xl relative'
                   : 'border-structural bg-pure-surface'
               }`}
             >
-              {plan.isPopular && (
+              {index === 1 && (
                 <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-lime-signal text-field-ink text-[10px] font-mono font-bold px-3 py-1 rounded-full uppercase tracking-wider">
                   Recommended for FPOs
                 </span>
@@ -52,26 +58,26 @@ export const PricingPage: React.FC = () => {
               <div className="space-y-6">
                 <div>
                   <h2 className="text-xl font-bold text-field-ink">{plan.name}</h2>
-                  <p className="text-xs text-muted-leaf mt-1">{plan.targetUser}</p>
+                  <p className="text-xs text-muted-leaf mt-1">Pilot organization access</p>
                   <div className="mt-4 flex items-baseline gap-1">
-                    <span className="text-4xl font-black text-field-ink">{annual && plan.price !== 'Custom' ? plan.price.replace(/\d+/, (value) => String(Math.round(Number(value) * 0.8))) : plan.price}</span>
-                    <span className="text-xs text-muted-leaf font-medium">{plan.period}</span>
+                    <span className="text-4xl font-black text-field-ink">{price(annual ? plan.annual_price_paise : plan.monthly_price_paise)}</span>
+                    <span className="text-xs text-muted-leaf font-medium">{annual ? '/ year' : '/ month'}</span>
                   </div>
                 </div>
 
                 <div className="space-y-2 pt-2 border-t border-structural text-xs">
                   <div className="flex items-center justify-between font-semibold text-field-ink">
                     <span>Monitored Farms:</span>
-                    <span className="font-mono text-muted-leaf">{plan.monitoredFarms}</span>
+                    <span className="font-mono text-muted-leaf">{plan.farm_limit ?? 'Flexible'}</span>
                   </div>
                   <div className="flex items-center justify-between font-semibold text-field-ink">
                     <span>Scans Included:</span>
-                    <span className="font-mono text-muted-leaf">{plan.scansIncluded}</span>
+                    <span className="font-mono text-muted-leaf">{plan.scan_limit ?? 'Flexible'}</span>
                   </div>
                 </div>
 
                 <ul className="space-y-2.5 text-xs text-field-ink pt-2 border-t border-structural">
-                  {plan.features.map((feat, i) => (
+                  {['Human-approved activation', 'Evidence-led dashboard access', 'No automatic charge'].map((feat, i) => (
                     <li key={i} className="flex items-start gap-2">
                       <CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5" />
                       <span>{feat}</span>
@@ -82,19 +88,21 @@ export const PricingPage: React.FC = () => {
 
               <div className="pt-8 space-y-2">
                 <Link
-                  to="/login"
+                  to={`/apply/organization${plan.code ? `?plan=${encodeURIComponent(plan.code)}` : ''}`}
                   className={`block w-full py-3 text-center text-xs font-bold rounded-xl transition shadow-xs ${
-                    plan.isPopular
+                    index === 1
                       ? 'bg-field-ink text-white hover:bg-opacity-90'
                       : 'bg-field-canvas border border-structural text-field-ink hover:bg-gray-200'
                   }`}
                 >
-                  {plan.ctaText}
+                  Request this pilot plan
                 </Link>
                 <p className="text-[10px] text-center text-muted-leaf">Plans can be tailored to your deployment</p>
               </div>
             </div>
           ))}
+          {!loadError && plans.length === 0 && <div className="md:col-span-3 rounded-2xl border border-structural bg-pure-surface p-8 text-center text-sm text-muted-leaf">No pilot plans have been published yet. Contact field operations to scope a rollout.</div>}
+          {loadError && <div className="md:col-span-3 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center text-sm text-amber-900">{loadError}</div>}
         </div>
 
         {/* Pilot Disclaimer Box */}

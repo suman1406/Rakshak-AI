@@ -19,7 +19,7 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
         const Text('Your field observations and reports.'),
         const SizedBox(height: 22),
         if (snapshot.connectionState == ConnectionState.waiting) const Center(child: CircularProgressIndicator()),
-        if (snapshot.hasError) AppCard(child: Text('Could not load scan history. ${snapshot.error}')),
+        if (snapshot.hasError) const AppCard(child: Text('Could not load scan history. Please try again.')),
         for (final scan in snapshot.data ?? const <Map<String, dynamic>>[])
           Padding(
               padding: const EdgeInsets.only(bottom: 12),
@@ -38,8 +38,8 @@ class _ScanHistoryScreenState extends State<ScanHistoryScreen> {
                           Text(scan['status']?.toString() ?? 'Scan',
                               style:
                                   const TextStyle(fontWeight: FontWeight.w800)),
-                          Text('Field ${scan['field_id'] ?? '—'}'),
-                          Text(scan['error_detail']?.toString() ?? 'Open report for details')
+                          const Text('Field observation'),
+                          Text(scan['status']?.toString() == 'failed' ? 'This scan could not be completed. Open it for next steps.' : 'Open report for details')
                         ]))
                   ])))),
         const SizedBox(height: 12),

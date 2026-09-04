@@ -16,6 +16,8 @@ import { PrivacyPage, TermsPage } from './screens/public/PrivacyPage';
 import { LoginPage } from './screens/auth/LoginPage';
 import { RegisterPage, ForgotPasswordPage } from './screens/auth/RegisterPage';
 import { OnboardingPage } from './screens/auth/OnboardingPage';
+import { ApplicationPage } from './screens/auth/ApplicationPage';
+import { AdminDashboard } from './screens/admin/AdminDashboard';
 
 // Agronomist Pages
 import { AgronomistDashboard } from './screens/agronomist/AgronomistDashboard';
@@ -55,6 +57,8 @@ export function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/onboarding" element={<OnboardingPage />} />
+          <Route path="/apply/:kind" element={<ApplicationPage />} />
+          <Route path="/admin/access" element={<LoginPage />} />
 
           {/* Agronomist Portal (Protected) */}
           <Route
@@ -101,6 +105,18 @@ export function App() {
             <Route path="organization" element={<SettingsOrgPage />} />
             <Route path="notifications" element={<SettingsNotificationsPage />} />
             <Route path="security" element={<SettingsSecurityPage />} />
+          </Route>
+
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AppLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Navigate to="/admin/dashboard" replace />} />
+            <Route path="dashboard" element={<AdminDashboard />} />
           </Route>
 
           {/* Fallback Route */}

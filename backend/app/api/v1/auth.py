@@ -6,7 +6,8 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_current_user, get_db
 from app.core.security import create_access_token, create_refresh_token, decode_token, get_password_hash, verify_password
-from app.models.identity import User, UserRole
+from app.models.identity import AccountStatus, User, UserRole
+from datetime import datetime, timezone
 from app.schemas.auth import TokenResponse, UserLogin, UserOut, UserRegister, UserUpdate
 from app.core.audit import write_audit_log
 
@@ -26,6 +27,8 @@ class RefreshResponse(BaseModel):
 async def register(payload: UserRegister, db: Annotated[AsyncSession, Depends(get_db)]):
     if not payload.email and not payload.phone:
         raise HTTPException(status_code=400, detail="Either email or phone is required")
+    if not payload.consent_to_data_processing:
+        raise HTTPException(status_code=400, detail="Consent to data processing is required")
 
     conditions = []
     if payload.email:
@@ -45,6 +48,8 @@ async def register(payload: UserRegister, db: Annotated[AsyncSession, Depends(ge
         password_hash=get_password_hash(payload.password),
         role=UserRole.farmer,
         display_name=payload.display_name,
+        account_status=AccountStatus.active.value,
+        consent_accepted_at=datetime.now(timezone.utc),
     )
     db.add(new_user)
     await db.flush()
@@ -68,6 +73,9 @@ async def login(payload: UserLogin, db: Annotated[AsyncSession, Depends(get_db)]
             detail="Invalid email/phone or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    if user.account_status != AccountStatus.active.value:
+        detail = "This application is awaiting platform review" if user.account_status == AccountStatus.pending.value else "This account is not approved"
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
 
     access_token = create_access_token(subject=user.id, role=user.role.value, org_id=user.org_id)
     refresh_token = create_refresh_token(subject=user.id)
@@ -90,7 +98,7 @@ async def refresh_token(payload: RefreshRequest, db: Annotated[AsyncSession, Dep
         user_id = data.get("sub")
         stmt = select(User).where(User.id == user_id)
         user = (await db.execute(stmt)).scalar_one_or_none()
-        if not user:
+        if not user or user.account_status != AccountStatus.active.value:
             raise HTTPException(status_code=401, detail="User not found")
         new_access_token = create_access_token(subject=user.id, role=user.role.value, org_id=user.org_id)
         return RefreshResponse(access_token=new_access_token)

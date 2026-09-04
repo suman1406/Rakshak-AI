@@ -16,6 +16,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final password = TextEditingController();
   bool obscure = true;
   bool submitting = false;
+  bool consent = false;
   String? error;
 
   @override
@@ -69,7 +70,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     if (!mounted) return;
                     navigateTo(context, const HomeScreen());
                   } catch (exception) {
-                    if (mounted) setState(() => error = exception.toString());
+                    if (mounted) setState(() => error = safeErrorMessage(exception, fallback: 'We could not sign you in. Check your details and try again.'));
                   } finally {
                     if (mounted) setState(() => submitting = false);
                   }
@@ -128,18 +129,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 14),
                 TextFormField(controller: password, obscureText: true, decoration: const InputDecoration(labelText: 'Password'), validator: requiredField),
                 const SizedBox(height: 16),
+                CheckboxListTile(contentPadding: EdgeInsets.zero, value: consent, onChanged: (value) => setState(() => consent = value ?? false), controlAffinity: ListTileControlAffinity.leading, title: const Text('I agree to processing my account and field data for this service.')),
                 if (error != null) ...[AppCard(color: RakshakColors.error, child: Text(error!, style: const TextStyle(color: RakshakColors.errorText))), const SizedBox(height: 12)],
                 PrimaryAction(
                     label: submitting ? 'Creating account...' : 'Create account',
                     onPressed: submitting ? null : () async {
-                      if (!formKey.currentState!.validate()) return;
+                      if (!formKey.currentState!.validate() || !consent) { if (!consent) setState(() => error = 'Please agree to data processing before creating an account.'); return; }
                       setState(() { submitting = true; error = null; });
                       try {
-                        await ApiClient.instance.register(name: name.text.trim(), phone: phone.text.trim(), email: email.text.trim(), password: password.text);
+                        await ApiClient.instance.register(name: name.text.trim(), phone: phone.text.trim(), email: email.text.trim(), password: password.text, consentToDataProcessing: consent);
                         await ApiClient.instance.login(email.text.trim(), password.text);
                         if (!mounted) return;
                         navigateTo(context, const HomeScreen());
-                      } catch (exception) { if (mounted) setState(() => error = exception.toString()); }
+                      } catch (exception) { if (mounted) setState(() => error = safeErrorMessage(exception, fallback: 'We could not create your account. Please try again.')); }
                       finally { if (mounted) setState(() => submitting = false); }
                     }),
               ])),

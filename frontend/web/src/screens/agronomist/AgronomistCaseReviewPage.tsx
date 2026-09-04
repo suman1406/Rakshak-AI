@@ -78,7 +78,7 @@ export const AgronomistCaseReviewPage: React.FC = () => {
           </Link>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-extrabold text-field-ink">Agronomist Case Verification #{caseData.id}</h1>
+              <h1 className="text-xl font-extrabold text-field-ink">Agronomist case verification</h1>
               <ReviewStatusBadge status={caseData.reviewStatus} />
             </div>
             <p className="text-xs text-muted-leaf">

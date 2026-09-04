@@ -9,7 +9,7 @@ async def test_auth_refresh_endpoint(client):
     # Register & login
     reg_res = await client.post(
         "/api/v1/auth/register",
-        json={"email": "refreshtest@rakshak.ai", "password": "PassWord123!", "role": "farmer"},
+        json={"email": "refreshtest@rakshak.ai", "password": "PassWord123!", "role": "farmer", "consent_to_data_processing": True},
     )
     assert reg_res.status_code == 201
 

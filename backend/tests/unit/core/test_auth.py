@@ -25,6 +25,7 @@ async def test_auth_register_and_login_flow(client):
         "email": "testfarmer@rakshak.ai",
         "password": "Password123!",
         "display_name": "Test Farmer",
+        "consent_to_data_processing": True,
     }
     reg_response = await client.post("/api/v1/auth/register", json=register_payload)
     assert reg_response.status_code == 201
@@ -75,7 +76,7 @@ async def test_public_registration_rejects_short_password(client):
 async def test_refresh_token_cannot_access_protected_routes(client):
     registration = await client.post(
         "/api/v1/auth/register",
-        json={"email": "refresh-misuse@rakshak.ai", "password": "Password123!"},
+        json={"email": "refresh-misuse@rakshak.ai", "password": "Password123!", "consent_to_data_processing": True},
     )
     user_id = registration.json()["id"]
     refresh_token = create_refresh_token(user_id)

@@ -9,6 +9,7 @@ export const RegisterPage: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [consent, setConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -21,7 +22,7 @@ export const RegisterPage: React.FC = () => {
     setError('');
     setSubmitting(true);
     try {
-      await apiClient.register({ display_name: name.trim(), email: email.trim(), password });
+      await apiClient.register({ display_name: name.trim(), email: email.trim(), password, consent_to_data_processing: consent });
       navigate('/login', { replace: true, state: { registered: true } });
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'We could not create the account. Please try again.');
@@ -57,6 +58,11 @@ export const RegisterPage: React.FC = () => {
               className="w-full p-2.5 rounded-xl border border-structural bg-field-canvas text-xs outline-none"
             />
           </div>
+
+          <label className="flex items-start gap-2 rounded-xl border border-structural bg-field-canvas p-3 text-[11px] text-muted-leaf">
+            <input type="checkbox" required checked={consent} onChange={(event) => setConsent(event.target.checked)} className="mt-0.5" />
+            <span>I agree to the processing of my account and field data for the Rakshak service, as described in the <Link to="/privacy" className="font-semibold text-field-ink underline">privacy notice</Link>.</span>
+          </label>
 
           <div>
             <label className="block font-semibold mb-1">Password</label>

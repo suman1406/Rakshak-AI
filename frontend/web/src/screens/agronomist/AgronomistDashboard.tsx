@@ -267,7 +267,7 @@ export const AgronomistDashboard: React.FC = () => {
                         {c.priority === 'high' && (
                           <span className="w-2 h-2 rounded-full bg-alert-red animate-pulse" title="High Priority" />
                         )}
-                        <span>#{c.id}</span>
+                        <span>Review case</span>
                       </div>
                     </td>
                     <td className="p-4">

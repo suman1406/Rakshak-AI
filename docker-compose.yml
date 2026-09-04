@@ -38,6 +38,9 @@ services:
       DEMO_GATE_PASSWORD: ${DEMO_GATE_PASSWORD:?Set DEMO_GATE_PASSWORD in .env before starting Docker Compose}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       ENVIRONMENT: docker
+      # Keep local browser and deployed web origins explicit; never use a
+      # credentialed wildcard origin for the API.
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:3005,https://stail-rakshakai.vercel.app}
     ports: ["8000:8000"]
     volumes:
       - rakshak-evidence-local:/app/storage

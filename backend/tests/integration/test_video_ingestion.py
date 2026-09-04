@@ -42,7 +42,7 @@ async def test_video_upload_consent_required(client):
     # Register and login first
     await client.post(
         "/api/v1/auth/register",
-        json={"email": "consent-test@rakshak.ai", "password": "Password123!"},
+        json={"email": "consent-test@rakshak.ai", "password": "Password123!", "consent_to_data_processing": True},
     )
     login = await client.post(
         "/api/v1/auth/login",
@@ -69,7 +69,7 @@ async def test_video_upload_and_pipeline_success(client, test_db):
     # Register and login first
     await client.post(
         "/api/v1/auth/register",
-        json={"email": "pipeline-test@rakshak.ai", "password": "Password123!"},
+        json={"email": "pipeline-test@rakshak.ai", "password": "Password123!", "consent_to_data_processing": True},
     )
     login = await client.post(
         "/api/v1/auth/login",
@@ -127,7 +127,7 @@ async def test_video_insufficient_evidence_routing(client, test_db):
     # Register and login first
     await client.post(
         "/api/v1/auth/register",
-        json={"email": "evidence-test@rakshak.ai", "password": "Password123!"},
+        json={"email": "evidence-test@rakshak.ai", "password": "Password123!", "consent_to_data_processing": True},
     )
     login = await client.post(
         "/api/v1/auth/login",

@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from .security import decode_token
 from ..db.session import get_db
-from ..models.identity import User, UserRole
+from ..models.identity import AccountStatus, User, UserRole
 
 security_scheme = HTTPBearer(auto_error=False)
 
@@ -35,6 +35,8 @@ async def get_current_user(
         user = result.scalar_one_or_none()
         if not user:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Account not found")
+        if user.account_status != AccountStatus.active.value:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is not active")
         return user
     except HTTPException:
         raise

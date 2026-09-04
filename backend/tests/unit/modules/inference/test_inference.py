@@ -315,7 +315,7 @@ async def test_inference_service_persists_detection_and_frame_diagnosis_rows(tes
     # ── Register and login to get auth token ───────────────────────────────
     await client.post(
         "/api/v1/auth/register",
-        json={"email": "inference-test@rakshak.ai", "password": "Password123!"},
+        json={"email": "inference-test@rakshak.ai", "password": "Password123!", "consent_to_data_processing": True},
     )
     login = await client.post(
         "/api/v1/auth/login",
@@ -449,7 +449,7 @@ async def test_inference_service_handles_frame_error_gracefully(test_db, client)
     # ── Register and login to get auth token ───────────────────────────────
     await client.post(
         "/api/v1/auth/register",
-        json={"email": "error-test@rakshak.ai", "password": "Password123!"},
+        json={"email": "error-test@rakshak.ai", "password": "Password123!", "consent_to_data_processing": True},
     )
     login = await client.post(
         "/api/v1/auth/login",

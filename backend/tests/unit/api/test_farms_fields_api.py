@@ -7,7 +7,7 @@ from app.models.identity import Organization, OrgType, User, UserRole
 async def test_farms_and_fields_api_flow(client):
     registration = await client.post(
         "/api/v1/auth/register",
-        json={"email": "farm-owner@rakshak.ai", "password": "Password123!"},
+        json={"email": "farm-owner@rakshak.ai", "password": "Password123!", "consent_to_data_processing": True},
     )
     assert registration.status_code == 201
     login = await client.post(

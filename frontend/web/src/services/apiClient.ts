@@ -46,13 +46,13 @@ const request = async (path: string, init: RequestInit = {}, canRefresh = true):
 
 export const apiClient = {
   isConfigured: () => Boolean(process.env.NEXT_PUBLIC_API_URL),
-  register: async (payload: { display_name: string; email: string; password: string }) => {
+  register: async (payload: { display_name: string; email: string; password: string; consent_to_data_processing: boolean }) => {
     const data = await request('/api/v1/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...payload, role: 'farmer' }),
     });
-    return data as { id: string; email?: string; role: UserRole; display_name?: string };
+    return data as { id: string; email?: string; role: UserRole; display_name?: string; account_status: string };
   },
   login: async (emailOrPhone: string, password: string) => {
     const data = await request('/api/v1/auth/login', {
@@ -68,7 +68,7 @@ export const apiClient = {
   },
   getCurrentUser: async () => {
     const data = await request('/api/v1/auth/me');
-    return data as { id: string; email?: string; phone?: string; role: UserRole; org_id?: string; display_name?: string };
+    return data as { id: string; email?: string; phone?: string; role: UserRole; org_id?: string; display_name?: string; account_status: string };
   },
   logout: () => {
     if (typeof window !== 'undefined') {
@@ -112,4 +112,17 @@ export const apiClient = {
     const suffix = query.toString();
     return request(`/api/v1/b2b/drilldown${suffix ? `?${suffix}` : ''}`);
   },
+  listPublicPlans: () => request('/api/v1/onboarding/plans') as Promise<Array<{ code: string; name: string; monthly_price_paise: number | null; annual_price_paise: number | null; farm_limit: number | null; scan_limit: number | null }>>,
+  submitApplication: (payload: { application_type: 'agronomist' | 'organization'; email: string; access_phrase: string; display_name: string; consent_to_data_processing: boolean; organization_name?: string; organization_type?: string; requested_plan_code?: string }) => request('/api/v1/onboarding/applications', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+  }) as Promise<{ reference: string; status: 'pending'; message: string }>,
+  listAdminApplications: (applicationStatus = 'pending') => request(`/api/v1/admin/onboarding-applications?application_status=${encodeURIComponent(applicationStatus)}`),
+  listAdminOnboardingAudit: () => request('/api/v1/admin/onboarding-audit-history'),
+  decideAdminApplication: (reference: string, payload: { decision: 'approved' | 'rejected'; review_note?: string }) => request(`/api/v1/admin/onboarding-applications/${encodeURIComponent(reference)}`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+  }),
+  listAdminPlans: () => request('/api/v1/admin/plans'),
+  createAdminPlan: (payload: { code: string; name: string; monthly_price_paise?: number; annual_price_paise?: number; farm_limit?: number; scan_limit?: number; is_public: boolean }) => request('/api/v1/admin/plans', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+  }),
 };

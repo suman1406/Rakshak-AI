@@ -106,7 +106,7 @@ export const OrgFarmDetailsPage: React.FC = () => {
         {farm.recentCases.map((c) => (
           <div key={c.id} className="p-3.5 bg-field-canvas rounded-2xl border border-structural flex items-center justify-between">
             <div>
-              <p className="font-bold text-field-ink">Case #{c.id} • {c.aiIndication}</p>
+              <p className="font-bold text-field-ink">Field case • {c.aiIndication}</p>
               <p className="text-[11px] text-muted-leaf">{new Date(c.submittedAt).toLocaleDateString()} • {c.confidence}% Confidence</p>
             </div>
             <Link

@@ -21,8 +21,8 @@ class ApiClient {
     return body;
   }
 
-  Future<Map<String, dynamic>> register({required String name, required String email, required String phone, required String password}) async {
-    final response = await http.post(_uri('/api/v1/auth/register'), headers: _jsonHeaders(), body: jsonEncode({'display_name': name, 'email': email, 'phone': phone, 'password': password, 'role': 'farmer'}));
+  Future<Map<String, dynamic>> register({required String name, required String email, required String phone, required String password, required bool consentToDataProcessing}) async {
+    final response = await http.post(_uri('/api/v1/auth/register'), headers: _jsonHeaders(), body: jsonEncode({'display_name': name, 'email': email, 'phone': phone, 'password': password, 'role': 'farmer', 'consent_to_data_processing': consentToDataProcessing}));
     final body = _decode(response);
     _ensureSuccess(response, body);
     return body as Map<String, dynamic>;
@@ -111,4 +111,13 @@ class ApiException implements Exception {
   final String message;
   final int statusCode;
   @override String toString() => message;
+}
+
+String safeErrorMessage(Object error, {String fallback = 'Please try again.'}) {
+  if (error is ApiException) {
+    if (error.statusCode == 401) return 'Your sign-in has expired. Please sign in again.';
+    if (error.statusCode == 403) return 'Your account does not have access to this action.';
+    if (error.statusCode >= 500) return 'The service is temporarily unavailable. Please try again.';
+  }
+  return fallback;
 }

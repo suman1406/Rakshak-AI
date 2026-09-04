@@ -20,7 +20,7 @@ class _DashboardTabState extends State<DashboardTab> {
   Future<_DashboardData> _load() async { final values = await Future.wait([ApiClient.instance.currentUser(), ApiClient.instance.listFields(), ApiClient.instance.listVideos()]); return _DashboardData(user: values[0] as Map<String, dynamic>, fields: values[1] as List<Map<String, dynamic>>, videos: values[2] as List<Map<String, dynamic>>); }
   @override Widget build(BuildContext context) => FutureBuilder<_DashboardData>(future: data, builder: (context, snapshot) {
     if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-    if (snapshot.hasError) return PageContent(children: [Text('Your fields', style: Theme.of(context).textTheme.headlineSmall), const SizedBox(height: 16), AppCard(child: Text('Could not load live field data. ${snapshot.error}')), const SizedBox(height: 12), PrimaryAction(label: 'Try again', onPressed: () => setState(() => data = _load()))]);
+    if (snapshot.hasError) return PageContent(children: [Text('Your fields', style: Theme.of(context).textTheme.headlineSmall), const SizedBox(height: 16), const AppCard(child: Text('Could not load live field data. Please try again.')), const SizedBox(height: 12), PrimaryAction(label: 'Try again', onPressed: () => setState(() => data = _load()))]);
     final value = snapshot.data!; final latest = <String, Map<String, dynamic>>{};
     for (final video in value.videos) { final fieldId = video['field_id']?.toString(); if (fieldId != null && !latest.containsKey(fieldId)) latest[fieldId] = video; }
     final name = value.user['display_name']?.toString() ?? value.user['email']?.toString() ?? 'there';
