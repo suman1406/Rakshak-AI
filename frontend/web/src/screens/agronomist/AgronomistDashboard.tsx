@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { liveWorkspaceApi } from '../../services/liveWorkspaceApi';
+import { useDemoMode } from '../../context/DemoModeContext';
 import { Case, AgronomistMetrics, ReviewStatus } from '../../types';
 import { SeverityBadge, ReviewStatusBadge } from '../../components/shared/RoleBadge';
 import {
@@ -17,6 +18,7 @@ import {
 } from 'lucide-react';
 
 export const AgronomistDashboard: React.FC = () => {
+  const { enabled: demoEnabled, workspace: demoWorkspace } = useDemoMode();
   const [metrics, setMetrics] = useState<AgronomistMetrics | null>(null);
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +34,7 @@ export const AgronomistDashboard: React.FC = () => {
 
   const fetchQueue = async () => {
     setLoading(true);
-    let c = await liveWorkspaceApi.getCases();
+    let c = demoEnabled ? [] : await liveWorkspaceApi.getCases();
     c = c.filter((item) =>
       (statusFilter === 'all' || item.reviewStatus === statusFilter) &&
       (severityFilter === 'all' || item.severity === severityFilter) &&
@@ -41,7 +43,7 @@ export const AgronomistDashboard: React.FC = () => {
       (!confidenceMin || item.confidence >= confidenceMin) &&
       (!search.trim() || [item.id, item.farmName, item.fieldName, item.fpoName].some((value) => value.toLowerCase().includes(search.trim().toLowerCase())))
     );
-    const m = await liveWorkspaceApi.getAgronomistMetrics(c);
+    const m = demoEnabled ? { openCases: demoWorkspace?.agronomist?.open_cases || 0, highPriorityCases: 0, awaitingReview: 0, reviewedThisWeek: 0, averageReviewTimeMinutes: 0 } : await liveWorkspaceApi.getAgronomistMetrics(c);
 
     // Sorting
     let sorted = [...c];
@@ -59,7 +61,7 @@ export const AgronomistDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchQueue();
-  }, [search, statusFilter, severityFilter, cropFilter, diseaseFilter, confidenceMin, sortBy]);
+  }, [search, statusFilter, severityFilter, cropFilter, diseaseFilter, confidenceMin, sortBy, demoEnabled, demoWorkspace]);
 
   const handleResetFilters = () => {
     setSearch('');
@@ -84,7 +86,7 @@ export const AgronomistDashboard: React.FC = () => {
               <h1 className="text-2xl font-extrabold text-field-ink">Agronomist Case Verification Queue</h1>
             </div>
             <p className="text-xs text-muted-leaf mt-1">
-              Audit AI-generated soybean crop disease indications and issue verified advice
+              {demoEnabled ? demoWorkspace?.agronomist?.message || 'Demo mode has no review cases.' : 'Audit AI-generated soybean crop disease indications and issue verified advice'}
             </p>
           </div>
 
@@ -236,7 +238,7 @@ export const AgronomistDashboard: React.FC = () => {
               <Search size={20} />
             </div>
             <p className="font-bold text-sm text-field-ink">No matching cases found</p>
-            <p className="text-xs text-muted-leaf">Try clearing your search query or adjusting filter parameters.</p>
+            <p className="text-xs text-muted-leaf">{demoEnabled ? 'This is intentional: demo mode never fabricates AI diagnoses or human-review work.' : 'Try clearing your search query or adjusting filter parameters.'}</p>
             <button
               onClick={handleResetFilters}
               className="px-4 py-2 bg-field-ink text-white font-bold text-xs rounded-xl"

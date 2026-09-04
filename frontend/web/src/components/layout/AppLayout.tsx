@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useDemoMode } from '../../context/DemoModeContext';
 import { RoleBadge } from '../shared/RoleBadge';
 import {
   Sprout,
@@ -19,6 +20,7 @@ import {
 
 export const AppLayout: React.FC = () => {
   const { user, role, logout } = useAuth();
+  const { enabled: demoEnabled, available: demoAvailable, loading: demoLoading, setEnabled: setDemoEnabled } = useDemoMode();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -149,9 +151,14 @@ export const AppLayout: React.FC = () => {
                 <span className="hidden sm:inline-flex items-center gap-2 px-3 py-2 bg-field-canvas border border-structural rounded-2xl text-xs font-semibold text-field-ink capitalize">
               <Shield size={14} className="text-muted-leaf" /> {role?.replace('_', ' ')} workspace
             </span>
+            {demoAvailable ? <button type="button" aria-pressed={demoEnabled} onClick={() => setDemoEnabled(!demoEnabled)} className={`inline-flex items-center gap-2 rounded-2xl border px-3 py-2 text-xs font-bold transition ${demoEnabled ? 'border-amber-300 bg-amber-100 text-amber-950' : 'border-structural bg-field-canvas text-field-ink'}`}>
+              <Database size={14} /> {demoEnabled ? 'Demo data on' : 'View demo data'}
+            </button> : !demoLoading && role === 'admin' ? <Link to="/admin/demo-data" className="inline-flex items-center gap-2 rounded-2xl border border-structural bg-field-canvas px-3 py-2 text-xs font-bold text-field-ink"><Database size={14} /> Initialize demo</Link> : null}
 
           </div>
         </header>
+
+        {demoEnabled && <div className="border-b border-amber-200 bg-amber-50 px-6 py-2.5 text-center text-xs font-semibold text-amber-950"><span className="font-mono uppercase tracking-wider">Development demo mode</span><span className="mx-2 text-amber-500">/</span>Showing the shared no-video fixture. Switch back to live data before operational work.</div>}
 
         {/* Dynamic Page Outlet */}
         <main className="flex-1 p-4 sm:p-7 lg:p-10 max-w-[1500px] mx-auto w-full">

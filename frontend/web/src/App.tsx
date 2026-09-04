@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { DemoModeProvider } from './context/DemoModeContext';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { AppLayout } from './components/layout/AppLayout';
 
@@ -42,7 +43,7 @@ import {
 export function App() {
   return (
     <AuthProvider>
-      <Router>
+      <DemoModeProvider><Router>
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<LandingPage />} />
@@ -124,7 +125,7 @@ export function App() {
           {/* Fallback Route */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </Router>
+      </Router></DemoModeProvider>
     </AuthProvider>
   );
 }

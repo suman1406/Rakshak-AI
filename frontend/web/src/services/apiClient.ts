@@ -127,4 +127,14 @@ export const apiClient = {
   }),
   getDemoDataStatus: () => request('/api/v1/admin/demo-data') as Promise<{ available: boolean; videos: number; message: string }>,
   initializeDemoData: () => request('/api/v1/admin/demo-data/initialize', { method: 'POST' }) as Promise<{ initialized: boolean; organization: string; farms: number; fields: number; videos: number; message: string }>,
+  getDemoWorkspace: () => request('/api/v1/demo-data/workspace') as Promise<DemoWorkspace>,
+};
+
+export type DemoField = { reference: string; name: string; farm_name: string; district: string; crop: string; area_hectares: number; scan_count: number };
+export type DemoWorkspace = {
+  available: boolean; message: string;
+  organization: null | { name: string; farms: Array<{ reference: string; name: string; district: string; owner_name: string; fields: DemoField[] }>; metrics: { total_farms: number; total_fields: number; videos: number; reports: number } };
+  farmer: null | { display_name: string; fields: DemoField[]; videos: [] };
+  agronomist: null | { open_cases: number; message: string };
+  admin: null | { pilot_plan: { code: string; name: string; monthly_price_paise: number; annual_price_paise: number; farm_limit: number; scan_limit: number }; message: string };
 };

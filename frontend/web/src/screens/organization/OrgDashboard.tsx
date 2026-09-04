@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { liveWorkspaceApi } from '../../services/liveWorkspaceApi';
+import { useDemoMode } from '../../context/DemoModeContext';
 import { OrgDashboardMetrics, Farm } from '../../types';
 import { SeverityBadge } from '../../components/shared/RoleBadge';
 import {
@@ -22,6 +23,7 @@ import {
 } from 'lucide-react';
 
 export const OrgDashboard: React.FC = () => {
+  const { enabled: demoEnabled, workspace: demoWorkspace } = useDemoMode();
   const [metrics, setMetrics] = useState<OrgDashboardMetrics | null>(null);
   const [farms, setFarms] = useState<Farm[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,7 +42,36 @@ export const OrgDashboard: React.FC = () => {
       setLoading(true);
       setLoadError(null);
       try {
-        const [m, f] = await Promise.all([liveWorkspaceApi.getOrgMetrics(), liveWorkspaceApi.getFarms(district)]);
+        const demo = demoWorkspace?.organization;
+        const [m, f] = demoEnabled && demo ? [
+          {
+            totalFarms: demo.metrics.total_farms,
+            healthyPercent: 0,
+            atRiskPercent: 0,
+            diseaseDetectedPercent: 0,
+            highRiskFarmsCount: 0,
+            diseaseDistribution: [],
+            timeTrends: [],
+          },
+          demo.farms.filter((farm) => district === 'all' || farm.district === district).map((farm) => ({
+            id: farm.reference,
+            name: farm.name,
+            fpoName: demo.name,
+            district: farm.district,
+            ownerName: farm.owner_name,
+            totalFieldsCount: farm.fields.length,
+            healthScore: 0,
+            riskStatus: 'Low Risk' as const,
+            diseaseSignalsCount: 0,
+            totalScansCount: 0,
+            fields: farm.fields.map((field) => ({
+              id: field.reference, name: field.name, farmId: farm.reference, farmName: farm.name, fpoName: demo.name,
+              district: field.district, crop: field.crop, areaAcres: Number((field.area_hectares * 2.47105).toFixed(2)),
+              healthScore: 0, healthStatus: 'Healthy' as const, latestScanDate: '', primaryDiseaseSignal: 'No demo scans',
+              severity: 'Uncertain' as const, totalScansCount: 0, scanHistory: [],
+            })), recentCases: [],
+          })),
+        ] : await Promise.all([liveWorkspaceApi.getOrgMetrics(), liveWorkspaceApi.getFarms(district)]);
         if (!isCurrent) return;
         setMetrics(m);
         setFarms(f);
@@ -55,7 +86,7 @@ export const OrgDashboard: React.FC = () => {
     return () => {
       isCurrent = false;
     };
-  }, [district, timeRange, reloadKey]);
+  }, [district, timeRange, reloadKey, demoEnabled, demoWorkspace]);
 
   if (loading) {
     return <div className="space-y-6 p-6" aria-busy="true" aria-label="Loading organization command center">
@@ -106,7 +137,7 @@ export const OrgDashboard: React.FC = () => {
             <p className="text-xs text-muted-leaf mt-1">
               Organization field health intelligence
             </p>
-            <p className="mt-2 text-[10px] font-mono uppercase tracking-wider text-muted-leaf">Live backend data · {timeRange === '30d' ? '30-day view' : timeRange}</p>
+            <p className="mt-2 text-[10px] font-mono uppercase tracking-wider text-muted-leaf">{demoEnabled ? 'Development demo data · no scan intelligence' : `Live backend data · ${timeRange === '30d' ? '30-day view' : timeRange}`}</p>
           </div>
 
           <div className="flex items-center gap-2 text-xs">
@@ -286,13 +317,7 @@ export const OrgDashboard: React.FC = () => {
                     <SeverityBadge severity={farm.fields[0]?.severity || 'Uncertain'} />
                   </td>
                   <td className="p-3 text-right">
-                    <Link
-                      to={`/organization/farms/${farm.id}`}
-                      className="px-3 py-1.5 bg-field-canvas border border-structural font-bold text-xs rounded-xl hover:bg-gray-200 transition inline-flex items-center gap-1"
-                    >
-                      <span>Farm Details</span>
-                      <ExternalLink size={12} />
-                    </Link>
+                    {demoEnabled ? <span className="inline-flex px-3 py-1.5 text-xs font-bold text-muted-leaf">Demo view</span> : <Link to={`/organization/farms/${farm.id}`} className="px-3 py-1.5 bg-field-canvas border border-structural font-bold text-xs rounded-xl hover:bg-gray-200 transition inline-flex items-center gap-1"><span>Farm Details</span><ExternalLink size={12} /></Link>}
                   </td>
                 </tr>
               ))}

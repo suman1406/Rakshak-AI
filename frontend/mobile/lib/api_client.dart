@@ -55,6 +55,7 @@ class ApiClient {
   Map<String, String> get mediaHeaders => _authHeaders();
   Future<List<Map<String, dynamic>>> listFields() async => (await _get('/api/v1/fields')).cast<Map<String, dynamic>>();
   Future<List<Map<String, dynamic>>> listVideos({String? fieldId}) async => (await _get('/api/v1/videos${fieldId == null ? '' : '?field_id=${Uri.encodeQueryComponent(fieldId)}'}')).cast<Map<String, dynamic>>();
+  Future<Map<String, dynamic>> demoWorkspace() async => (await _get('/api/v1/demo-data/workspace')) as Map<String, dynamic>;
 
   Future<Map<String, dynamic>> uploadVideo({required String fieldId, required String filePath, required bool consent}) async {
     final request = http.MultipartRequest('POST', _uri('/api/v1/videos'));
