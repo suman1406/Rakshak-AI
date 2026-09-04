@@ -18,6 +18,7 @@ import { RegisterPage, ForgotPasswordPage } from './screens/auth/RegisterPage';
 import { OnboardingPage } from './screens/auth/OnboardingPage';
 import { ApplicationPage } from './screens/auth/ApplicationPage';
 import { AdminDashboard } from './screens/admin/AdminDashboard';
+import { DemoDataPage } from './screens/admin/DemoDataPage';
 
 // Agronomist Pages
 import { AgronomistDashboard } from './screens/agronomist/AgronomistDashboard';
@@ -117,6 +118,7 @@ export function App() {
           >
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="demo-data" element={<DemoDataPage />} />
           </Route>
 
           {/* Fallback Route */}

@@ -125,4 +125,6 @@ export const apiClient = {
   createAdminPlan: (payload: { code: string; name: string; monthly_price_paise?: number; annual_price_paise?: number; farm_limit?: number; scan_limit?: number; is_public: boolean }) => request('/api/v1/admin/plans', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
   }),
+  getDemoDataStatus: () => request('/api/v1/admin/demo-data') as Promise<{ available: boolean; videos: number; message: string }>,
+  initializeDemoData: () => request('/api/v1/admin/demo-data/initialize', { method: 'POST' }) as Promise<{ initialized: boolean; organization: string; farms: number; fields: number; videos: number; message: string }>,
 };

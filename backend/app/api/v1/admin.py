@@ -16,8 +16,22 @@ from app.models.identity import AccountStatus, OnboardingApplication, Organizati
 from app.models.billing import OrganizationSubscription, Plan, SubscriptionStatus
 from app.core.audit import write_audit_log
 from app.schemas.onboarding import ApplicationDecision
+from app.db.demo_data import initialize_demo_data
 
 router = APIRouter(prefix="/admin", tags=["Admin & Governance"])
+
+@router.get("/demo-data")
+async def demo_data_status(current_user: Annotated[User, Depends(require_role(UserRole.admin))], db: Annotated[AsyncSession, Depends(get_db)]):
+    from app.db.demo_data import DEMO_ORG
+    org = (await db.execute(select(Organization).where(Organization.name == DEMO_ORG))).scalar_one_or_none()
+    return {"available": bool(org), "videos": 0, "message": "Demo data never includes videos, diagnoses, or generated reports."}
+
+@router.post("/demo-data/initialize", status_code=201)
+async def initialize_demo_data_endpoint(current_user: Annotated[User, Depends(require_role(UserRole.admin))], db: Annotated[AsyncSession, Depends(get_db)]):
+    result = await initialize_demo_data(db)
+    await write_audit_log(db, actor_user_id=current_user.id, action="demo_data.initialized", entity_type="demo_data", metadata={"videos": 0})
+    await db.commit()
+    return result
 
 
 class ModelVersionCreate(BaseModel):

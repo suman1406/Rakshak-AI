@@ -12,6 +12,7 @@ import {
   Settings,
   LogOut,
   Shield,
+  Database,
   Menu,
   X,
 } from 'lucide-react';
@@ -24,6 +25,7 @@ export const AppLayout: React.FC = () => {
   const navItems = role === 'admin'
       ? [
           { name: 'Access & pilot plans', path: '/admin/dashboard', icon: Shield },
+          { name: 'Demo data', path: '/admin/demo-data', icon: Database },
           { name: 'Account & Security', path: '/settings/security', icon: Settings },
         ]
       : role === 'agronomist'
