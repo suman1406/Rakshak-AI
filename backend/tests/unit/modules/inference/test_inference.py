@@ -2,10 +2,10 @@
 Unit tests for Grade 3 — Vision Inference: Detector, Classifier, and InferenceService.
 
 Strategy:
-  - All torch/torchvision calls are mocked so tests run without GPU and without
+  - All ultralytics/torch calls are mocked so tests run without GPU and without
     downloading pretrained weights (keeping CI fast and deterministic).
   - We verify the *contracts* enforced by the architecture:
-    • Full probability distributions are always returned (all 6 taxonomy classes).
+    • Full probability distributions are always returned (all 5 taxonomy classes).
     • OOD routing triggers correctly.
     • All detector results carry detector_model_version.
     • All classifier results carry classifier_model_version.
@@ -90,48 +90,55 @@ class TestTaxonomyLock:
 
     def test_detector_version_constant_present(self):
         assert DETECTOR_MODEL_VERSION != ""
+        assert "yolov8" in DETECTOR_MODEL_VERSION.lower()
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Detector Unit Tests (mocked torch)
+# Detector Unit Tests (mocked ultralytics.YOLO)
 # ──────────────────────────────────────────────────────────────────────────────
 
 class TestPlantDetector:
 
-    def _make_detector_with_mock_model(self, boxes, scores, labels, img_bgr=None):
+    def _make_detector_with_mock_model(
+        self,
+        xywhn_boxes: list[list[float]],
+        confidences: list[float],
+    ):
         """
-        Construct a PlantDetector whose model is pre-seeded with mock predictions.
-        Returns (detector, mock_frame_path).
+        Construct a PlantDetector whose YOLO model is pre-seeded with mock
+        predictions matching the ultralytics Results API.
+
+        Args:
+            xywhn_boxes: List of [x_center, y_center, w, h] in [0,1] (normalised).
+            confidences:  Per-box confidence scores.
+
+        Returns:
+            detector (PlantDetector with lazy model already injected)
         """
         import torch
+
         detector = PlantDetector(confidence_threshold=0.30)
+
+        # Build a mock that mimics ultralytics Results object
+        mock_boxes = MagicMock()
+        mock_boxes.xywhn = torch.tensor(xywhn_boxes, dtype=torch.float32)
+        mock_boxes.conf  = torch.tensor(confidences, dtype=torch.float32)
+
+        mock_result = MagicMock()
+        mock_result.boxes = mock_boxes
+
         mock_model = MagicMock()
+        mock_model.return_value = [mock_result]
 
-        # Build prediction dict
-        pred = {
-            "boxes": torch.tensor(boxes, dtype=torch.float32),
-            "scores": torch.tensor(scores, dtype=torch.float32),
-            "labels": torch.tensor(labels, dtype=torch.int64),
-        }
-        mock_model.return_value = [pred]
-        mock_model.eval.return_value = mock_model
-        mock_model.to.return_value = mock_model
-
+        # Inject the already-loaded mock model so _load_model() is bypassed
         detector._model = mock_model
-        detector._device = torch.device("cpu")
-        detector._torch = torch
 
         return detector
 
-    @patch("cv2.imread")
-    def test_returns_detection_results_with_version_stamp(self, mock_imread):
-        import torch
-        mock_imread.return_value = make_fake_bgr_image(128, 128)
-
+    def test_returns_detection_results_with_version_stamp(self):
         detector = self._make_detector_with_mock_model(
-            boxes=[[10.0, 20.0, 60.0, 80.0]],
-            scores=[0.85],
-            labels=[58],   # plant class
+            xywhn_boxes=[[0.5, 0.4, 0.3, 0.25]],
+            confidences=[0.85],
         )
 
         results = detector.detect("fake/frame.jpg")
@@ -140,15 +147,10 @@ class TestPlantDetector:
         assert r.detector_model_version == DETECTOR_MODEL_VERSION
         assert r.detector_model_version != ""
 
-    @patch("cv2.imread")
-    def test_bbox_normalised_to_unit_range(self, mock_imread):
-        import torch
-        mock_imread.return_value = make_fake_bgr_image(100, 200)  # h=100, w=200
-
+    def test_bbox_normalised_to_unit_range(self):
         detector = self._make_detector_with_mock_model(
-            boxes=[[20.0, 10.0, 100.0, 50.0]],  # absolute pixels
-            scores=[0.90],
-            labels=[58],
+            xywhn_boxes=[[0.6, 0.45, 0.4, 0.35]],
+            confidences=[0.90],
         )
         results = detector.detect("fake/frame.jpg")
         bbox = results[0].bbox
@@ -157,35 +159,41 @@ class TestPlantDetector:
         assert 0.0 <= bbox["w"] <= 1.0, f"w={bbox['w']} out of range"
         assert 0.0 <= bbox["h"] <= 1.0, f"h={bbox['h']} out of range"
 
-    @patch("cv2.imread")
-    def test_low_confidence_boxes_are_filtered(self, mock_imread):
-        import torch
-        mock_imread.return_value = make_fake_bgr_image(128, 128)
-
+    def test_low_confidence_boxes_are_filtered(self):
         detector = self._make_detector_with_mock_model(
-            boxes=[[10.0, 20.0, 60.0, 80.0], [5.0, 5.0, 15.0, 15.0]],
-            scores=[0.80, 0.05],   # second is below threshold
-            labels=[58, 58],
+            xywhn_boxes=[[0.5, 0.5, 0.4, 0.4], [0.2, 0.2, 0.1, 0.1]],
+            confidences=[0.80, 0.05],   # second is below threshold
         )
         results = detector.detect("fake/frame.jpg")
-        # Should keep the high-score box only
         real_detections = [r for r in results if r.confidence >= 0.30]
+        # The high-confidence box should be kept; low-confidence filtered.
+        assert any(r.confidence == pytest.approx(0.80, abs=0.01) for r in real_detections)
         assert all(r.confidence >= 0.30 for r in real_detections)
 
-    @patch("cv2.imread")
-    def test_no_detections_synthesises_full_frame_region(self, mock_imread):
+    def test_no_detections_synthesises_full_frame_region(self):
         """If no box exceeds threshold, a full-frame fallback is inserted."""
-        import torch
-        mock_imread.return_value = make_fake_bgr_image(128, 128)
-
         detector = self._make_detector_with_mock_model(
-            boxes=[[10.0, 20.0, 60.0, 80.0]],
-            scores=[0.05],         # below threshold
-            labels=[58],
+            xywhn_boxes=[[0.5, 0.5, 0.4, 0.4]],
+            confidences=[0.05],         # below threshold
         )
         results = detector.detect("fake/frame.jpg")
         assert len(results) == 1
         assert results[0].bbox == {"x": 0.5, "y": 0.5, "w": 1.0, "h": 1.0}
+
+    def test_coords_clamped_to_unit_range(self):
+        """Out-of-range xywhn values (floating-point edge cases) must be clamped."""
+        detector = self._make_detector_with_mock_model(
+            # Intentionally slightly out of range
+            xywhn_boxes=[[1.02, -0.01, 0.5, 0.5]],
+            confidences=[0.95],
+        )
+        results = detector.detect("fake/frame.jpg")
+        bbox = results[0].bbox
+        assert 0.0 <= bbox["x"] <= 1.0
+        assert 0.0 <= bbox["y"] <= 1.0
+        assert 0.0 <= bbox["w"] <= 1.0
+        assert 0.0 <= bbox["h"] <= 1.0
+
 
 
 # ──────────────────────────────────────────────────────────────────────────────

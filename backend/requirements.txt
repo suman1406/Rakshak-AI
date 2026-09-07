@@ -22,3 +22,4 @@ groq>=0.4.0
 torch
 torchvision
 timm
+ultralytics>=8.0.0
