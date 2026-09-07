@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.core.logging import RequestLoggingMiddleware, logger
 from app.db.base import Base
 from app.db.bootstrap_accounts import ensure_bootstrap_access_accounts, ensure_initial_admin_account
+from app.db.catalog import ensure_disease_catalog
 from app.db.session import async_session_factory, engine
 
 @asynccontextmanager
@@ -36,6 +37,9 @@ async def lifespan(app: FastAPI):
                 logger.info("Created bootstrap access accounts: %s", ", ".join(created_accounts))
             else:
                 logger.info("Bootstrap access accounts already exist.")
+    # Seed disease taxonomy catalog (idempotent — safe on every restart)
+    async with async_session_factory() as session:
+        await ensure_disease_catalog(session)
     logger.info("Database schema initialized successfully.")
     yield
     logger.info("Shutting down Fasal Rakshak API...")
