@@ -121,6 +121,8 @@ async def test_video_upload_and_pipeline_success(client, test_db):
     assert "evidence" in analysis
     assert "model_versions" in analysis
     assert analysis["model_versions"]["aggregation"] != ""
+    assert analysis["explanation"] is not None and len(analysis["explanation"]) > 0
+    assert analysis["action_items"] is not None and len(analysis["action_items"]) > 0
 
 @pytest.mark.asyncio
 async def test_video_insufficient_evidence_routing(client, test_db):

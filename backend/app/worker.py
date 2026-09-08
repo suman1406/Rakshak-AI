@@ -33,7 +33,17 @@ def process_video(self, video_id: str) -> str:
         async with async_session_factory() as db:
             claim = await db.execute(
                 update(Video)
-                .where(Video.id == video_id, Video.status.in_((VideoStatus.uploaded, VideoStatus.failed)))
+                .where(
+                    Video.id == video_id,
+                    Video.status.in_((
+                        VideoStatus.uploaded,
+                        VideoStatus.failed,
+                        VideoStatus.validating,
+                        VideoStatus.processing,
+                        VideoStatus.analyzing,
+                        VideoStatus.aggregating,
+                    )),
+                )
                 .values(status=VideoStatus.validating, retry_count=self.request.retries, job_started_at=datetime.now(timezone.utc))
             )
             if claim.rowcount != 1:

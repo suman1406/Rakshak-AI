@@ -253,32 +253,39 @@ class VideoIngestionService:
             )
             
             if llm_result:
-                # Run LLM explanation through guardrail filter
                 llm_explanation = llm_result.get("explanation", "")
-                guardrail_result = guardrail_filter.evaluate(llm_explanation)
+                disclaimer = llm_result.get("safety_disclaimer", "") or "AI estimate, not a confirmed diagnosis. Consult an agronomist."
+                combined_text = f"{llm_explanation} {disclaimer}".strip()
+                guardrail_result = guardrail_filter.evaluate(combined_text)
                 if guardrail_result.passed:
                     explanation = llm_explanation
-                    action_items = llm_result.get("action_items", [])
+                    raw_actions = llm_result.get("action_items", [])
+                    action_items = [a.strip() for a in raw_actions if isinstance(a, str) and a.strip()]
                     logger.info(f"Video {video_id} -> LLM advisory generated and passed guardrails")
                 else:
                     logger.warning(f"Video {video_id} -> LLM output failed guardrails: {guardrail_result.violations}, using template fallback")
                     template = get_canned_report(disease_slug)
                     explanation = template.get("explanation", "")
                     action_items_str = template.get("action_items", "")
-                    action_items = action_items_str.split("\n") if isinstance(action_items_str, str) else []
+                    action_items = [a.strip() for a in action_items_str.split("\n") if a.strip()]
             else:
                 # LLM returned None (API key missing or call failed), use template
                 template = get_canned_report(disease_slug)
                 explanation = template.get("explanation", "")
                 action_items_str = template.get("action_items", "")
-                action_items = action_items_str.split("\n") if isinstance(action_items_str, str) else []
+                action_items = [a.strip() for a in action_items_str.split("\n") if a.strip()]
                 
         except Exception as e:
             logger.warning(f"Video {video_id} -> LLM advisory generation failed: {e}, using template fallback")
             template = get_canned_report(disease_slug)
             explanation = template.get("explanation", "")
             action_items_str = template.get("action_items", "")
-            action_items = action_items_str.split("\n") if isinstance(action_items_str, str) else []
+            action_items = [a.strip() for a in action_items_str.split("\n") if a.strip()]
+
+        if not action_items:
+            template = get_canned_report(disease_slug)
+            action_items_str = template.get("action_items", "")
+            action_items = [a.strip() for a in action_items_str.split("\n") if a.strip()]
 
         # Build explanation - use LLM result if available, otherwise fallback to default template
         disease_display = top_class.replace("_", " ").title()
