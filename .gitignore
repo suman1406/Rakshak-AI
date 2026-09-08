@@ -19,9 +19,6 @@ ios/Pods/
 coverage/
 /data/
 # Ignore ML model weight files, but NOT the weights bundled inside the backend app
-*.pt
-*.pth
-!backend/app/weights/*.pt
 *.onnx
 *.h5
 *.pkl
