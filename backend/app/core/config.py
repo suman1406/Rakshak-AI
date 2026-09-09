@@ -62,7 +62,7 @@ class Settings(BaseSettings):
         if self.EVIDENCE_RETENTION_DAYS < 1:
             raise ValueError('EVIDENCE_RETENTION_DAYS must be positive')
         if self.ENVIRONMENT == 'production':
-            if self.JWT_SECRET_KEY.startswith('dev-secret') or len(self.JWT_SECRET_KEY) < 32:
+            if self.JWT_SECRET_KEY.lower().startswith(('dev-secret', 'replace-with', 'change-me', 'validation-only')) or len(self.JWT_SECRET_KEY.strip()) < 32:
                 raise ValueError('Production requires a unique JWT_SECRET_KEY of at least 32 characters')
             if self.STORAGE_BACKEND != 's3':
                 raise ValueError('Production API and workers require shared private S3 storage')

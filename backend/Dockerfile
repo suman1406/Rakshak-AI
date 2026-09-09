@@ -1,13 +1,14 @@
+# syntax=docker/dockerfile:1
 FROM python:3.12-slim
 
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements.txt requirements.lock ./
+RUN --mount=type=cache,target=/root/.cache/pip pip install --timeout=120 --retries=5 -r requirements.txt -c requirements.lock
 COPY requirements-storage.txt .
-RUN pip install --no-cache-dir -r requirements-storage.txt && apt-get update && apt-get install -y --no-install-recommends libgl1 libglib2.0-0 && rm -rf /var/lib/apt/lists/*
+RUN --mount=type=cache,target=/root/.cache/pip pip install --timeout=120 --retries=5 -r requirements-storage.txt -c requirements.lock && apt-get update && apt-get install -y --no-install-recommends libgl1 libglib2.0-0 && rm -rf /var/lib/apt/lists/*
 
 ENV PYTHONPATH=/app
 
