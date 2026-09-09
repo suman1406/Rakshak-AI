@@ -12,6 +12,7 @@ export const OrgFieldDetailsPage: React.FC = () => {
   const [field, setField] = useState<Field | null>(null);
   const [activeCase, setActiveCase] = useState<Case | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const fetchFieldData = async () => {
@@ -21,12 +22,16 @@ export const OrgFieldDetailsPage: React.FC = () => {
       setActiveCase(c);
       setLoading(false);
     };
-    fetchFieldData();
+    fetchFieldData().catch(e => { setError(e.message); setLoading(false); });
   }, [id]);
 
-  if (loading || !field || !activeCase) {
+  if (loading) {
     return <div className="p-8 text-center text-xs text-muted-leaf">Loading field intelligence profile...</div>;
   }
+
+  if (error) return <p role="alert">{error}</p>;
+  if (!field) return <p>Field not found.</p>;
+  if (!activeCase) return <section className="workspace-panel"><h1>{field.name}</h1><p>No completed assessment is available for this field yet.</p><Link className="text-action" to="/organization/dashboard">Return to farms</Link></section>;
 
   return (
     <div className="space-y-6 font-sans max-w-5xl mx-auto">
@@ -48,7 +53,7 @@ export const OrgFieldDetailsPage: React.FC = () => {
         </div>
 
         <Link
-          to={`/agronomist/cases/${activeCase.id}`}
+          to="#evidence"
           className="px-4 py-2.5 bg-field-ink text-white font-bold text-xs rounded-xl hover:bg-opacity-90 transition flex items-center gap-2 shadow-xs"
         >
           <FileText size={14} className="text-lime-signal" />
@@ -62,7 +67,7 @@ export const OrgFieldDetailsPage: React.FC = () => {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
         <div className="p-4 bg-pure-surface rounded-2xl border border-structural shadow-xs">
           <span className="text-[10px] text-muted-leaf uppercase font-mono block">Health Score</span>
-          <span className="font-extrabold text-xl text-field-ink font-mono">{field.healthScore}/100</span>
+          <span className="font-extrabold text-xl text-field-ink font-mono">Not yet validated</span>
         </div>
         <div className="p-4 bg-pure-surface rounded-2xl border border-structural shadow-xs">
           <span className="text-[10px] text-muted-leaf uppercase font-mono block">Health Status</span>
@@ -83,7 +88,7 @@ export const OrgFieldDetailsPage: React.FC = () => {
         <h3 className="font-bold text-xs text-field-ink uppercase font-mono tracking-wider">
           Latest Scan Multi-Frame Evidence Analysis
         </h3>
-        <EvidenceViewer
+        <EvidenceViewer videoUrl={activeCase.videoUrl}
           evidenceFrames={activeCase.evidenceFrames}
           aiIndication={activeCase.aiIndication}
           confidence={activeCase.confidence}

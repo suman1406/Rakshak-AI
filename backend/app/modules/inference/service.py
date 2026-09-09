@@ -33,7 +33,7 @@ from ...models.prediction import (
     DecisionAuthorityStatus,
 )
 from ...models.video import Frame, Video, VideoStatus
-from .detector import PlantDetector, DETECTOR_MODEL_VERSION
+from .detector import PlantDetector, DetectionResult, DETECTOR_MODEL_VERSION
 from .classifier import DiseaseClassifier, CLASSIFIER_MODEL_VERSION, TAXONOMY_CLASSES
 
 logger = logging.getLogger("rakshak")
@@ -132,18 +132,7 @@ class InferenceService:
                 )
                 # On per-frame failure: emit an unknown result but do NOT halt
                 # the pipeline — other frames may still be usable.
-                frame_results.append(FrameInferenceResult(
-                    frame_id=frame.id,
-                    frame_path=frame.storage_path,
-                    quality_score=frame.blur_score or 0.0,
-                    detections_count=0,
-                    top_class="unknown_other",
-                    top_confidence=0.0,
-                    is_unknown=True,
-                    avg_probability_distribution={
-                        cls: round(1.0 / len(TAXONOMY_CLASSES), 6) for cls in TAXONOMY_CLASSES
-                    },
-                ))
+                raise RuntimeError("Model inference failed; scan cannot be assessed") from exc
 
         await db.commit()
         logger.info(
@@ -158,6 +147,12 @@ class InferenceService:
         """Detect objects, classify each detection, persist rows, return summary."""
         # ── 1. Detection ────────────────────────────────────────────────────
         detections = self._detector.detect(frame.storage_path)
+        if not detections:
+            # Baseline mode approved for the supplied COCO checkpoint. This is
+            # a sampled observation, never a claim that a leaf was detected.
+            detections = [DetectionResult(frame.storage_path,
+                {"x": .5, "y": .5, "w": 1.0, "h": 1.0},
+                "frame_region", 1.0, "whole-frame-observation-v1")]
         logger.debug(
             f"Frame {frame.id}: {len(detections)} detection(s) "
             f"[detector={DETECTOR_MODEL_VERSION}]"
@@ -209,6 +204,9 @@ class InferenceService:
                 dominant_class = cls_result.top_class
 
         avg_dist = self._average_distributions(per_detection_dists)
+        dominant_class = max(avg_dist, key=avg_dist.get)
+        dominant_conf = avg_dist[dominant_class]
+        any_unknown = not detections or dominant_class == "unknown_other" or dominant_conf < 0.30
         composite_quality = float(frame.blur_score or 50.0)
 
         return FrameInferenceResult(

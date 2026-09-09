@@ -45,7 +45,20 @@ const request = async (path: string, init: RequestInit = {}, canRefresh = true):
 };
 
 export const apiClient = {
-  isConfigured: () => Boolean(process.env.NEXT_PUBLIC_API_URL),
+  mediaBlob: async (path: string): Promise<Blob> => {
+    if (!path.startsWith('/api/v1/videos/')) throw new Error('Invalid evidence path');
+    const fetchMedia = () => fetch(`${API_BASE_URL}${path}`, { headers: { Authorization: `Bearer ${window.localStorage.getItem(TOKEN_KEY) || ''}` } });
+    let response = await fetchMedia();
+    if (response.status === 401 && await refreshAccessToken()) response = await fetchMedia();
+    if (!response.ok) throw new ApiError('Evidence could not be loaded', response.status);
+    return response.blob();
+  },
+  isConfigured: () => Boolean(API_BASE_URL),
+  createFarm: (name: string) => request('/api/v1/farms', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) }),
+  createField: (farmId: string, payload: { name: string; area_hectares?: number }) => request(`/api/v1/farms/${farmId}/fields`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
+  requestReview: (id: string) => request(`/api/v1/diagnosis/${id}/review-requests`, { method: 'POST' }),
+  submitFeedback: (id: string, note: string) => request(`/api/v1/diagnosis/${id}/feedback`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ correction_type: 'other', note }) }),
+  retryVideo: (id: string) => request(`/api/v1/videos/${id}/retry`, { method: 'POST' }),
   register: async (payload: { display_name: string; email: string; password: string; consent_to_data_processing: boolean }) => {
     const data = await request('/api/v1/auth/register', {
       method: 'POST',
@@ -98,7 +111,7 @@ export const apiClient = {
   getAgronomistCase: (diagnosisId: string) => request(`/api/v1/agronomist/cases/${diagnosisId}`),
   getAgronomistCaseHistory: (diagnosisId: string) => request(`/api/v1/agronomist/cases/${diagnosisId}/history`),
   claimAgronomistCase: (diagnosisId: string) => request(`/api/v1/agronomist/cases/${diagnosisId}/claim`, { method: 'POST' }),
-  verifyAgronomistCase: (diagnosisId: string, payload: { disease_id?: string | null; is_healthy_override: boolean; severity_level: number; affected_plant_estimate_independent: number; notes?: string }) => request(`/api/v1/diagnosis/${diagnosisId}/verify`, {
+  verifyAgronomistCase: (diagnosisId: string, payload: { disease_id?: string | null; disease_slug?: string; is_healthy_override: boolean; severity_level: number; affected_plant_estimate_independent: number; notes?: string }) => request(`/api/v1/diagnosis/${diagnosisId}/verify`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -112,6 +125,7 @@ export const apiClient = {
     const suffix = query.toString();
     return request(`/api/v1/b2b/drilldown${suffix ? `?${suffix}` : ''}`);
   },
+  updateProfile: (payload: { display_name: string }) => request('/api/v1/auth/me', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
   listPublicPlans: () => request('/api/v1/onboarding/plans') as Promise<Array<{ code: string; name: string; monthly_price_paise: number | null; annual_price_paise: number | null; farm_limit: number | null; scan_limit: number | null }>>,
   submitApplication: (payload: { application_type: 'agronomist' | 'organization'; email: string; access_phrase: string; display_name: string; consent_to_data_processing: boolean; organization_name?: string; organization_type?: string; requested_plan_code?: string }) => request('/api/v1/onboarding/applications', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),

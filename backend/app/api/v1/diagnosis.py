@@ -12,7 +12,7 @@ from sqlalchemy.orm import selectinload
 from app.core.deps import get_current_user, get_db, require_role
 from app.core.scopes import diagnosis_scope
 from app.core.audit import write_audit_log
-from app.models.farm import Field
+from app.models.farm import Field, Disease
 from app.models.video import Video
 from app.models.identity import User, UserRole
 from app.models.prediction import VideoDiagnosis
@@ -138,7 +138,7 @@ async def submit_agronomist_verification(
     vl = VerifiedLabel(
         video_diagnosis_id=video_diagnosis_id,
         agronomist_id=current_user.id,
-        disease_id=payload.disease_id,
+        disease_id=await resolve_verified_disease(payload, db),
         is_healthy_override=payload.is_healthy_override,
         severity_level=payload.severity_level,
         affected_plant_estimate_independent=payload.affected_plant_estimate_independent,
@@ -148,8 +148,14 @@ async def submit_agronomist_verification(
     db.add(vl)
     work_item = (await db.execute(select(ReviewWorkItem).where(ReviewWorkItem.video_diagnosis_id == video_diagnosis_id))).scalar_one_or_none()
     if work_item:
+        if work_item.status == ReviewStatus.completed:
+            raise HTTPException(status_code=409, detail="This review has already been completed")
+        if work_item.assigned_agronomist_id and work_item.assigned_agronomist_id != current_user.id:
+            raise HTTPException(status_code=409, detail="Case is assigned to another reviewer")
         work_item.status = ReviewStatus.completed
         work_item.completed_at = datetime.now(timezone.utc)
+    else:
+        db.add(ReviewWorkItem(video_diagnosis_id=video_diagnosis_id, status=ReviewStatus.completed, assigned_agronomist_id=current_user.id, completed_at=datetime.now(timezone.utc)))
     await db.flush()
     await write_audit_log(db, actor_user_id=current_user.id, action="diagnosis.verified", entity_type="diagnosis", entity_id=video_diagnosis_id, metadata={"decision": payload.disease_id or "healthy"})
     await db.commit()
@@ -160,3 +166,27 @@ async def submit_agronomist_verification(
         is_gold=vl.is_gold,
         created_at=vl.created_at,
     )
+
+async def resolve_verified_disease(payload: AgronomistVerifyCreate, db: AsyncSession) -> str | None:
+    if payload.is_healthy_override:
+        if payload.disease_id or payload.disease_slug:
+            raise HTTPException(status_code=422, detail="Healthy review cannot also name a disease")
+        if payload.severity_level != 0:
+            raise HTTPException(status_code=422, detail="Healthy review must have severity zero")
+        return None
+    if payload.disease_slug:
+        names = {"soybean_rust": "Soybean Rust", "soybean_bacterial_blight": "Bacterial Blight", "bacterial_blight": "Bacterial Blight", "soybean_frogeye_leaf_spot": "Frogeye Leaf Spot", "frogeye_leaf_spot": "Frogeye Leaf Spot"}
+        name = names.get(payload.disease_slug)
+        if name is None:
+            raise HTTPException(status_code=422, detail="Unsupported disease classification")
+        disease = (await db.execute(select(Disease).where(Disease.name == name, Disease.active.is_(True)))).scalars().first()
+        if disease is None:
+            raise HTTPException(status_code=422, detail="Disease is not in the active catalog")
+        return disease.id
+    if payload.disease_id:
+        disease = await db.get(Disease, payload.disease_id)
+        if disease is None or not disease.active:
+            raise HTTPException(status_code=422, detail="Disease is not in the active catalog")
+        return disease.id
+    # Neither healthy nor a named disease means the expert could not classify.
+    return None

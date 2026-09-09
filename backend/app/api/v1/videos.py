@@ -2,11 +2,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse
 from pathlib import Path
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from app.core.deps import get_current_user, get_db
-from app.core.scopes import video_scope
+from app.core.scopes import video_scope, field_scope
 from app.core.audit import write_audit_log
 from app.models.farm import Field
 from app.models.identity import User
@@ -62,7 +62,7 @@ async def upload_video(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    field_result = await db.execute(select(Field).join(Field.farm).where(Field.id == field_id, video_scope(current_user)))
+    field_result = await db.execute(select(Field).join(Field.farm).where(Field.id == field_id, field_scope(current_user)))
     if field_result.scalar_one_or_none() is None:
         raise HTTPException(status_code=404, detail="Field not found")
     video = await ingestion_service.init_upload(
@@ -83,7 +83,12 @@ async def upload_video(
     await db.commit()
 
     # Launch processing pipeline as background task
-    process_video.delay(video.id)
+    try:
+        process_video.delay(video.id)
+    except Exception:
+        video.status = VideoStatus.failed
+        video.error_detail = "Processing could not be queued. Your video is saved; retry when the service is available."
+        await db.commit()
 
     return VideoUploadResponse(
         video_id=video.id,
@@ -113,6 +118,34 @@ async def get_video_status(
         total_frames_extracted=video.total_frames_extracted,
         error_detail=video.error_detail,
     )
+
+@router.post("/{video_id}/retry", response_model=VideoStatusResponse)
+async def retry_video(video_id: str, current_user: Annotated[User, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db)]):
+    video = (await db.execute(select(Video).join(Video.field).join(Field.farm).where(Video.id == video_id, video_scope(current_user)))).scalar_one_or_none()
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+    if video.uploaded_by != current_user.id:
+        raise HTTPException(status_code=403, detail="Only the uploader can retry this scan")
+    claimed = await db.execute(update(Video).where(Video.id == video.id, Video.status == VideoStatus.failed).values(status=VideoStatus.uploaded, error_detail=None, job_completed_at=None))
+    if claimed.rowcount != 1:
+        raise HTTPException(status_code=409, detail="Only a failed scan can be retried")
+    await write_audit_log(db, actor_user_id=current_user.id, action="video.retry_requested", entity_type="video", entity_id=video.id)
+    await db.commit()
+    try:
+        process_video.delay(video.id)
+    except Exception:
+        video.status = VideoStatus.failed
+        video.error_detail = "Processing is temporarily unavailable. Please retry later."
+        await db.commit()
+    await db.refresh(video)
+    return VideoStatusResponse(video_id=video.id, status=video.status, quality_score=video.quality_score, usable_frames_count=video.usable_frames_count, total_frames_extracted=video.total_frames_extracted, error_detail=video.error_detail)
+
+@router.get("/{video_id}/content")
+async def get_video_content(video_id: str, current_user: Annotated[User, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db)]):
+    video = (await db.execute(select(Video).join(Video.field).join(Field.farm).where(Video.id == video_id, video_scope(current_user)))).scalar_one_or_none()
+    if not video or not Path(video.storage_path).is_file():
+        raise HTTPException(status_code=404, detail="Video content not found")
+    return FileResponse(video.storage_path, headers={"Cache-Control": "private, no-store"})
 
 @router.get("/{video_id}/analysis", response_model=VideoAnalysisResponse)
 async def get_video_analysis(
@@ -190,7 +223,7 @@ async def get_video_analysis(
             affected_plant_estimate=diagnosis_row.affected_plant_estimate or 0.0,
         ),
         evidence=VideoAnalysisEvidence(
-            frames_analyzed=video.total_frames_extracted or 0,
+            frames_analyzed=diagnosis_row.total_frames or video.usable_frames_count or 0,
             supporting_frames=diagnosis_row.supporting_frames or 0,
             quality_score=video.quality_score,
         ),

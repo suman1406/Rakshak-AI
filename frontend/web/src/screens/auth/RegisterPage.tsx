@@ -43,7 +43,7 @@ export const RegisterPage: React.FC = () => {
             </div>
           </Link>
           <h1 className="text-2xl font-extrabold text-field-ink">Register for Rakshak AI</h1>
-          <p className="text-xs text-muted-leaf">Create a farmer account for the Rakshak mobile app</p>
+          <p className="text-xs text-muted-leaf">Create a farmer account to record and review your fields</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">

@@ -123,9 +123,11 @@ class TestPlantDetector:
         mock_boxes = MagicMock()
         mock_boxes.xywhn = torch.tensor(xywhn_boxes, dtype=torch.float32)
         mock_boxes.conf  = torch.tensor(confidences, dtype=torch.float32)
+        mock_boxes.cls = torch.zeros(len(confidences))
 
         mock_result = MagicMock()
         mock_result.boxes = mock_boxes
+        mock_result.names = {0: "leaf"}
 
         mock_model = MagicMock()
         mock_model.return_value = [mock_result]
@@ -177,8 +179,7 @@ class TestPlantDetector:
             confidences=[0.05],         # below threshold
         )
         results = detector.detect("fake/frame.jpg")
-        assert len(results) == 1
-        assert results[0].bbox == {"x": 0.5, "y": 0.5, "w": 1.0, "h": 1.0}
+        assert results == []
 
     def test_coords_clamped_to_unit_range(self):
         """Out-of-range xywhn values (floating-point edge cases) must be clamped."""
@@ -498,7 +499,5 @@ async def test_inference_service_handles_frame_error_gracefully(test_db, client)
     # Detector raises FileNotFoundError
     svc._detector.detect = MagicMock(side_effect=FileNotFoundError("test"))
 
-    results = await svc.run_frame_inference(video_id, test_db)
-    assert len(results) == 1
-    assert results[0].is_unknown is True
-    assert results[0].detections_count == 0
+    with pytest.raises(RuntimeError, match="Model inference failed"):
+        await svc.run_frame_inference(video_id, test_db)

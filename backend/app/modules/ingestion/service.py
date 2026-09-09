@@ -10,7 +10,7 @@ from ...core.config import settings
 from ...core.logging import logger
 from ...db.session import async_session_factory
 from ...models.farm import Disease, Field
-from ...models.prediction import ConfidenceBand, DecisionAuthorityStatus, Detection, VideoDiagnosis
+from ...models.prediction import ConfidenceBand, DecisionAuthorityStatus, Detection, FrameDiagnosis, VideoDiagnosis
 from ...models.video import Frame, Video, VideoStatus
 from ..processing.extractor import VideoFrameExtractor
 from ..processing.quality import QualityFilterService
@@ -24,7 +24,7 @@ from ...guardrails.certainty_filter import CertaintyGuardrailFilter
 
 class VideoIngestionService:
     def __init__(self):
-        self.extractor = VideoFrameExtractor(target_fps=1.0, max_frames=30)
+        self.extractor = VideoFrameExtractor(target_fps=2.0, max_frames=60)
         self.quality_filter = QualityFilterService(
             min_blur_threshold=settings.QUALITY_BLUR_THRESHOLD,
             min_exposure_score=40.0,
@@ -48,7 +48,7 @@ class VideoIngestionService:
             duration = frames / fps
             if not settings.MIN_VIDEO_DURATION_SECONDS <= duration <= settings.MAX_VIDEO_DURATION_SECONDS:
                 raise HTTPException(status_code=422, detail=f"Video duration must be {settings.MIN_VIDEO_DURATION_SECONDS:g}–{settings.MAX_VIDEO_DURATION_SECONDS:g} seconds")
-            if width > settings.MAX_VIDEO_WIDTH or height > settings.MAX_VIDEO_HEIGHT:
+            if max(width, height) > max(settings.MAX_VIDEO_WIDTH, settings.MAX_VIDEO_HEIGHT) or min(width, height) > min(settings.MAX_VIDEO_WIDTH, settings.MAX_VIDEO_HEIGHT):
                 raise HTTPException(status_code=422, detail="Video resolution exceeds the capture limit")
             return duration
         finally:
@@ -117,6 +117,7 @@ class VideoIngestionService:
             duration_seconds=duration_seconds,
             usable_frames_count=0,
             total_frames_extracted=0,
+            device_metadata={"processing_consent": True, "consent_version": "video-processing-v1", "consent_accepted_at": datetime.now(timezone.utc).isoformat()},
         )
         db.add(video)
         await db.commit()
@@ -162,11 +163,13 @@ class VideoIngestionService:
         # A retry may follow a crash after frames were committed but before the
         # diagnosis was persisted. Replace that attempt's derived rows so frame
         # records remain idempotent for a video.
-        await db.execute(delete(Frame).where(Frame.video_id == video_id))
-        # Also clean up any detection/diagnosis records from previous attempts
+        await db.execute(delete(FrameDiagnosis).where(FrameDiagnosis.detection_id.in_(
+            select(Detection.id).where(Detection.frame_id.in_(select(Frame.id).where(Frame.video_id == video_id)))
+        )))
         await db.execute(delete(Detection).where(Detection.frame_id.in_(
             select(Frame.id).where(Frame.video_id == video_id)
         )))
+        await db.execute(delete(Frame).where(Frame.video_id == video_id))
         await db.flush()
 
         # Store Frame rows in DB
@@ -205,6 +208,11 @@ class VideoIngestionService:
 
         # Run detection + classification on all selected frames (Grade 3)
         frame_results = await self._inference.run_frame_inference(video_id, db)
+        if sum(fr.detections_count > 0 for fr in frame_results) < settings.MIN_USABLE_FRAMES_THRESHOLD:
+            video.status = VideoStatus.insufficient_evidence
+            video.error_detail = "Not enough crop regions were detected. Capture clear, close views of several soybean plants."
+            await db.commit()
+            return
 
         # 6. Aggregation: Bayesian temporal aggregation
         video.status = VideoStatus.aggregating
@@ -255,7 +263,10 @@ class VideoIngestionService:
             if llm_result:
                 # Run LLM explanation through guardrail filter
                 llm_explanation = llm_result.get("explanation", "")
-                guardrail_result = guardrail_filter.evaluate(llm_explanation)
+                proposed_actions = llm_result.get("action_items", [])
+                if not isinstance(proposed_actions, list) or not all(isinstance(item, str) for item in proposed_actions):
+                    raise ValueError("Invalid advisory actions")
+                guardrail_result = guardrail_filter.evaluate(llm_explanation + "\n" + "\n".join(proposed_actions))
                 if guardrail_result.passed:
                     explanation = llm_explanation
                     action_items = llm_result.get("action_items", [])
@@ -318,7 +329,7 @@ class VideoIngestionService:
                 "soybean_rust": "Soybean Rust",
                 "soybean_frogeye_leaf_spot": "Frogeye Leaf Spot",
                 "soybean_healthy": "Healthy",
-                "soybean_bacterial_blight": "Sudden Death Syndrome",
+                "soybean_bacterial_blight": "Bacterial Blight",
             }
             disease_name = taxonomy_names.get(top_class)
             if disease_name:
@@ -337,6 +348,9 @@ class VideoIngestionService:
         if is_unknown:
             severity_level = 0
             affected_estimate = 0.0
+            template = get_canned_report("unknown_other")
+            explanation = template["explanation"]
+            action_items = template["action_items"].split("\n")
 
         diagnosis = VideoDiagnosis(
             video_id=video_id,
@@ -347,8 +361,8 @@ class VideoIngestionService:
             severity_level=severity_level,
             affected_plant_estimate=affected_estimate,
             supporting_frames=known_frame_count,
-            total_frames=len(extracted_frames),
-            aggregation_model_version="bayes-v1.0",
+            total_frames=len(frame_results),
+            aggregation_model_version=agg_result.aggregation_model_version,
             decision_authority=DecisionAuthorityStatus.advisory_only,
             explanation=explanation,
             action_items="\n".join(item for item in action_items if item.strip()) or None,
@@ -372,6 +386,7 @@ class VideoIngestionService:
                 await self._process_pipeline_internal(video_id, db_session)
             except Exception as e:
                 logger.exception(f"Error in video processing pipeline for {video_id}: {e}")
+                await db_session.rollback()
                 stmt = select(Video).where(Video.id == video_id)
                 result = await db_session.execute(stmt)
                 video = result.scalar_one_or_none()
@@ -387,6 +402,7 @@ class VideoIngestionService:
                     await self._process_pipeline_internal(video_id, db)
                 except Exception as e:
                     logger.exception(f"Error in video processing pipeline for {video_id}: {e}")
+                    await db.rollback()
                     stmt = select(Video).where(Video.id == video_id)
                     result = await db.execute(stmt)
                     video = result.scalar_one_or_none()

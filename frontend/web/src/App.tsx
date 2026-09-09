@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext';
 import { DemoModeProvider } from './context/DemoModeContext';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { AppLayout } from './components/layout/AppLayout';
+import { FarmerWorkspace } from './screens/farmer/FarmerWorkspace';
 
 // Public Pages
 import { LandingPage } from './screens/public/LandingPage';
@@ -63,10 +64,13 @@ export function App() {
           <Route path="/admin/access" element={<LoginPage />} />
 
           {/* Agronomist Portal (Protected) */}
+          <Route path="/farmer" element={<ProtectedRoute allowedRoles={['farmer']}><AppLayout /></ProtectedRoute>}>
+            <Route index element={<FarmerWorkspace />} />
+          </Route>
           <Route
             path="/agronomist"
             element={
-              <ProtectedRoute allowedRoles={['agronomist', 'org_admin', 'admin', 'enterprise']}>
+              <ProtectedRoute allowedRoles={['agronomist', 'admin']}>
                 <AppLayout />
               </ProtectedRoute>
             }
@@ -97,7 +101,7 @@ export function App() {
           <Route
             path="/settings"
             element={
-                <ProtectedRoute allowedRoles={['agronomist', 'org_admin', 'admin', 'enterprise']}>
+                <ProtectedRoute allowedRoles={['farmer', 'agronomist', 'org_admin', 'admin', 'enterprise']}>
                 <AppLayout />
               </ProtectedRoute>
             }

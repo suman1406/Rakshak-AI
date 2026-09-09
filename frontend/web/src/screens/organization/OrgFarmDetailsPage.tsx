@@ -45,7 +45,7 @@ export const OrgFarmDetailsPage: React.FC = () => {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
         <div className="p-4 bg-pure-surface rounded-2xl border border-structural shadow-xs">
           <span className="text-[10px] text-muted-leaf uppercase font-mono block">Health Score</span>
-          <span className="font-extrabold text-xl text-field-ink font-mono">{farm.healthScore}/100</span>
+          <span className="font-extrabold text-xl text-field-ink font-mono">Not yet validated</span>
         </div>
         <div className="p-4 bg-pure-surface rounded-2xl border border-structural shadow-xs">
           <span className="text-[10px] text-muted-leaf uppercase font-mono block">Risk Status</span>

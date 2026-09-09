@@ -12,7 +12,7 @@ const toEvidenceFrames = (frames: RecordValue[] = []): EvidenceFrame[] => frames
   timestampSeconds: frame.sequence_index ?? index + 1,
   // Frame content is protected by bearer authentication. The UI deliberately does not
   // substitute a fixture image while the backend has no signed or token-aware image URL.
-  thumbnailUrl: '',
+  thumbnailUrl: frame.evidence_url || '',
   leafRegionsCount: 0,
   lesionsCount: 0,
   confidenceScore: Math.round((frame.is_selected ? 1 : 0) * 100),
@@ -22,6 +22,7 @@ const toEvidenceFrames = (frames: RecordValue[] = []): EvidenceFrame[] => frames
 
 const toCase = (diagnosis: RecordValue, context: Partial<RecordValue> = {}): Case => ({
   id: diagnosis.video_diagnosis_id,
+  videoUrl: diagnosis.video_id ? `/api/v1/videos/${diagnosis.video_id}/content` : undefined,
   farmId: context.farm?.id || '',
   farmName: context.farm?.name || 'Not available',
   fieldId: context.field?.id || '',
@@ -78,10 +79,7 @@ const toField = (field: RecordValue, farm?: RecordValue, videos: RecordValue[] =
 export const liveWorkspaceApi = {
   async getCaseById(id: string): Promise<Case> {
     const diagnosis = await apiClient.getAgronomistCase(id) as RecordValue;
-    const video = await apiClient.getVideo(diagnosis.video_id) as RecordValue;
-    const field = await apiClient.getField(video.field_id) as RecordValue;
-    const farm = await apiClient.getFarm(field.farm_id) as RecordValue;
-    return toCase(diagnosis, { field, farm });
+    return toCase(diagnosis, { field: diagnosis.field, farm: diagnosis.farm });
   },
 
   async getCases(): Promise<Case[]> {
@@ -89,11 +87,10 @@ export const liveWorkspaceApi = {
     return Promise.all(queue.map((item) => this.getCaseById(item.video_diagnosis_id)));
   },
 
-  async verifyCase(caseData: Case, payload: { is_healthy_override: boolean; severity_level: number; notes?: string }): Promise<void> {
+  async verifyCase(caseData: Case, payload: { disease_slug?: string; is_healthy_override: boolean; severity_level: number; affected_plant_estimate_independent: number; notes?: string }): Promise<void> {
     await apiClient.claimAgronomistCase(caseData.id);
     await apiClient.verifyAgronomistCase(caseData.id, {
       ...payload,
-      affected_plant_estimate_independent: caseData.estimatedAffectedPlantsPercent / 100,
     });
   },
 
@@ -150,7 +147,10 @@ export const liveWorkspaceApi = {
     const latestReadyVideo = videos.find((video) => video.status === 'ready');
     if (!latestReadyVideo) return null;
     const analysis = await apiClient.getVideoAnalysis(latestReadyVideo.video_id) as RecordValue;
-    return analysis.diagnosis_id ? this.getCaseById(analysis.diagnosis_id) : null;
+    if (!analysis.diagnosis_id) return null;
+    const [diagnosis, frames, field] = await Promise.all([apiClient.getDiagnosis(analysis.diagnosis_id), apiClient.getVideoFrames(latestReadyVideo.video_id), apiClient.getField(fieldId)]);
+    const farm = await apiClient.getFarm(field.farm_id);
+    return toCase({ ...diagnosis, frames }, { field, farm });
   },
 
   async getOrgMetrics(): Promise<OrgDashboardMetrics> {

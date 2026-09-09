@@ -30,7 +30,7 @@ logger = logging.getLogger("rakshak")
 # ──────────────────────────────────────────────────────────────────────────────
 # Taxonomy & version constants
 # ──────────────────────────────────────────────────────────────────────────────
-DETECTOR_MODEL_VERSION = "yolov8n-leaf-v1.0"
+DETECTOR_MODEL_VERSION = "yolov8n-coco-v1.1"
 
 WEIGHTS_DIR = pathlib.Path(__file__).resolve().parents[2] / "weights"
 YOLO_WEIGHTS_PATH = WEIGHTS_DIR / "yolov8n.pt"
@@ -128,11 +128,19 @@ class PlantDetector:
         #                  results[0].boxes.cls    → Tensor[N]
         boxes_xywhn = results[0].boxes.xywhn.cpu().numpy()  # shape [N, 4]
         confidences = results[0].boxes.conf.cpu().numpy()    # shape [N]
+        class_ids = results[0].boxes.cls.cpu().numpy()
+        names = results[0].names
 
         detection_results: list[DetectionResult] = []
 
-        for (x_c, y_c, w, h), conf in zip(boxes_xywhn, confidences):
+        for (x_c, y_c, w, h), conf, class_id in zip(boxes_xywhn, confidences, class_ids):
             if float(conf) < self._confidence_threshold:
+                continue
+            label = str(names.get(int(class_id), "")).lower().replace(" ", "_")
+            # COCO is not a leaf detector. Never relabel people, animals or
+            # background objects as crop evidence. A domain checkpoint may
+            # expose these explicit plant classes using this same adapter.
+            if label not in {"plant", "leaf", "diseased_leaf", "lesion", "stem", "pod"}:
                 continue
 
             # Clamp to [0, 1] — defensive guard against floating-point edge cases
@@ -146,22 +154,13 @@ class PlantDetector:
             detection_results.append(DetectionResult(
                 frame_path=image_path,
                 bbox=bbox,
-                detection_class="leaf",
+                detection_class=label,
                 confidence=float(conf),
                 detector_model_version=self._model_version,
             ))
 
         # If no objects detected (or all below threshold), synthesise a
         # full-frame "leaf" region so the classifier always has ≥1 region.
-        if not detection_results:
-            detection_results.append(DetectionResult(
-                frame_path=image_path,
-                bbox={"x": 0.5, "y": 0.5, "w": 1.0, "h": 1.0},
-                detection_class="leaf",
-                confidence=0.40,
-                detector_model_version=self._model_version,
-            ))
-
         return detection_results
 
     @property

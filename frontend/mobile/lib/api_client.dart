@@ -31,7 +31,9 @@ class ApiClient {
   Future<bool> restoreSession() async {
     _accessToken = await _secureStorage.read(key: 'access_token');
     if (_accessToken == null) return false;
-    try { await currentUser(); return true; } catch (_) { await signOut(); return false; }
+    try { await currentUser(); return true; }
+    on ApiException catch (error) { if (error.statusCode == 401 || error.statusCode == 403) { await signOut(); return false; } return true; }
+    catch (_) { return true; }
   }
 
   Future<bool> refreshSession() async {
@@ -44,13 +46,16 @@ class ApiClient {
       _accessToken = body['access_token'] as String?;
       if (_accessToken != null) await _secureStorage.write(key: 'access_token', value: _accessToken);
       return _accessToken != null;
-    } catch (_) {
-      await signOut();
+    } on ApiException catch (error) {
+      if (error.statusCode == 401 || error.statusCode == 403) await signOut();
       return false;
-    }
+    } catch (_) { return false; }
   }
 
   Future<Map<String, dynamic>> currentUser() async => (await _get('/api/v1/auth/me')) as Map<String, dynamic>;
+  Future<List<Map<String, dynamic>>> listFarms() async => (await _get('/api/v1/farms')).cast<Map<String, dynamic>>();
+  Future<Map<String, dynamic>> createFarm(String name) async => (await _post('/api/v1/farms', {'name': name})) as Map<String, dynamic>;
+  Future<Map<String, dynamic>> createField(String farmId, String name, double? area) async => (await _post('/api/v1/farms/$farmId/fields', {'name': name, if (area != null) 'area_hectares': area})) as Map<String, dynamic>;
   Future<Map<String, dynamic>> updateProfile(Map<String, dynamic> payload) async => (await _patch('/api/v1/auth/me', payload)) as Map<String, dynamic>;
   Map<String, String> get mediaHeaders => _authHeaders();
   Future<List<Map<String, dynamic>>> listFields() async => (await _get('/api/v1/fields')).cast<Map<String, dynamic>>();

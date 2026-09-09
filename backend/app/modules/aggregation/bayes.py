@@ -20,7 +20,7 @@ import numpy as np
 from ..inference.classifier import TAXONOMY_CLASSES, NUM_CLASSES
 from ..inference.service import FrameInferenceResult
 
-AGGREGATION_MODEL_VERSION = "bayes-v1.0"
+AGGREGATION_MODEL_VERSION = "quality-mean-v2.0"
 
 @dataclass
 class AggregatedDiagnosisResult:
@@ -52,7 +52,7 @@ class BayesianAggregator:
             )
 
         # Filter out unknown/unusable frames
-        valid_frames = [fr for fr in frame_results if not fr.is_unknown]
+        valid_frames = [fr for fr in frame_results if fr.detections_count > 0]
         total_frames = len(frame_results)
         supporting_frames = len(valid_frames)
 
@@ -69,7 +69,8 @@ class BayesianAggregator:
                 aggregation_model_version=self.model_version,
             )
 
-        # Compute log-odds sum per class
+        # Correlated video frames are not independent trials. A weighted mean
+        # preserves uncertainty instead of manufacturing certainty by repetition.
         log_odds_acc = {cls: 0.0 for cls in TAXONOMY_CLASSES}
         total_weight = 0.0
 
@@ -80,13 +81,16 @@ class BayesianAggregator:
             total_weight += weight
 
             for cls in TAXONOMY_CLASSES:
-                prob = max(min(fr.avg_probability_distribution.get(cls, 0.01), 0.99), 0.01)
-                log_odds_acc[cls] += weight * math.log(prob / (1.0 - prob))
+                prob = fr.avg_probability_distribution.get(cls, 0.0)
+                if not math.isfinite(prob) or not 0 <= prob <= 1:
+                    raise ValueError("Invalid classifier probability")
+                log_odds_acc[cls] += weight * prob
 
         # Apply softmax to log-odds to obtain normalized posterior probabilities
         logits = np.array([log_odds_acc[cls] for cls in TAXONOMY_CLASSES], dtype=np.float64)
-        exp_logits = np.exp(logits - np.max(logits))
-        posteriors = exp_logits / np.sum(exp_logits)
+        if logits.sum() <= 0:
+            raise ValueError("Classifier distribution has no probability mass")
+        posteriors = logits / logits.sum()
 
         prob_dist = {
             cls: float(round(posteriors[i], 6))
@@ -99,7 +103,7 @@ class BayesianAggregator:
         # OOD thresholding
         is_unknown = (
             top_class == "unknown_other"
-            or top_conf < 0.30
+            or top_conf < 0.70
             or prob_dist.get("unknown_other", 0.0) >= 0.45
         )
 
@@ -108,7 +112,7 @@ class BayesianAggregator:
             top_confidence=top_conf,
             probability_distribution=prob_dist,
             is_unknown=is_unknown,
-            supporting_frames=supporting_frames,
+            supporting_frames=sum(1 for fr in valid_frames if not fr.is_unknown and fr.top_class == top_class),
             total_frames=total_frames,
             aggregation_model_version=self.model_version,
         )

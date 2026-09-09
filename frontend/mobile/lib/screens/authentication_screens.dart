@@ -67,7 +67,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   setState(() { submitting = true; error = null; });
                   try {
                     await ApiClient.instance.login(email.text.trim(), password.text);
-                    if (!mounted) return;
+                    if (!context.mounted) return;
                     navigateTo(context, const HomeScreen());
                   } catch (exception) {
                     if (mounted) setState(() => error = safeErrorMessage(exception, fallback: 'We could not sign you in. Check your details and try again.'));
@@ -101,6 +101,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final email = TextEditingController();
   final password = TextEditingController();
   bool submitting = false;
+  bool consent = false;
+  @override void dispose() { name.dispose(); phone.dispose(); email.dispose(); password.dispose(); super.dispose(); }
   String? error;
   @override
   Widget build(BuildContext context) => AppPage(
@@ -139,7 +141,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       try {
                         await ApiClient.instance.register(name: name.text.trim(), phone: phone.text.trim(), email: email.text.trim(), password: password.text, consentToDataProcessing: consent);
                         await ApiClient.instance.login(email.text.trim(), password.text);
-                        if (!mounted) return;
+                        if (!context.mounted) return;
                         navigateTo(context, const HomeScreen());
                       } catch (exception) { if (mounted) setState(() => error = safeErrorMessage(exception, fallback: 'We could not create your account. Please try again.')); }
                       finally { if (mounted) setState(() => submitting = false); }

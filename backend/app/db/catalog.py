@@ -40,7 +40,7 @@ _CROP_NAME = "Soybean"
 _DISEASE_NAMES: list[str] = [
     "Soybean Rust",
     "Frogeye Leaf Spot",
-    "Sudden Death Syndrome",
+    "Bacterial Blight",
     "Healthy",
 ]
 

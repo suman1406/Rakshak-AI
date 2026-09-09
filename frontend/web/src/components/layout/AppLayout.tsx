@@ -24,7 +24,10 @@ export const AppLayout: React.FC = () => {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const navItems = role === 'admin'
+  const navItems = role === 'farmer' ? [
+    { name: 'Fields & scans', path: '/farmer', icon: Sprout },
+    { name: 'Your profile', path: '/settings/profile', icon: User },
+  ] : role === 'admin'
       ? [
           { name: 'Access & pilot plans', path: '/admin/dashboard', icon: Shield },
           { name: 'Demo data', path: '/admin/demo-data', icon: Database },

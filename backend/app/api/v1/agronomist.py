@@ -38,6 +38,9 @@ async def claim_case(video_diagnosis_id: str, current_user: Annotated[User, Depe
 
 @router.get("/cases/{video_diagnosis_id}/history")
 async def review_history(video_diagnosis_id: str, current_user: Annotated[User, Depends(require_role(UserRole.agronomist, UserRole.admin))], db: Annotated[AsyncSession, Depends(get_db)]):
+    diag = (await db.execute(select(VideoDiagnosis).join(VideoDiagnosis.video).join(Video.field).join(Field.farm).where(VideoDiagnosis.id == video_diagnosis_id, diagnosis_scope(current_user)))).scalar_one_or_none()
+    if diag is None:
+        raise HTTPException(status_code=404, detail="Case not found")
     item = (await db.execute(select(ReviewWorkItem).where(ReviewWorkItem.video_diagnosis_id == video_diagnosis_id))).scalar_one_or_none()
     labels = (await db.execute(select(VerifiedLabel).where(VerifiedLabel.video_diagnosis_id == video_diagnosis_id).order_by(VerifiedLabel.created_at))).scalars().all()
     return {"workflow": None if not item else {"status": item.status, "assigned_agronomist_id": item.assigned_agronomist_id, "completed_at": item.completed_at}, "verifications": [{"id": label.id, "agronomist_id": label.agronomist_id, "created_at": label.created_at, "notes": label.notes} for label in labels]}
@@ -88,6 +91,7 @@ async def get_agronomist_case(
         select(VideoDiagnosis)
         .options(
             selectinload(VideoDiagnosis.video).selectinload(Video.frames),
+            selectinload(VideoDiagnosis.video).selectinload(Video.field).selectinload(Field.farm),
             selectinload(VideoDiagnosis.verified_labels),
             selectinload(VideoDiagnosis.disease),
         )
@@ -102,6 +106,8 @@ async def get_agronomist_case(
     return {
         "video_diagnosis_id": diag.id,
         "video_id": diag.video_id,
+        "field": {"id": diag.video.field.id, "name": diag.video.field.name, "farm_id": diag.video.field.farm_id},
+        "farm": {"id": diag.video.field.farm.id, "name": diag.video.field.farm.name, "district": diag.video.field.farm.district},
         "disease": disease_slug(diag),
         "confidence": diag.confidence,
         "confidence_band": diag.confidence_band.value,

@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { apiClient } from '../../services/apiClient';
 import { useAuth } from '../../context/AuthContext';
 import { RoleBadge } from '../../components/shared/RoleBadge';
 import { Link, useLocation } from 'react-router-dom';
@@ -24,7 +25,7 @@ export const SettingsLayout: React.FC<{ children: React.ReactNode }> = ({ childr
 
       {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-structural pb-1 overflow-x-auto text-xs">
-        {tabs.map((tab) => {
+        {tabs.filter(tab => role !== 'farmer' || tab.path === '/settings/profile' || tab.path === '/settings/security').map((tab) => {
           const Icon = tab.icon;
           const isActive = location.pathname === tab.path;
           return (
@@ -53,6 +54,15 @@ export const SettingsLayout: React.FC<{ children: React.ReactNode }> = ({ childr
 
 export const SettingsProfilePage: React.FC = () => {
   const { user, role, logout } = useAuth();
+  const [name, setName] = useState(user?.name || '');
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
+  async function save() {
+    setSaving(true); setMessage('');
+    try { await apiClient.updateProfile({ display_name: name.trim() }); setMessage('Your profile was saved.'); }
+    catch (e) { setMessage(e instanceof Error ? e.message : 'Could not save your profile.'); }
+    finally { setSaving(false); }
+  }
 
   return (
     <SettingsLayout>
@@ -70,8 +80,9 @@ export const SettingsProfilePage: React.FC = () => {
             <label className="block font-semibold mb-1">Full Name</label>
             <input
               type="text"
-              readOnly
-              value={user?.name || ''}
+              value={name}
+              onChange={event => setName(event.target.value)}
+              maxLength={255}
               className="w-full p-2.5 rounded-xl border border-structural bg-field-canvas font-medium outline-none"
             />
           </div>
@@ -91,7 +102,7 @@ export const SettingsProfilePage: React.FC = () => {
             <input
               type="text"
               readOnly
-              value={user?.district || 'Latur & Amravati'}
+              value={user?.district || 'Not assigned'}
               className="w-full p-2.5 rounded-xl border border-structural bg-field-canvas font-medium outline-none"
             />
           </div>
@@ -103,6 +114,8 @@ export const SettingsProfilePage: React.FC = () => {
             </div>
           </div>
 
+          <button className="action" onClick={save} disabled={saving || !name.trim()}>{saving ? 'Saving…' : 'Save profile'}</button>
+          {message && <p role="status">{message}</p>}
           <button
             onClick={logout}
             className="px-5 py-2.5 bg-red-50 text-alert-red border border-red-200 font-bold rounded-xl hover:bg-red-100 transition flex items-center gap-2"

@@ -17,7 +17,8 @@ from dataclasses import dataclass, field
 DISEASE_TERMS = r"(rust|blight|mildew|spot|rot|wilts?|(?:leaf|stem)(?:\s+)?spot|cancer|lesion)"
 
 PROHIBITED_CERTAINTY_PATTERNS = [
-    r"\b100%\b",
+    r"\b100\s*%",
+    r"\b(?:apply|spray|use|mix|dose)\b[^.\n]*\b\d+(?:\.\d+)?\s*(?:ml|mg|g|kg|litres?|liters?)\b",
     r"\bdefinitely\b",
     r"\bguaranteed?\b",
     r"\bcured?\b",

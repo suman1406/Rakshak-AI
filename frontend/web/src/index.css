@@ -3,9 +3,9 @@
 @layer base {
   :root {
     --field-ink: #14231D;
-    --muted-leaf: #66766D;
+    --muted-leaf: oklch(43% 0.025 150);
     --field-canvas: #F4F7F1;
-    --pure-surface: #FFFFFF;
+    --pure-surface: oklch(99% 0.006 145);
     --lime-signal: #D8F36A;
     --soft-healthy: #E6F0D8;
     --structural-border: #DFE7DC;
@@ -56,6 +56,45 @@
 .stagger-in { animation: rise-in 700ms cubic-bezier(.32,.72,0,1) both; animation-delay: 90ms; }
 @keyframes rise-in { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
 .metric-value { font-variant-numeric: tabular-nums; letter-spacing: -0.04em; }
+
+.farmer-workspace { max-width: 1120px; margin: auto; display: grid; gap: 24px; }
+.farmer-workspace h1, .farmer-workspace h2, .farmer-workspace h3 { font-family: var(--ui-font); letter-spacing: -.025em; font-weight: 650; }
+.farmer-workspace h1 { font-size: 30px; line-height: 1.2; margin: 10px 0 12px; }
+.farmer-workspace h2 { font-size: 23px; margin-bottom: 12px; }
+.farmer-workspace h3 { font-size: 18px; margin: 24px 0 12px; }
+.farmer-workspace p { max-width: 70ch; color: var(--muted-leaf); }
+.workspace-heading { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 12px 0 20px; }
+.action { min-height: 46px; padding: 11px 18px; border-radius: 10px; background: var(--field-ink); color: var(--pure-surface); display: inline-flex; align-items: center; justify-content: center; gap: 10px; font-weight: 650; border: 1px solid var(--field-ink); cursor: pointer; flex-shrink: 0; }
+.action:hover { background: oklch(32% .045 155); }
+.action.secondary { color: var(--field-ink); background: var(--pure-surface); border-color: var(--structural-border); }
+.action:disabled { opacity: .5; cursor: not-allowed; }
+.workspace-panel { background: var(--pure-surface); border: 1px solid var(--structural-border); border-radius: 14px; padding: 26px; }
+.farmer-columns { display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; align-items: start; }
+.workspace-form { display: grid; gap: 20px; margin-top: 24px; }
+.workspace-form label { display: grid; gap: 8px; font-weight: 600; }
+.workspace-form input:not([type=checkbox]), .workspace-form select, .workspace-form textarea { border: 1px solid oklch(74% .018 145); border-radius: 8px; padding: 12px; width: 100%; min-height: 48px; background: var(--pure-surface); font: inherit; font-weight: 400; }
+.workspace-form textarea { min-height: 110px; resize: vertical; }
+.workspace-form .consent-control { display: flex; align-items: start; gap: 12px; font-weight: 400; }
+.consent-control input { margin-top: 5px; width: 19px; height: 19px; flex-shrink: 0; accent-color: var(--field-ink); }
+.helper-copy { font-size: 14px; }
+.section-heading, .workspace-actions { display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.field-list, .scan-list { list-style: none; padding: 0; }
+.field-list li, .scan-list li { display: flex; align-items: center; gap: 16px; padding: 18px 0; border-top: 1px solid var(--structural-border); }
+.field-list li > div, .scan-list li > div { flex: 1; }
+.field-list p, .scan-list p { font-size: 14px; margin-top: 4px; }
+.text-action { color: var(--field-ink); display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-weight: 650; text-decoration: underline; cursor: pointer; }
+.status-label { background: var(--soft-healthy); color: var(--field-ink); border-radius: 6px; padding: 5px 9px; font-size: 13px; }
+.message { padding: 16px; background: oklch(95% .035 135); border: 1px solid var(--structural-border); border-radius: 10px; }
+.message.error { color: oklch(36% .12 25); background: oklch(96% .018 25); }
+.message button { text-decoration: underline; margin-left: 12px; }
+.report-sheet { max-width: 850px; }
+.report-facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; padding: 24px 0; margin-top: 24px; border-block: 1px solid var(--structural-border); }
+.report-facts dt { color: var(--muted-leaf); font-size: 14px; }
+.report-facts dd { font-weight: 650; margin-top: 8px; }
+.report-actions-text { white-space: pre-line; line-height: 1.9; }
+.safety-copy { margin: 24px 0; font-size: 14px; }
+.workspace-loading { min-height: 240px; padding: 30px; background: var(--pure-surface); }
+@media (max-width: 760px) { .workspace-heading { align-items: start; flex-direction: column; } .farmer-columns { grid-template-columns: 1fr; } .workspace-panel { padding: 20px; } .report-facts { grid-template-columns: 1fr; } .scan-list li { flex-wrap: wrap; } .farmer-workspace h1 { font-size: 26px; } }
 
 /* Custom Utilities for Rakshak AI Brand Palette */
 .bg-field-ink { background-color: #14231D; }

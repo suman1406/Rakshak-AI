@@ -6,6 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from ..db.base import Base
 
 class DetectionClass(str, enum.Enum):
+    frame_region = "frame_region"
     plant = "plant"
     leaf = "leaf"
     diseased_leaf = "diseased_leaf"

@@ -39,7 +39,7 @@ class FarmOut(BaseModel):
 class FieldCreate(BaseModel):
     name: str = PydanticField(min_length=1, max_length=255)
     crop_id: str | None = None
-    area_hectares: float | None = None
+    area_hectares: float | None = PydanticField(default=None, gt=0, allow_inf_nan=False)
 
 class FieldUpdate(BaseModel):
     name: str | None = PydanticField(default=None, min_length=1, max_length=255)
