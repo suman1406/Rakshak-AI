@@ -101,7 +101,7 @@ export const liveWorkspaceApi = {
       highPriorityCases: cases.filter((item) => item.priority === 'high').length,
       awaitingReview: cases.filter((item) => item.reviewStatus === 'awaiting_review').length,
       reviewedThisWeek,
-      averageReviewTimeMinutes: reviews.length ? Math.round(reviews.reduce((sum, item) => sum + item.elapsed_minutes, 0) / reviews.length) : 0,
+      averageReviewTimeMinutes: reviews.length ? Math.round(reviews.reduce((sum, item) => sum + item.elapsed_minutes, 0) / reviews.length) : null,
     };
   },
 

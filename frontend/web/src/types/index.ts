@@ -127,7 +127,7 @@ export interface AgronomistMetrics {
   highPriorityCases: number;
   awaitingReview: number;
   reviewedThisWeek: number;
-  averageReviewTimeMinutes: number;
+  averageReviewTimeMinutes: number | null;
 }
 
 export interface PricingPlan {

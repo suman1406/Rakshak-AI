@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import '../src/index.css';
-import '../src/premium.css';
-import '@fontsource-variable/public-sans';
+import '../src/saas.css';
+import '@fontsource-variable/geist';
 
 export const metadata: Metadata = {
   title: 'Rakshak AI | Field Health Intelligence',

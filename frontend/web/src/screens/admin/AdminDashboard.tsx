@@ -1,21 +1,86 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Check, Clock3, Plus, X } from 'lucide-react';
 import { apiClient } from '../../services/apiClient';
-
-
-type Application = { reference: string; application_type: string; status: string; applicant_name?: string; contact?: string; organization_name?: string; organization_type?: string; requested_plan_code?: string; requested_billing_interval?: string; review_note?: string; created_at: string };
-type Plan = { code: string; name: string; monthly_price_paise?: number | null; annual_price_paise?: number | null; farm_limit?: number | null; scan_limit?: number | null; is_public: boolean };
-type AuditItem = { action: string; created_at: string; application_reference: string; application_type?: string };
-const money = (paise?: number | null) => paise == null ? 'Contact us' : `₹${(paise / 100).toLocaleString('en-IN')}`;
-
-export const AdminDashboard: React.FC = () => {
-
-  const [applications, setApplications] = useState<Application[]>([]); const [plans, setPlans] = useState<Plan[]>([]); const [audit, setAudit] = useState<AuditItem[]>([]); const [error, setError] = useState(''); const [loading, setLoading] = useState(true); const [note, setNote] = useState<Record<string, string>>({}); const [newPlan, setNewPlan] = useState(false); const [saving, setSaving] = useState(false);
-  const load = useCallback(async () => { setLoading(true); setError(''); try { const [applicationRows, planRows, auditRows] = await Promise.all([apiClient.listAdminApplications(), apiClient.listAdminPlans(), apiClient.listAdminOnboardingAudit()]); setApplications(applicationRows); setPlans(planRows); setAudit(auditRows); } catch (reason) { setError(reason instanceof Error ? reason.message : 'Unable to load the protected workspace.'); } finally { setLoading(false); } }, []);
-  useEffect(() => { void load(); }, [load]);
-  const decide = async (reference: string, decision: 'approved' | 'rejected') => { setSaving(true); try { await apiClient.decideAdminApplication(reference, { decision, review_note: note[reference]?.trim() || undefined }); await load(); } catch (reason) { setError(reason instanceof Error ? reason.message : 'Decision could not be recorded.'); } finally { setSaving(false); } };
-  const createPlan = async (event: React.FormEvent<HTMLFormElement>) => { event.preventDefault(); const form = new FormData(event.currentTarget); setSaving(true); try { await apiClient.createAdminPlan({ code: String(form.get('code')).trim(), name: String(form.get('name')).trim(), monthly_price_paise: form.get('monthly_price_paise') === '' ? undefined : Number(form.get('monthly_price_paise')), annual_price_paise: form.get('annual_price_paise') === '' ? undefined : Number(form.get('annual_price_paise')), farm_limit: Number(form.get('farm_limit')) || undefined, scan_limit: Number(form.get('scan_limit')) || undefined, is_public: form.get('is_public') === 'on' }); setNewPlan(false); await load(); } catch (reason) { setError(reason instanceof Error ? reason.message : 'Plan could not be created.'); } finally { setSaving(false); } };
-  const displayPlans = plans;
-  return <div className="space-y-7"><div className="flex flex-wrap items-end justify-between gap-3"><div><p className="eyebrow">Platform control</p><h1 className="mt-2 text-3xl font-extrabold text-field-ink">Access decisions and pilot plans</h1><p className="mt-2 max-w-2xl text-sm text-muted-leaf">Review access requests, publish pilot plans, and track decisions in the audit history.</p></div><button onClick={() => setNewPlan((open) => !open)} className="inline-flex items-center gap-2 rounded-xl bg-field-ink px-4 py-3 text-xs font-bold text-white"><Plus size={15}/>Add pilot plan</button></div>{error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-alert-red">{error}</p>}{newPlan && <form onSubmit={createPlan} className="grid gap-3 rounded-2xl border border-structural bg-pure-surface p-5 sm:grid-cols-2"><label className="text-xs font-semibold">Plan code<input required name="code" pattern="[a-z0-9_-]+" className="mt-1.5 w-full rounded-xl border border-structural bg-field-canvas p-2.5" /></label><label className="text-xs font-semibold">Plan name<input required name="name" className="mt-1.5 w-full rounded-xl border border-structural bg-field-canvas p-2.5" /></label><label className="text-xs font-semibold">Monthly price (paise)<input name="monthly_price_paise" type="number" min="0" className="mt-1.5 w-full rounded-xl border border-structural bg-field-canvas p-2.5" /></label><label className="text-xs font-semibold">Annual price (paise)<input name="annual_price_paise" type="number" min="0" className="mt-1.5 w-full rounded-xl border border-structural bg-field-canvas p-2.5" /></label><label className="text-xs font-semibold">Farm limit<input name="farm_limit" type="number" min="1" className="mt-1.5 w-full rounded-xl border border-structural bg-field-canvas p-2.5" /></label><label className="text-xs font-semibold">Scan limit<input name="scan_limit" type="number" min="1" className="mt-1.5 w-full rounded-xl border border-structural bg-field-canvas p-2.5" /></label><label className="flex items-center gap-2 text-xs font-semibold"><input name="is_public" type="checkbox" defaultChecked/>Show in public pilot catalogue</label><button disabled={saving} className="rounded-xl bg-field-ink px-4 py-3 text-xs font-bold text-white disabled:opacity-50">Save plan</button></form>}<section className="rounded-2xl border border-structural bg-pure-surface"><div className="border-b border-structural p-5"><h2 className="font-bold text-field-ink">Pending access applications</h2><p className="mt-1 text-xs text-muted-leaf">Approve only after verification. A decision cannot be overwritten from this screen.</p></div>{loading ? <div className="p-5 text-sm text-muted-leaf">Loading protected records…</div> : applications.length === 0 ? <div className="p-5 text-sm text-muted-leaf">No pending applications.</div> : <div className="divide-y divide-structural">{applications.map((application) => <article key={application.reference} className="p-5"><div className="flex flex-wrap justify-between gap-3"><div><p className="font-mono text-xs font-bold text-field-ink">{application.reference}</p><h3 className="mt-1 font-bold text-field-ink">{application.applicant_name || 'Applicant'}</h3><p className="text-xs text-muted-leaf">{application.contact || 'No contact supplied'} · {application.application_type === 'organization' ? application.organization_name || 'Organization application' : 'Agronomist application'}</p>{application.requested_plan_code && <p className="text-sm mt-2">Requested plan: <strong>{application.requested_plan_code}</strong> · {application.requested_billing_interval || 'monthly'}</p>}</div><span className="inline-flex h-fit items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-800"><Clock3 size={13}/>Pending review</span></div><div className="mt-4 grid gap-2 sm:grid-cols-[1fr_auto_auto]"><input value={note[application.reference] || ''} onChange={(event) => setNote((current) => ({ ...current, [application.reference]: event.target.value }))} maxLength={1000} aria-label={`Decision note for ${application.applicant_name || application.reference}`} placeholder="Decision note (optional)" className="rounded-xl border border-structural bg-field-canvas px-3 py-2 text-xs"/><button disabled={saving} onClick={() => void decide(application.reference, 'rejected')} className="inline-flex items-center justify-center gap-1 rounded-xl border border-red-200 px-3 py-2 text-xs font-bold text-alert-red"><X size={14}/>Reject</button><button disabled={saving} onClick={() => void decide(application.reference, 'approved')} className="inline-flex items-center justify-center gap-1 rounded-xl bg-field-ink px-3 py-2 text-xs font-bold text-white"><Check size={14}/>Approve</button></div></article>)}</div>}</section><section className="rounded-2xl border border-structural bg-pure-surface p-5"><h2 className="font-bold text-field-ink">Onboarding audit history</h2><div className="mt-3 space-y-2">{audit.map((item) => <p key={`${item.application_reference}-${item.created_at}-${item.action}`} className="rounded-xl bg-field-canvas p-3 text-xs text-muted-leaf"><span className="font-mono font-bold text-field-ink">{item.application_reference}</span> · {item.action.replaceAll('_', ' ')} · {new Date(item.created_at).toLocaleString()}</p>)}{audit.length === 0 && <p className="text-sm text-muted-leaf">No onboarding audit entries yet.</p>}</div></section><section className="rounded-2xl border border-structural bg-pure-surface p-5"><h2 className="font-bold text-field-ink">Enabled pilot catalogue</h2><div className="mt-4 grid gap-3 md:grid-cols-3">{displayPlans.map((plan) => <div key={plan.code} className="rounded-xl border border-structural bg-field-canvas p-4"><p className="font-bold text-field-ink">{plan.name}</p><p className="mt-1 text-xs text-muted-leaf">{money(plan.monthly_price_paise)} monthly · {plan.farm_limit ?? 'Flexible'} farms</p><p className="mt-2 font-mono text-[10px] text-muted-leaf">{plan.code} {plan.is_public ? '· public' : '· internal'}</p></div>)}{displayPlans.length === 0 && <p className="text-sm text-muted-leaf">No plans have been enabled yet.</p>}</div></section></div>;
+type Application = {
+    reference: string;
+    application_type: string;
+    status: string;
+    applicant_name?: string;
+    contact?: string;
+    organization_name?: string;
+    organization_type?: string;
+    requested_plan_code?: string;
+    requested_billing_interval?: string;
+    review_note?: string;
+    created_at: string;
 };
-
+type Plan = {
+    code: string;
+    name: string;
+    monthly_price_paise?: number | null;
+    annual_price_paise?: number | null;
+    farm_limit?: number | null;
+    scan_limit?: number | null;
+    is_public: boolean;
+};
+type AuditItem = {
+    action: string;
+    created_at: string;
+    application_reference: string;
+    application_type?: string;
+};
+const money = (paise?: number | null) => paise == null ? 'Contact us' : `₹${(paise / 100).toLocaleString('en-IN')}`;
+export const AdminDashboard: React.FC = () => {
+    const [applications, setApplications] = useState<Application[]>([]);
+    const [plans, setPlans] = useState<Plan[]>([]);
+    const [audit, setAudit] = useState<AuditItem[]>([]);
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [note, setNote] = useState<Record<string, string>>({});
+    const [newPlan, setNewPlan] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const load = useCallback(async () => { setLoading(true); setError(''); try {
+        const [applicationRows, planRows, auditRows] = await Promise.all([apiClient.listAdminApplications(), apiClient.listAdminPlans(), apiClient.listAdminOnboardingAudit()]);
+        setApplications(applicationRows);
+        setPlans(planRows);
+        setAudit(auditRows);
+    }
+    catch (reason) {
+        setError(reason instanceof Error ? reason.message : 'Unable to load the protected workspace.');
+    }
+    finally {
+        setLoading(false);
+    } }, []);
+    useEffect(() => { void load(); }, [load]);
+    const decide = async (reference: string, decision: 'approved' | 'rejected') => { setSaving(true); try {
+        await apiClient.decideAdminApplication(reference, { decision, review_note: note[reference]?.trim() || undefined });
+        await load();
+    }
+    catch (reason) {
+        setError(reason instanceof Error ? reason.message : 'Decision could not be recorded.');
+    }
+    finally {
+        setSaving(false);
+    } };
+    const createPlan = async (event: React.FormEvent<HTMLFormElement>) => { event.preventDefault(); const form = new FormData(event.currentTarget); setSaving(true); try {
+        await apiClient.createAdminPlan({ code: String(form.get('code')).trim(), name: String(form.get('name')).trim(), monthly_price_paise: form.get('monthly_price_paise') === '' ? undefined : Number(form.get('monthly_price_paise')), annual_price_paise: form.get('annual_price_paise') === '' ? undefined : Number(form.get('annual_price_paise')), farm_limit: Number(form.get('farm_limit')) || undefined, scan_limit: Number(form.get('scan_limit')) || undefined, is_public: form.get('is_public') === 'on' });
+        setNewPlan(false);
+        await load();
+    }
+    catch (reason) {
+        setError(reason instanceof Error ? reason.message : 'Plan could not be created.');
+    }
+    finally {
+        setSaving(false);
+    } };
+    const displayPlans = plans;
+    const [tab, setTab] = useState<'requests' | 'plans' | 'audit'>('requests');
+    return <div className="farmer-workspace admin-workspace"><header className="workspace-heading"><div><span className="page-context">Platform administration</span><h1>Access & pilot plans</h1><p>Bring the right people into Rakshak. Keep every decision accountable.</p></div><button onClick={() => { setTab('plans'); setNewPlan(open => !open); }} className="action"><Plus size={15}/>{newPlan ? 'Close plan form' : 'Add pilot plan'}</button></header>
+    {error && <div className="message error" role="alert">{error}<button onClick={() => void load()}>Try again</button></div>}
+    <dl className="portfolio-metrics admin-metrics"><div><dt>Awaiting a decision</dt><dd>{loading ? '—' : applications.length}</dd><p>Organization and expert requests</p></div><div><dt>Enabled pilot plans</dt><dd>{loading ? '—' : plans.length}</dd><p>Public and internal catalogue</p></div><div><dt>Recorded decisions</dt><dd>{loading ? '—' : audit.length}</dd><p>Loaded onboarding audit entries</p></div></dl>
+    <nav className="workspace-tabs" aria-label="Administration views">{([{ id: 'requests', label: 'Access requests', count: applications.length }, { id: 'plans', label: 'Pilot plans', count: plans.length }, { id: 'audit', label: 'Decision history', count: audit.length }] as const).map(item => <button key={item.id} aria-pressed={tab === item.id} onClick={() => setTab(item.id)}>{item.label}<span>{loading ? '…' : item.count}</span></button>)}</nav>
+    {tab === 'plans' && <>{newPlan && <form onSubmit={createPlan} className="grid gap-3 rounded-2xl border border-structural bg-pure-surface p-5 sm:grid-cols-2"><label className="text-xs font-semibold">Plan code<input required name="code" pattern="[a-z0-9_-]+" className="mt-1.5 w-full rounded-xl border border-structural bg-field-canvas p-2.5"/></label><label className="text-xs font-semibold">Plan name<input required name="name" className="mt-1.5 w-full rounded-xl border border-structural bg-field-canvas p-2.5"/></label><label className="text-xs font-semibold">Monthly price (paise)<input name="monthly_price_paise" type="number" min="0" className="mt-1.5 w-full rounded-xl border border-structural bg-field-canvas p-2.5"/></label><label className="text-xs font-semibold">Annual price (paise)<input name="annual_price_paise" type="number" min="0" className="mt-1.5 w-full rounded-xl border border-structural bg-field-canvas p-2.5"/></label><label className="text-xs font-semibold">Farm limit<input name="farm_limit" type="number" min="1" className="mt-1.5 w-full rounded-xl border border-structural bg-field-canvas p-2.5"/></label><label className="text-xs font-semibold">Scan limit<input name="scan_limit" type="number" min="1" className="mt-1.5 w-full rounded-xl border border-structural bg-field-canvas p-2.5"/></label><label className="flex items-center gap-2 text-xs font-semibold"><input name="is_public" type="checkbox" defaultChecked/>Show in public pilot catalogue</label><button disabled={saving} className="rounded-xl bg-field-ink px-4 py-3 text-xs font-bold text-white disabled:opacity-50">Save plan</button></form>}<section className="rounded-2xl border border-structural bg-pure-surface p-5"><h2 className="font-bold text-field-ink">Enabled pilot catalogue</h2><div className="mt-4 grid gap-3 md:grid-cols-3">{displayPlans.map((plan) => <div key={plan.code} className="rounded-xl border border-structural bg-field-canvas p-4"><p className="font-bold text-field-ink">{plan.name}</p><p className="mt-1 text-xs text-muted-leaf">{money(plan.monthly_price_paise)} monthly · {plan.farm_limit ?? 'Flexible'} farms</p><p className="mt-2 font-mono text-[10px] text-muted-leaf">{plan.code} {plan.is_public ? '· public' : '· internal'}</p></div>)}{displayPlans.length === 0 && <p className="text-sm text-muted-leaf">No plans have been enabled yet.</p>}</div></section></>}
+    {tab === 'requests' && <section className="rounded-2xl border border-structural bg-pure-surface"><div className="border-b border-structural p-5"><h2 className="font-bold text-field-ink">Pending access applications</h2><p className="mt-1 text-xs text-muted-leaf">Approve only after verification. A decision cannot be overwritten from this screen.</p></div>{loading ? <div className="p-5 text-sm text-muted-leaf">Loading protected records…</div> : applications.length === 0 ? <div className="p-5 text-sm text-muted-leaf">No pending applications.</div> : <div className="divide-y divide-structural">{applications.map((application) => <article key={application.reference} className="p-5"><div className="flex flex-wrap justify-between gap-3"><div><p className="font-mono text-xs font-bold text-field-ink">{application.reference}</p><h3 className="mt-1 font-bold text-field-ink">{application.applicant_name || 'Applicant'}</h3><p className="text-xs text-muted-leaf">{application.contact || 'No contact supplied'} · {application.application_type === 'organization' ? application.organization_name || 'Organization application' : 'Agronomist application'}</p>{application.requested_plan_code && <p className="text-sm mt-2">Requested plan: <strong>{application.requested_plan_code}</strong> · {application.requested_billing_interval || 'monthly'}</p>}</div><span className="inline-flex h-fit items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-800"><Clock3 size={13}/>Pending review</span></div><div className="mt-4 grid gap-2 sm:grid-cols-[1fr_auto_auto]"><input value={note[application.reference] || ''} onChange={(event) => setNote((current) => ({ ...current, [application.reference]: event.target.value }))} maxLength={1000} aria-label={`Decision note for ${application.applicant_name || application.reference}`} placeholder="Decision note (optional)" className="rounded-xl border border-structural bg-field-canvas px-3 py-2 text-xs"/><button disabled={saving} onClick={() => void decide(application.reference, 'rejected')} className="inline-flex items-center justify-center gap-1 rounded-xl border border-red-200 px-3 py-2 text-xs font-bold text-alert-red"><X size={14}/>Reject</button><button disabled={saving} onClick={() => void decide(application.reference, 'approved')} className="inline-flex items-center justify-center gap-1 rounded-xl bg-field-ink px-3 py-2 text-xs font-bold text-white"><Check size={14}/>Approve</button></div></article>)}</div>}</section>}
+    {tab === 'audit' && <div className="admin-audit"><section className="rounded-2xl border border-structural bg-pure-surface p-5"><h2 className="font-bold text-field-ink">Onboarding audit history</h2><div className="mt-3 space-y-2">{audit.map((item) => <p key={`${item.application_reference}-${item.created_at}-${item.action}`} className="rounded-xl bg-field-canvas p-3 text-xs text-muted-leaf"><span className="font-mono font-bold text-field-ink">{item.application_reference}</span> · {item.action.replaceAll('_', ' ')} · {new Date(item.created_at).toLocaleString()}</p>)}{audit.length === 0 && <p className="text-sm text-muted-leaf">No onboarding audit entries yet.</p>}</div></section></div>}
+  </div>;
+};

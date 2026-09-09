@@ -1,324 +1,82 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { liveWorkspaceApi } from '../../services/liveWorkspaceApi';
-
 import { Case, AgronomistMetrics, ReviewStatus } from '../../types';
-import { SeverityBadge, ReviewStatusBadge } from '../../components/shared/RoleBadge';
-import {
-  ClipboardList,
-  Search,
-  Filter,
-  CheckCircle2,
-  Clock,
-  AlertTriangle,
-  ArrowUpDown,
-  ExternalLink,
-  RotateCcw,
-  UserCheck,
-} from 'lucide-react';
-
+import { ReviewStatusBadge } from '../../components/shared/RoleBadge';
+import { ClipboardList, Search, Filter, AlertTriangle, ExternalLink, RotateCcw, } from 'lucide-react';
 export const AgronomistDashboard: React.FC = () => {
-
-  const [metrics, setMetrics] = useState<AgronomistMetrics | null>(null);
-  const [cases, setCases] = useState<Case[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const requestVersion = useRef(0);
-
-  // Filters
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<ReviewStatus | 'all'>('all');
-  const [severityFilter, setSeverityFilter] = useState<string>('all');
-  const [cropFilter, setCropFilter] = useState<string>('all');
-  const [diseaseFilter, setDiseaseFilter] = useState<string>('all');
-  const [confidenceMin, setConfidenceMin] = useState<number>(0);
-  const [sortBy, setSortBy] = useState<'priority' | 'date'>('priority');
-
-  const fetchQueue = async () => {
-    const version = ++requestVersion.current;
-    setLoading(true);
-    setError('');
-    try {
-    let c = await liveWorkspaceApi.getCases();
-    c = c.filter((item) =>
-      (statusFilter === 'all' || item.reviewStatus === statusFilter) &&
-      (severityFilter === 'all' || item.severity === severityFilter) &&
-      (cropFilter === 'all' || item.crop.toLowerCase() === cropFilter.toLowerCase()) &&
-      (diseaseFilter === 'all' || item.aiIndication.toLowerCase().includes(diseaseFilter.toLowerCase())) &&
-      (!confidenceMin || item.confidence >= confidenceMin) &&
-      (!search.trim() || [item.id, item.farmName, item.fieldName, item.fpoName].some((value) => value.toLowerCase().includes(search.trim().toLowerCase())))
-    );
-    const m = await liveWorkspaceApi.getAgronomistMetrics(c);
-
-    // Sorting
-    let sorted = [...c];
-    if (sortBy === 'priority') {
-      const pOrder = { high: 1, medium: 2, low: 3 };
-      sorted.sort((a, b) => pOrder[a.priority] - pOrder[b.priority]);
-    } else {
-      sorted.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
-    }
-
-    if (version !== requestVersion.current) return;
-    setMetrics(m);
-    setCases(sorted);
-    } catch (e) { if (version === requestVersion.current) setError(e instanceof Error ? e.message : 'Could not load review queue'); }
-    finally { if (version === requestVersion.current) setLoading(false); }
-  };
-
-  useEffect(() => {
-    fetchQueue();
-    return () => { requestVersion.current++; };
-  }, [search, statusFilter, severityFilter, cropFilter, diseaseFilter, confidenceMin, sortBy]);
-
-  const handleResetFilters = () => {
-    setSearch('');
-    setStatusFilter('all');
-    setSeverityFilter('all');
-    setCropFilter('all');
-    setDiseaseFilter('all');
-    setConfidenceMin(0);
-    setSortBy('priority');
-  };
-
-  return (
-    <div className="space-y-6 font-sans">
-      {error && <div className="message error" role="alert">{error}<button onClick={() => void fetchQueue()}>Try again</button></div>}
-      {/* Page Title & Metrics Bar */}
-      <div className="bg-pure-surface border border-structural p-6 rounded-3xl shadow-2xs space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="p-1.5 bg-field-ink text-lime-signal rounded-lg font-bold">
-                <ClipboardList size={18} />
-              </span>
-              <h1 className="text-2xl font-extrabold text-field-ink">Review queue</h1>
-            </div>
-            <p className="text-xs text-muted-leaf mt-1">
-              Review crop observations and add your independent assessment.
-            </p>
-          </div>
-
-          <span className="text-xs font-mono bg-soft-healthy text-emerald-800 px-3 py-1 rounded-full font-bold">
-            Human review
-          </span>
-        </div>
-
-        {/* 5 Header Metrics Cards */}
-        {metrics && (
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-2 text-xs">
-            <div className="p-3.5 bg-field-canvas rounded-2xl border border-structural">
-              <span className="text-[10px] text-muted-leaf uppercase font-mono block">Open Cases</span>
-              <span className="font-extrabold text-lg text-field-ink font-mono">{metrics.openCases}</span>
-            </div>
-            <div className="p-3.5 bg-amber-50 rounded-2xl border border-amber-200">
-              <span className="text-[10px] text-amber-800 uppercase font-mono block">High Priority</span>
-              <span className="font-extrabold text-lg text-amber-900 font-mono">{metrics.highPriorityCases}</span>
-            </div>
-            <div className="p-3.5 bg-field-canvas rounded-2xl border border-structural">
-              <span className="text-[10px] text-muted-leaf uppercase font-mono block">Awaiting Review</span>
-              <span className="font-extrabold text-lg text-field-ink font-mono">{metrics.awaitingReview}</span>
-            </div>
-            <div className="p-3.5 bg-emerald-50 rounded-2xl border border-emerald-200">
-              <span className="text-[10px] text-emerald-800 uppercase font-mono block">Reviewed This Week</span>
-              <span className="font-extrabold text-lg text-emerald-900 font-mono">{metrics.reviewedThisWeek}</span>
-            </div>
-            <div className="p-3.5 bg-field-canvas rounded-2xl border border-structural">
-              <span className="text-[10px] text-muted-leaf uppercase font-mono block">Upload to review</span>
-              <span className="font-extrabold text-lg text-field-ink font-mono">{metrics.averageReviewTimeMinutes} mins</span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Filter Toolbar */}
-      <div className="bg-pure-surface border border-structural p-5 rounded-3xl shadow-xs space-y-4 text-xs">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="relative flex-1 min-w-[240px]">
-            <Search size={16} className="absolute left-3.5 top-3 text-muted-leaf" />
-            <input
-              type="text"
-              aria-label="Search review queue"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by Case ID, Farm, Field, or FPO..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-structural bg-field-canvas text-xs outline-none"
-            />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-muted-leaf font-bold flex items-center gap-1">
-              <Filter size={14} /> Filter Queue:
-            </span>
-            <button
-              onClick={handleResetFilters}
-              className="px-3 py-1.5 bg-field-canvas hover:bg-gray-200 border border-structural rounded-lg text-muted-leaf text-xs font-semibold transition flex items-center gap-1"
-            >
-              <RotateCcw size={12} /> Reset
-            </button>
-          </div>
-        </div>
-
-        {/* Filter Dropdowns Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
-          <div>
-            <label className="block text-[10px] text-muted-leaf font-bold uppercase mb-1">Status</label>
-            <select
-              value={statusFilter}
-              aria-label="Status"
-              onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="w-full p-2 rounded-xl border border-structural bg-field-canvas text-xs font-medium outline-none"
-            >
-              <option value="all">All Statuses</option>
-              <option value="awaiting_review">Awaiting Review</option>
-              <option value="reviewed">Reviewed</option>
-              <option value="needs_inspection">Needs Inspection</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[10px] text-muted-leaf font-bold uppercase mb-1">Severity</label>
-            <select
-              value={severityFilter}
-              aria-label="Severity"
-              onChange={(e) => setSeverityFilter(e.target.value)}
-              className="w-full p-2 rounded-xl border border-structural bg-field-canvas text-xs font-medium outline-none"
-            >
-              <option value="all">All Severities</option>
-              <option value="Early">Early</option>
-              <option value="Moderate">Moderate</option>
-              <option value="Severe">Severe</option>
-              <option value="Uncertain">Uncertain</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[10px] text-muted-leaf font-bold uppercase mb-1">Disease Signal</label>
-            <select
-              value={diseaseFilter}
-              aria-label="Disease signal"
-              onChange={(e) => setDiseaseFilter(e.target.value)}
-              className="w-full p-2 rounded-xl border border-structural bg-field-canvas text-xs font-medium outline-none"
-            >
-              <option value="all">All Diseases</option>
-              <option value="Rust">Soybean Rust</option>
-              <option value="Blight">Bacterial Blight</option>
-              <option value="Frogeye">Frogeye leaf spot</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[10px] text-muted-leaf font-bold uppercase mb-1">Min Confidence</label>
-            <select
-              value={confidenceMin}
-              aria-label="Minimum confidence"
-              onChange={(e) => setConfidenceMin(Number(e.target.value))}
-              className="w-full p-2 rounded-xl border border-structural bg-field-canvas text-xs font-medium outline-none font-mono"
-            >
-              <option value={0}>Any Confidence</option>
-              <option value={50}>≥ 50% Confidence</option>
-              <option value={75}>≥ 75% Confidence</option>
-              <option value={85}>≥ 85% Confidence</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[10px] text-muted-leaf font-bold uppercase mb-1">Sort Order</label>
-            <select
-              value={sortBy}
-              aria-label="Sort order"
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="w-full p-2 rounded-xl border border-structural bg-field-canvas text-xs font-medium outline-none"
-            >
-              <option value="priority">Sort by Priority</option>
-              <option value="date">Sort by Date</option>
-            </select>
-          </div>
-
-          <div className="flex items-end">
-            <span className="text-muted-leaf text-[11px] font-mono font-semibold py-2">
-              Showing {cases.length} cases
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Case Queue Table */}
-      <div className="bg-pure-surface border border-structural rounded-3xl shadow-xs overflow-hidden">
-        {loading ? (
-          <div className="p-12 text-center text-xs text-muted-leaf">Updating agronomist queue...</div>
-        ) : cases.length === 0 ? (
-          <div className="p-12 text-center space-y-3">
-            <div className="w-12 h-12 rounded-full bg-field-canvas border border-structural flex items-center justify-center mx-auto text-muted-leaf">
-              <Search size={20} />
-            </div>
-            <p className="font-bold text-sm text-field-ink">No matching cases found</p>
-            <p className="text-xs text-muted-leaf">New requests appear here when a farmer asks for review. Clear filters to see all accessible cases.</p>
-            <button
-              onClick={handleResetFilters}
-              className="px-4 py-2 bg-field-ink text-white font-bold text-xs rounded-xl"
-            >
-              Reset Filters
-            </button>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-field-canvas border-b border-structural text-muted-leaf font-mono uppercase text-[10px]">
-                  <th className="p-4 font-bold">Case ID</th>
-                  <th className="p-4 font-bold">Crop & Field</th>
-                  <th className="p-4 font-bold">AI Indication</th>
-                  <th className="p-4 font-bold">Confidence</th>
-                  <th className="p-4 font-bold">Severity</th>
-                  <th className="p-4 font-bold">Submitted Date</th>
-                  <th className="p-4 font-bold">Review Status</th>
-                  <th className="p-4 font-bold text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-structural">
-                {cases.map((c) => (
-                  <tr key={c.id} className="hover:bg-field-canvas/60 transition">
-                    <td className="p-4 font-mono font-bold text-field-ink">
-                      <div className="flex items-center gap-1.5">
-                        {c.priority === 'high' && (
-                          <span className="w-2 h-2 rounded-full bg-alert-red animate-pulse" title="High Priority" />
-                        )}
-                        <span>Review case</span>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <p className="font-bold text-field-ink">{c.crop}</p>
-                      <p className="text-[11px] text-muted-leaf">
-                        {c.farmName} • {c.fieldName} ({c.fpoName})
-                      </p>
-                    </td>
-                    <td className="p-4 font-semibold text-field-ink">{c.aiIndication}</td>
-                    <td className="p-4 font-mono font-bold text-field-ink">{c.confidence}%</td>
-                    <td className="p-4">
-                      <SeverityBadge severity={c.severity} />
-                    </td>
-                    <td className="p-4 text-muted-leaf font-mono">{new Date(c.submittedAt).toLocaleDateString()}</td>
-                    <td className="p-4">
-                      <ReviewStatusBadge status={c.reviewStatus} />
-                    </td>
-                    <td className="p-4 text-right">
-                      <Link
-                        to={`/agronomist/cases/${c.id}`}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-field-ink text-white text-xs font-bold rounded-xl hover:bg-opacity-90 transition shadow-2xs"
-                      >
-                        <span>Review</span>
-                        <ExternalLink size={12} className="text-lime-signal" />
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+    const [metrics, setMetrics] = useState<AgronomistMetrics | null>(null);
+    const [cases, setCases] = useState<Case[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const requestVersion = useRef(0);
+    // Filters
+    const [search, setSearch] = useState('');
+    const [statusFilter, setStatusFilter] = useState<ReviewStatus | 'all'>('all');
+    const [severityFilter, setSeverityFilter] = useState<string>('all');
+    const [cropFilter, setCropFilter] = useState<string>('all');
+    const [diseaseFilter, setDiseaseFilter] = useState<string>('all');
+    const [confidenceMin, setConfidenceMin] = useState<number>(0);
+    const [sortBy, setSortBy] = useState<'priority' | 'date'>('priority');
+    const fetchQueue = async () => {
+        const version = ++requestVersion.current;
+        setLoading(true);
+        setError('');
+        try {
+            let c = await liveWorkspaceApi.getCases();
+            c = c.filter((item) => (statusFilter === 'all' || item.reviewStatus === statusFilter) &&
+                (severityFilter === 'all' || item.severity === severityFilter) &&
+                (cropFilter === 'all' || item.crop.toLowerCase() === cropFilter.toLowerCase()) &&
+                (diseaseFilter === 'all' || item.aiIndication.toLowerCase().includes(diseaseFilter.toLowerCase())) &&
+                (!confidenceMin || item.confidence >= confidenceMin) &&
+                (!search.trim() || [item.id, item.farmName, item.fieldName, item.fpoName].some((value) => value.toLowerCase().includes(search.trim().toLowerCase()))));
+            const m = await liveWorkspaceApi.getAgronomistMetrics(c);
+            // Sorting
+            let sorted = [...c];
+            if (sortBy === 'priority') {
+                const pOrder = { high: 1, medium: 2, low: 3 };
+                sorted.sort((a, b) => pOrder[a.priority] - pOrder[b.priority]);
+            }
+            else {
+                sorted.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+            }
+            if (version !== requestVersion.current)
+                return;
+            setMetrics(m);
+            setCases(sorted);
+        }
+        catch (e) {
+            if (version === requestVersion.current)
+                setError(e instanceof Error ? e.message : 'Could not load review queue');
+        }
+        finally {
+            if (version === requestVersion.current)
+                setLoading(false);
+        }
+    };
+    useEffect(() => {
+        fetchQueue();
+        return () => { requestVersion.current++; };
+    }, [search, statusFilter, severityFilter, cropFilter, diseaseFilter, confidenceMin, sortBy]);
+    const handleResetFilters = () => {
+        setSearch('');
+        setStatusFilter('all');
+        setSeverityFilter('all');
+        setCropFilter('all');
+        setDiseaseFilter('all');
+        setConfidenceMin(0);
+        setSortBy('priority');
+    };
+    return <div className="farmer-workspace review-workspace">
+    <header className="workspace-heading"><div><span className="page-context">Your independent perspective</span><h1>Review queue</h1><p>Crop observations waiting for a closer look. Evidence first, judgment yours.</p></div><button className="action secondary" disabled={loading} onClick={() => void fetchQueue()}><RotateCcw size={15}/>Refresh queue</button></header>
+    {error && <div className="message error" role="alert">{error}<button onClick={() => void fetchQueue()}>Try again</button></div>}
+    {metrics && <dl className="portfolio-metrics review-metrics">{[
+                ['Open cases', metrics.openCases, 'In the filtered queue'], ['High priority', metrics.highPriorityCases, 'Prioritized for attention'], ['Awaiting review', metrics.awaitingReview, 'Ready for assessment'], ['Reviewed this week', metrics.reviewedThisWeek, 'Your reviews in the last 7 days'], ['Upload to review', metrics.averageReviewTimeMinutes !== null ? `${metrics.averageReviewTimeMinutes} min` : '—', 'Includes time in queue'],
+            ].map(([label, value, detail]) => <div key={label}><dt>{label}</dt><dd>{value}</dd><p>{detail}</p></div>)}</dl>}
+    <section className="portfolio-records"><div className="records-title"><div><h2>Requested assessments <span>{loading ? '…' : cases.length}</span></h2><p>Cases shared for expert review</p></div><span className="subtle-tag">Human review</span></div>
+      <div className="portfolio-toolbar"><label className="portfolio-search"><Search size={16}/><span className="sr-only">Search review queue</span><input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search case, farm, field or organization…"/></label><div className="portfolio-selects"><select aria-label="Status" value={statusFilter} onChange={e => setStatusFilter(e.target.value as ReviewStatus | 'all')}><option value="all">All statuses</option><option value="awaiting_review">Awaiting review</option><option value="reviewed">Reviewed</option><option value="needs_inspection">Needs inspection</option></select><select aria-label="Sort order" value={sortBy} onChange={e => setSortBy(e.target.value as 'priority' | 'date')}><option value="priority">Priority first</option><option value="date">Newest first</option></select></div></div>
+      <details className="review-filters"><summary><Filter size={14}/>Refine the queue{(severityFilter !== 'all' || diseaseFilter !== 'all' || confidenceMin > 0) && <span>Filters active</span>}</summary><div><label>Severity<select aria-label="Severity" value={severityFilter} onChange={e => setSeverityFilter(e.target.value)}><option value="all">All severities</option>{['Early', 'Moderate', 'Severe', 'Uncertain'].map(value => <option key={value}>{value}</option>)}</select></label><label>Disease signal<select aria-label="Disease signal" value={diseaseFilter} onChange={e => setDiseaseFilter(e.target.value)}><option value="all">All indications</option><option value="Rust">Soybean rust</option><option value="Blight">Bacterial blight</option><option value="Frogeye">Frogeye leaf spot</option></select></label><label>Minimum confidence<select aria-label="Minimum confidence" value={confidenceMin} onChange={e => setConfidenceMin(Number(e.target.value))}><option value={0}>Any confidence</option><option value={50}>At least 50%</option><option value={75}>At least 75%</option><option value={85}>At least 85%</option></select></label><button className="action secondary" onClick={handleResetFilters}>Clear all filters</button></div></details>
+      {loading ? <div className="portfolio-loading" role="status" aria-busy="true"><RotateCcw size={17} className="ui-spinner"/>Updating the review queue…</div> : !cases.length ? <div className="portfolio-empty"><ClipboardList size={30}/><h3>No matching cases</h3><p>New requests appear when a farmer asks for review. Clear filters to see all accessible cases.</p><button className="action secondary" onClick={handleResetFilters}>Show all cases</button></div> : <div className="review-table-wrap" tabIndex={0} role="region" aria-label="Review cases, scroll horizontally for all columns"><p className="table-scroll-hint">Scroll across to see all case details and actions.</p><table className="review-table"><thead><tr><th>Field / organization</th><th>AI perspective</th><th>Requested</th><th>Review status</th><th><span className="sr-only">Open case</span></th></tr></thead><tbody>{cases.map(c => <tr key={c.id}><td><Link className="review-field-name" to={`/agronomist/cases/${c.id}`}>{c.fieldName}</Link><p>{c.farmName} · {c.fpoName}</p><small>{c.crop}{c.priority === 'high' ? ' · High priority' : ''}</small></td><td><strong>{c.aiIndication}</strong><p>{c.confidence}% confidence · {c.severity}</p></td><td><span>{new Date(c.submittedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</span></td><td><ReviewStatusBadge status={c.reviewStatus}/></td><td><Link className="record-open" to={`/agronomist/cases/${c.id}`}>Review evidence <ExternalLink size={14}/></Link></td></tr>)}</tbody></table><div className="records-bottom">Showing {cases.length} {cases.length === 1 ? 'case' : 'cases'}<span>Queue counts reflect filters; review history is account-wide</span></div></div>}
+    </section><p className="portfolio-disclaimer"><AlertTriangle size={14}/>Model indications are advisory. Inspect the original evidence before recording your assessment.</p>
+  </div>;
 };
-

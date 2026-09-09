@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext';
 import { DemoModeProvider } from './context/DemoModeContext';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { AppLayout } from './components/layout/AppLayout';
+import { RouteViewport } from './components/layout/RouteViewport';
 import { FarmerWorkspace } from './screens/farmer/FarmerWorkspace';
 
 // Public Pages
@@ -47,7 +48,7 @@ import {
 export function App() {
   return (
     <AuthProvider>
-      <DemoModeProvider><Router>
+      <DemoModeProvider><Router><RouteViewport/>
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<LandingPage />} />
