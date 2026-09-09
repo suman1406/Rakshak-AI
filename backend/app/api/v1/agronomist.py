@@ -17,6 +17,7 @@ from app.models.prediction import VideoDiagnosis
 from app.models.verification import ReviewStatus, ReviewWorkItem, VerifiedLabel
 from app.models.video import Video
 from app.modules.reporting.result_contract import disease_slug
+from app.modules.reporting.reviews import review_summary
 
 router = APIRouter(prefix="/agronomist", tags=["Agronomist"])
 
@@ -118,9 +119,13 @@ async def get_agronomist_case(
     return {
         "video_diagnosis_id": diag.id,
         "video_id": diag.video_id,
+        "expert_review": await review_summary(db, diag.id),
         "field": {"id": diag.video.field.id, "name": diag.video.field.name, "farm_id": diag.video.field.farm_id},
         "farm": {"id": diag.video.field.farm.id, "name": diag.video.field.farm.name, "district": diag.video.field.farm.district},
         "disease": disease_slug(diag),
+        "is_unknown": diag.is_unknown,
+        "probability_distribution": diag.probability_distribution,
+        "model_versions": diag.model_versions or {'aggregation': diag.aggregation_model_version},
         "confidence": diag.confidence,
         "confidence_band": diag.confidence_band.value,
         "severity_level": diag.severity_level,

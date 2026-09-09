@@ -105,7 +105,7 @@ async def decide_onboarding_application(
     if not reference.startswith("APL-") or len(reference) != 12:
         raise HTTPException(status_code=404, detail="Onboarding application not found")
     suffix = reference[4:].lower()
-    application = (await db.execute(select(OnboardingApplication).where(OnboardingApplication.id.ilike(f"%{suffix}")))).scalar_one_or_none()
+    application = (await db.execute(select(OnboardingApplication).where(OnboardingApplication.id.ilike(f"%{suffix}")).with_for_update())).scalar_one_or_none()
     if not application:
         raise HTTPException(status_code=404, detail="Onboarding application not found")
     if application.status != AccountStatus.pending.value:

@@ -42,13 +42,13 @@ async def list_videos(
         stmt = stmt.where(Video.field_id == field_id)
     if status_filter:
         stmt = stmt.where(Video.status == status_filter)
-    stmt = stmt.options(selectinload(Video.diagnoses).selectinload(VideoDiagnosis.disease))
+    stmt = stmt.options(selectinload(Video.diagnoses).selectinload(VideoDiagnosis.disease), selectinload(Video.diagnoses).selectinload(VideoDiagnosis.verified_labels))
     videos = (await db.execute(stmt.order_by(Video.created_at.desc()).offset(offset).limit(limit))).scalars().all()
     records = []
     for video in videos:
         diagnosis = max(video.diagnoses, key=lambda item: item.created_at) if video.diagnoses else None
         records.append({"video_id": video.id, "field_id": video.field_id, "status": video.status, "created_at": video.created_at, "duration_seconds": video.duration_seconds, "error_detail": video.error_detail,
-            "diagnosis": None if diagnosis is None else {"disease": disease_slug(diagnosis), "is_unknown": diagnosis.is_unknown, "confidence": diagnosis.confidence, "severity_level": diagnosis.severity_level}})
+            "diagnosis": None if diagnosis is None else {"disease": disease_slug(diagnosis), "is_unknown": diagnosis.is_unknown, "confidence": diagnosis.confidence, "severity_level": diagnosis.severity_level, "verifications_count": len(diagnosis.verified_labels)}})
     return records
 
 @router.get("/{video_id}")

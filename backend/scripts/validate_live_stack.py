@@ -65,7 +65,46 @@ def main():
         assert media.status_code == 200 and len(media.content) > 100
         # A different, unauthenticated client must never receive private evidence.
         assert httpx.get(f'http://api:8000/api/v1/videos/{video_id}/content').status_code == 401
+        # Exercise reviewed onboarding and the human-feedback loop on PostgreSQL.
+        from app.core.config import settings
+        assert settings.ENVIRONMENT == 'validation', 'Role smoke test is for the isolated validation environment only'
+        admin_session = call('POST', '/auth/login', json={'email_or_phone': settings.INITIAL_ADMIN_EMAIL, 'password': settings.INITIAL_ADMIN_PASSPHRASE})
+        admin_headers = {'Authorization': 'Bearer ' + admin_session['access_token']}
+        expert_email = f'expert-{uuid4().hex[:8]}@example.test'
+        application = call('POST', '/onboarding/applications', json={'application_type': 'agronomist', 'email': expert_email, 'access_phrase': password, 'display_name': 'Validation Agronomist', 'consent_to_data_processing': True})
+        assert client.post('/api/v1/auth/login', json={'email_or_phone': expert_email, 'password': password}).status_code == 403
+        from concurrent.futures import ThreadPoolExecutor
+        def approve(_):
+            return client.patch('/api/v1/admin/onboarding-applications/' + application['reference'], headers=admin_headers, json={'decision': 'approved', 'review_note': 'Isolated test account'}).status_code
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            assert sorted(pool.map(approve, range(2))) == [200, 409]
+        expert_session = call('POST', '/auth/login', json={'email_or_phone': expert_email, 'password': password})
+        expert_headers = {'Authorization': 'Bearer ' + expert_session['access_token']}
+        case_path = '/agronomist/cases/' + analysis['diagnosis_id']
+        assert client.get('/api/v1' + case_path, headers=expert_headers).status_code == 404
+        call('POST', '/diagnosis/' + analysis['diagnosis_id'] + '/review-requests')
+        case = call('GET', case_path, headers=expert_headers)
+        assert case['probability_distribution'] == analysis['probability_distribution']
+        assert case['is_unknown'] is True
+        call('POST', case_path + '/claim', headers=expert_headers)
+        call('POST', '/diagnosis/' + analysis['diagnosis_id'] + '/verify', headers=expert_headers, json={'is_healthy_override': False, 'severity_level': 0, 'affected_plant_estimate_independent': 0, 'notes': 'Synthetic validation footage; no crop diagnosis can be established.'})
+        reviewed = call('GET', f'/videos/{video_id}/analysis')
+        assert reviewed['expert_review']['status'] == 'completed'
+        assert reviewed['expert_review']['disease'] == 'Uncertain'
+        assert call('GET', case_path, headers=expert_headers)['expert_review']['status'] == 'completed'
+        org_email = f'org-{uuid4().hex[:8]}@example.test'
+        org_application = call('POST', '/onboarding/applications', json={'application_type': 'organization', 'email': org_email, 'access_phrase': password, 'display_name': 'Validation Organization', 'organization_name': 'Validation Cooperative', 'organization_type': 'fpo', 'consent_to_data_processing': True})
+        call('PATCH', '/admin/onboarding-applications/' + org_application['reference'], headers=admin_headers, json={'decision': 'approved'})
+        org_session = call('POST', '/auth/login', json={'email_or_phone': org_email, 'password': password})
+        org_headers = {'Authorization': 'Bearer ' + org_session['access_token']}
+        org_farm = call('POST', '/farms', headers=org_headers, json={'name': 'Cooperative farm'})
+        call('POST', f"/farms/{org_farm['id']}/fields", headers=org_headers, json={'name': 'Cooperative soybean field'})
+        dashboard = call('GET', '/b2b/dashboard', headers=org_headers)
+        assert dashboard['total_fields'] == 1 and dashboard['total_farms'] == 1
+        assert client.get(f'/api/v1/videos/{video_id}/content', headers=org_headers).status_code == 404
+        print(json.dumps({'expert_email': expert_email, 'organization_email': org_email}), flush=True)
         print('PASS: real checkpoint -> PostgreSQL report -> separate-host private evidence', flush=True)
+        print('PASS: concurrent approval -> scoped review -> farmer feedback -> organization isolation', flush=True)
 
 
 if __name__ == '__main__':
