@@ -8,6 +8,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from ...core.config import settings
 from ...core.logging import logger
+from ...media_storage import media_storage
 from ...db.session import async_session_factory
 from ...models.farm import Disease, Field
 from ...models.prediction import ConfidenceBand, DecisionAuthorityStatus, Detection, FrameDiagnosis, VideoDiagnosis
@@ -113,7 +114,7 @@ class VideoIngestionService:
             field_id=field_id,
             uploaded_by=user_id,
             status=VideoStatus.uploaded,
-            storage_path=str(video_file_path),
+            storage_path=media_storage.store(f"videos/{video_id}/{video_file_path.name}", video_file_path),
             duration_seconds=duration_seconds,
             usable_frames_count=0,
             total_frames_extracted=0,
@@ -122,6 +123,8 @@ class VideoIngestionService:
         db.add(video)
         await db.commit()
         await db.refresh(video)
+        if settings.STORAGE_BACKEND == 's3':
+            video_file_path.unlink(missing_ok=True)
         logger.info(f"Video {video_id} uploaded successfully, storage_path={video_file_path}")
         return video
 
@@ -146,7 +149,7 @@ class VideoIngestionService:
         frames_dir.mkdir(parents=True, exist_ok=True)
 
         extracted_frames = self.extractor.extract_frames(
-            video_path=video.storage_path,
+            video_path=str(media_storage.local_path(video.storage_path)),
             output_dir=str(frames_dir),
         )
         video.total_frames_extracted = len(extracted_frames)
@@ -176,13 +179,15 @@ class VideoIngestionService:
         for q in quality_results:
             frame_row = Frame(
                 video_id=video_id,
-                storage_path=q.file_path,
+                storage_path=media_storage.store(f"frames/{video_id}/{Path(q.file_path).name}", q.file_path),
                 blur_score=q.blur_score,
                 exposure_score=q.exposure_score,
                 is_selected=q.is_selected,
                 sequence_index=q.sequence_index,
             )
             db.add(frame_row)
+            if settings.STORAGE_BACKEND == 's3':
+                Path(q.file_path).unlink(missing_ok=True)
 
         video.quality_score = avg_quality
         video.usable_frames_count = usable_count
@@ -352,6 +357,15 @@ class VideoIngestionService:
             explanation = template["explanation"]
             action_items = template["action_items"].split("\n")
 
+        provenance_rows = (await db.execute(
+            select(Detection.detector_model_version, FrameDiagnosis.classifier_model_version)
+            .join(FrameDiagnosis, FrameDiagnosis.detection_id == Detection.id)
+            .join(Frame, Frame.id == Detection.frame_id).where(Frame.video_id == video_id).distinct()
+        )).all()
+        provenance = {'aggregation': agg_result.aggregation_model_version}
+        if provenance_rows:
+            provenance['detector'] = ', '.join(sorted({row[0] for row in provenance_rows}))
+            provenance['classifier'] = ', '.join(sorted({row[1] for row in provenance_rows}))
         diagnosis = VideoDiagnosis(
             video_id=video_id,
             disease_id=disease_id,
@@ -363,6 +377,8 @@ class VideoIngestionService:
             supporting_frames=known_frame_count,
             total_frames=len(frame_results),
             aggregation_model_version=agg_result.aggregation_model_version,
+            probability_distribution=agg_dist,
+            model_versions=provenance,
             decision_authority=DecisionAuthorityStatus.advisory_only,
             explanation=explanation,
             action_items="\n".join(item for item in action_items if item.strip()) or None,

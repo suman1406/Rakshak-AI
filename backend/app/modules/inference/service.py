@@ -33,6 +33,7 @@ from ...models.prediction import (
     DecisionAuthorityStatus,
 )
 from ...models.video import Frame, Video, VideoStatus
+from ...media_storage import media_storage
 from .detector import PlantDetector, DetectionResult, DETECTOR_MODEL_VERSION
 from .classifier import DiseaseClassifier, CLASSIFIER_MODEL_VERSION, TAXONOMY_CLASSES
 
@@ -146,7 +147,8 @@ class InferenceService:
     ) -> FrameInferenceResult:
         """Detect objects, classify each detection, persist rows, return summary."""
         # ── 1. Detection ────────────────────────────────────────────────────
-        detections = self._detector.detect(frame.storage_path)
+        image_path = str(media_storage.local_path(frame.storage_path))
+        detections = self._detector.detect(image_path)
         if not detections:
             # Baseline mode approved for the supplied COCO checkpoint. This is
             # a sampled observation, never a claim that a leaf was detected.
@@ -177,7 +179,7 @@ class InferenceService:
             await db.flush()
 
             # ── 3. Classification ───────────────────────────────────────────
-            cls_result = self._classifier.classify(frame.storage_path, det.bbox)
+            cls_result = self._classifier.classify(image_path, det.bbox)
             logger.debug(
                 f"  Detection {det_row.id}: top={cls_result.top_class} "
                 f"conf={cls_result.top_confidence:.3f} "

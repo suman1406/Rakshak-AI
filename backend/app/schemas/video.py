@@ -36,6 +36,9 @@ class VideoAnalysisDiagnosis(BaseModel):
     affected_plant_estimate: float
 
 class VideoAnalysisResponse(BaseModel):
+    expert_review: dict | None = None
+    model_status: str = 'baseline_unvalidated'
+    crop_verified: bool = False
     video_id: str
     diagnosis_id: str | None = None
     crop: str
@@ -43,6 +46,7 @@ class VideoAnalysisResponse(BaseModel):
     diagnosis: VideoAnalysisDiagnosis | None = None
     evidence: VideoAnalysisEvidence
     model_versions: dict[str, str] = {}
+    probability_distribution: dict[str, float] | None = None
     retake_guidance: str | None = None
     action_items: str | None = None
     explanation: str | None = None

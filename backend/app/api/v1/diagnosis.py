@@ -18,6 +18,7 @@ from app.models.identity import User, UserRole
 from app.models.prediction import VideoDiagnosis
 from app.models.verification import Feedback, ReviewStatus, ReviewWorkItem, VerifiedLabel
 from app.modules.reporting.templates import get_canned_report
+from app.modules.reporting.reviews import review_summary
 from app.modules.reporting.result_contract import disease_slug, result_state, severity_name
 from app.schemas.diagnosis import (
     AgronomistVerifyCreate,
@@ -40,7 +41,7 @@ async def get_diagnosis_report(
         select(VideoDiagnosis)
         .join(VideoDiagnosis.video).join(Video.field).join(Field.farm)
         .options(selectinload(VideoDiagnosis.disease))
-        .where(VideoDiagnosis.id == video_diagnosis_id, diagnosis_scope(current_user))
+        .where(VideoDiagnosis.id == video_diagnosis_id, diagnosis_scope(current_user)).with_for_update(of=VideoDiagnosis)
     )
     result = await db.execute(stmt)
     diag = result.scalar_one_or_none()
@@ -52,6 +53,9 @@ async def get_diagnosis_report(
 
     return DiagnosisReportResponse(
         video_diagnosis_id=diag.id,
+        expert_review=await review_summary(db, diag.id),
+        probability_distribution=diag.probability_distribution,
+        model_versions=diag.model_versions or {'aggregation': diag.aggregation_model_version},
         video_id=diag.video_id,
         crop="soybean",
         result_state=result_state(diag),
@@ -79,7 +83,7 @@ async def submit_farmer_feedback(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    stmt = select(VideoDiagnosis).join(VideoDiagnosis.video).join(Video.field).join(Field.farm).where(VideoDiagnosis.id == video_diagnosis_id, diagnosis_scope(current_user))
+    stmt = select(VideoDiagnosis).join(VideoDiagnosis.video).join(Video.field).join(Field.farm).where(VideoDiagnosis.id == video_diagnosis_id, diagnosis_scope(current_user)).with_for_update(of=VideoDiagnosis)
     result = await db.execute(stmt)
     diag = result.scalar_one_or_none()
     if not diag:
@@ -109,7 +113,7 @@ async def request_agronomist_review(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    diag = (await db.execute(select(VideoDiagnosis).join(VideoDiagnosis.video).join(Video.field).join(Field.farm).where(VideoDiagnosis.id == video_diagnosis_id, diagnosis_scope(current_user)))).scalar_one_or_none()
+    diag = (await db.execute(select(VideoDiagnosis).join(VideoDiagnosis.video).join(Video.field).join(Field.farm).where(VideoDiagnosis.id == video_diagnosis_id, diagnosis_scope(current_user)).with_for_update(of=VideoDiagnosis))).scalar_one_or_none()
     if not diag:
         raise HTTPException(status_code=404, detail="Diagnosis record not found")
     work_item = (await db.execute(select(ReviewWorkItem).where(ReviewWorkItem.video_diagnosis_id == video_diagnosis_id))).scalar_one_or_none()
@@ -129,7 +133,7 @@ async def submit_agronomist_verification(
     current_user: Annotated[User, Depends(require_role(UserRole.agronomist, UserRole.admin))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    stmt = select(VideoDiagnosis).join(VideoDiagnosis.video).join(Video.field).join(Field.farm).where(VideoDiagnosis.id == video_diagnosis_id, diagnosis_scope(current_user))
+    stmt = select(VideoDiagnosis).join(VideoDiagnosis.video).join(Video.field).join(Field.farm).where(VideoDiagnosis.id == video_diagnosis_id, diagnosis_scope(current_user)).with_for_update(of=VideoDiagnosis)
     result = await db.execute(stmt)
     diag = result.scalar_one_or_none()
     if not diag:
@@ -145,7 +149,6 @@ async def submit_agronomist_verification(
         is_blind_relabel=payload.is_blind_relabel,
         notes=payload.notes,
     )
-    db.add(vl)
     work_item = (await db.execute(select(ReviewWorkItem).where(ReviewWorkItem.video_diagnosis_id == video_diagnosis_id))).scalar_one_or_none()
     if work_item:
         if work_item.status == ReviewStatus.completed:
@@ -156,8 +159,9 @@ async def submit_agronomist_verification(
         work_item.completed_at = datetime.now(timezone.utc)
     else:
         db.add(ReviewWorkItem(video_diagnosis_id=video_diagnosis_id, status=ReviewStatus.completed, assigned_agronomist_id=current_user.id, completed_at=datetime.now(timezone.utc)))
+    db.add(vl)
     await db.flush()
-    await write_audit_log(db, actor_user_id=current_user.id, action="diagnosis.verified", entity_type="diagnosis", entity_id=video_diagnosis_id, metadata={"decision": payload.disease_id or "healthy"})
+    await write_audit_log(db, actor_user_id=current_user.id, action="diagnosis.verified", entity_type="diagnosis", entity_id=video_diagnosis_id, metadata={"decision": vl.disease_id or ("healthy" if vl.is_healthy_override else "uncertain")})
     await db.commit()
     await db.refresh(vl)
     return AgronomistVerifyResponse(

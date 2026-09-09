@@ -23,6 +23,8 @@ from app.schemas.video import (
     VideoUploadResponse,
 )
 from app.worker import process_video
+from app.media_storage import media_storage
+from app.modules.reporting.reviews import review_summary
 
 router = APIRouter(prefix="/videos", tags=["Videos"])
 
@@ -40,8 +42,14 @@ async def list_videos(
         stmt = stmt.where(Video.field_id == field_id)
     if status_filter:
         stmt = stmt.where(Video.status == status_filter)
+    stmt = stmt.options(selectinload(Video.diagnoses).selectinload(VideoDiagnosis.disease))
     videos = (await db.execute(stmt.order_by(Video.created_at.desc()).offset(offset).limit(limit))).scalars().all()
-    return [{"video_id": video.id, "field_id": video.field_id, "status": video.status, "created_at": video.created_at, "duration_seconds": video.duration_seconds, "error_detail": video.error_detail} for video in videos]
+    records = []
+    for video in videos:
+        diagnosis = max(video.diagnoses, key=lambda item: item.created_at) if video.diagnoses else None
+        records.append({"video_id": video.id, "field_id": video.field_id, "status": video.status, "created_at": video.created_at, "duration_seconds": video.duration_seconds, "error_detail": video.error_detail,
+            "diagnosis": None if diagnosis is None else {"disease": disease_slug(diagnosis), "is_unknown": diagnosis.is_unknown, "confidence": diagnosis.confidence, "severity_level": diagnosis.severity_level}})
+    return records
 
 @router.get("/{video_id}")
 async def get_video(
@@ -124,6 +132,8 @@ async def retry_video(video_id: str, current_user: Annotated[User, Depends(get_c
     video = (await db.execute(select(Video).join(Video.field).join(Field.farm).where(Video.id == video_id, video_scope(current_user)))).scalar_one_or_none()
     if not video:
         raise HTTPException(status_code=404, detail="Video not found")
+    if video.media_deleted_at:
+        raise HTTPException(status_code=410, detail="Evidence has expired; please upload a new video")
     if video.uploaded_by != current_user.id:
         raise HTTPException(status_code=403, detail="Only the uploader can retry this scan")
     claimed = await db.execute(update(Video).where(Video.id == video.id, Video.status == VideoStatus.failed).values(status=VideoStatus.uploaded, error_detail=None, job_completed_at=None))
@@ -143,9 +153,14 @@ async def retry_video(video_id: str, current_user: Annotated[User, Depends(get_c
 @router.get("/{video_id}/content")
 async def get_video_content(video_id: str, current_user: Annotated[User, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db)]):
     video = (await db.execute(select(Video).join(Video.field).join(Field.farm).where(Video.id == video_id, video_scope(current_user)))).scalar_one_or_none()
-    if not video or not Path(video.storage_path).is_file():
+    if not video:
         raise HTTPException(status_code=404, detail="Video content not found")
-    return FileResponse(video.storage_path, headers={"Cache-Control": "private, no-store"})
+    if video.media_deleted_at:
+        raise HTTPException(status_code=410, detail="Video evidence has expired")
+    path = media_storage.local_path(video.storage_path)
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="Video content not found")
+    return FileResponse(path, headers={"Cache-Control": "private, no-store"})
 
 @router.get("/{video_id}/analysis", response_model=VideoAnalysisResponse)
 async def get_video_analysis(
@@ -212,6 +227,7 @@ async def get_video_analysis(
     return VideoAnalysisResponse(
         video_id=video.id,
         diagnosis_id=diagnosis_row.id,
+        expert_review=await review_summary(db, diagnosis_row.id),
         crop="soybean",
         result_state=result_state(diagnosis_row),
         diagnosis=VideoAnalysisDiagnosis(
@@ -227,7 +243,8 @@ async def get_video_analysis(
             supporting_frames=diagnosis_row.supporting_frames or 0,
             quality_score=video.quality_score,
         ),
-        model_versions={
+        probability_distribution=diagnosis_row.probability_distribution,
+        model_versions=diagnosis_row.model_versions or {
             "aggregation": diagnosis_row.aggregation_model_version,
         },
         explanation=diagnosis_row.explanation or canned["explanation"],
@@ -270,6 +287,12 @@ async def get_frame_content(
     )
     result = await db.execute(stmt)
     frame = result.scalar_one_or_none()
-    if not frame or not Path(frame.storage_path).is_file():
+    if not frame:
         raise HTTPException(status_code=404, detail="Evidence frame not found")
-    return FileResponse(frame.storage_path, media_type="image/jpeg", filename=f"frame-{frame.sequence_index}.jpg")
+    video = await db.get(Video, video_id)
+    if video.media_deleted_at:
+        raise HTTPException(status_code=410, detail="Frame evidence has expired")
+    path = media_storage.local_path(frame.storage_path)
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="Evidence frame not found")
+    return FileResponse(path, media_type="image/jpeg", filename=f"frame-{frame.sequence_index}.jpg", headers={"Cache-Control": "private, no-store"})

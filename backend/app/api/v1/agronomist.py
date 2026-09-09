@@ -20,9 +20,21 @@ from app.modules.reporting.result_contract import disease_slug
 
 router = APIRouter(prefix="/agronomist", tags=["Agronomist"])
 
+@router.get('/reviews')
+async def list_reviews(current_user: Annotated[User, Depends(require_role(UserRole.agronomist, UserRole.admin))], db: Annotated[AsyncSession, Depends(get_db)], limit: int = Query(100, ge=1, le=500), offset: int = Query(0, ge=0)):
+    def utc(value):
+        return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
+    stmt = select(VerifiedLabel, VideoDiagnosis, Video, Field).join(VideoDiagnosis, VerifiedLabel.video_diagnosis_id == VideoDiagnosis.id).join(Video, VideoDiagnosis.video_id == Video.id).join(Field, Video.field_id == Field.id).join(Field.farm).where(diagnosis_scope(current_user))
+    if current_user.role != UserRole.admin:
+        stmt = stmt.where(VerifiedLabel.agronomist_id == current_user.id)
+    rows = (await db.execute(stmt.order_by(VerifiedLabel.created_at.desc()).offset(offset).limit(limit))).all()
+    return [{'id': label.id, 'diagnosis_id': diagnosis.id, 'field_name': field.name, 'reviewed_at': label.created_at, 'submitted_at': video.created_at,
+             'disease_id': label.disease_id, 'is_healthy': label.is_healthy_override, 'severity_level': label.severity_level, 'notes': label.notes,
+             'elapsed_minutes': round((utc(label.created_at) - utc(video.created_at)).total_seconds() / 60, 1)} for label, diagnosis, video, field in rows]
+
 @router.post("/cases/{video_diagnosis_id}/claim")
 async def claim_case(video_diagnosis_id: str, current_user: Annotated[User, Depends(require_role(UserRole.agronomist, UserRole.admin))], db: Annotated[AsyncSession, Depends(get_db)]):
-    diag = (await db.execute(select(VideoDiagnosis).join(VideoDiagnosis.video).join(Video.field).join(Field.farm).where(VideoDiagnosis.id == video_diagnosis_id, diagnosis_scope(current_user)))).scalar_one_or_none()
+    diag = (await db.execute(select(VideoDiagnosis).join(VideoDiagnosis.video).join(Video.field).join(Field.farm).where(VideoDiagnosis.id == video_diagnosis_id, diagnosis_scope(current_user)).with_for_update(of=VideoDiagnosis))).scalar_one_or_none()
     if not diag: raise HTTPException(status_code=404, detail="Case not found")
     item = (await db.execute(select(ReviewWorkItem).where(ReviewWorkItem.video_diagnosis_id == video_diagnosis_id))).scalar_one_or_none()
     if item is None:
@@ -38,7 +50,7 @@ async def claim_case(video_diagnosis_id: str, current_user: Annotated[User, Depe
 
 @router.get("/cases/{video_diagnosis_id}/history")
 async def review_history(video_diagnosis_id: str, current_user: Annotated[User, Depends(require_role(UserRole.agronomist, UserRole.admin))], db: Annotated[AsyncSession, Depends(get_db)]):
-    diag = (await db.execute(select(VideoDiagnosis).join(VideoDiagnosis.video).join(Video.field).join(Field.farm).where(VideoDiagnosis.id == video_diagnosis_id, diagnosis_scope(current_user)))).scalar_one_or_none()
+    diag = (await db.execute(select(VideoDiagnosis).join(VideoDiagnosis.video).join(Video.field).join(Field.farm).where(VideoDiagnosis.id == video_diagnosis_id, diagnosis_scope(current_user)).with_for_update(of=VideoDiagnosis))).scalar_one_or_none()
     if diag is None:
         raise HTTPException(status_code=404, detail="Case not found")
     item = (await db.execute(select(ReviewWorkItem).where(ReviewWorkItem.video_diagnosis_id == video_diagnosis_id))).scalar_one_or_none()
@@ -96,7 +108,7 @@ async def get_agronomist_case(
             selectinload(VideoDiagnosis.disease),
         )
         .join(VideoDiagnosis.video).join(Video.field).join(Field.farm)
-        .where(VideoDiagnosis.id == video_diagnosis_id, diagnosis_scope(current_user))
+        .where(VideoDiagnosis.id == video_diagnosis_id, diagnosis_scope(current_user)).with_for_update(of=VideoDiagnosis)
     )
     result = await db.execute(stmt)
     diag = result.scalar_one_or_none()

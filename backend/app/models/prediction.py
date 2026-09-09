@@ -62,6 +62,8 @@ class VideoDiagnosis(Base):
     supporting_frames: Mapped[int | None] = mapped_column(Integer, nullable=True)
     total_frames: Mapped[int | None] = mapped_column(Integer, nullable=True)
     aggregation_model_version: Mapped[str] = mapped_column(String(100), nullable=False)
+    probability_distribution: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    model_versions: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     decision_authority: Mapped[DecisionAuthorityStatus] = mapped_column(
         Enum(DecisionAuthorityStatus),
         nullable=False,

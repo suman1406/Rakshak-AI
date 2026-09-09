@@ -29,3 +29,24 @@ async def test_independent_farmer_review_shares_only_requested_scan(client, test
     assert (await client.get(f"/api/v1/videos/{videos[1].id}", headers=expert_headers)).status_code == 404
     assert (await client.get(f"/api/v1/agronomist/cases/{diagnoses[1].id}/history", headers=expert_headers)).status_code == 404
     assert (await client.get(f"/api/v1/farms/{farm.id}", headers=expert_headers)).status_code == 404
+    assert (await client.post(case + '/claim', headers=expert_headers)).status_code == 200
+    payload = {'is_healthy_override': True, 'severity_level': 0, 'affected_plant_estimate_independent': 0, 'notes': 'No clear symptoms in the submitted evidence.'}
+    review_path = f'/api/v1/diagnosis/{diagnoses[0].id}/verify'
+    assert (await client.post(review_path, json=payload, headers=expert_headers)).status_code == 201
+    assert (await client.post(review_path, json=payload, headers=expert_headers)).status_code == 409
+    report = (await client.get(f'/api/v1/videos/{videos[0].id}/analysis', headers=owner_headers)).json()
+    assert report['expert_review']['status'] == 'completed'
+    assert report['expert_review']['notes'] == payload['notes']
+    history = (await client.get('/api/v1/agronomist/reviews', headers=expert_headers)).json()
+    assert len(history) == 1
+    assert history[0]['field_name'] == 'Soybean'
+    from app.dataset_export import eligible_records
+    assert await eligible_records(test_db) == []
+    farmer.training_consent = True
+    await test_db.commit()
+    exported = await eligible_records(test_db)
+    assert len(exported) == 1 and exported[0]['disease'] == 'healthy'
+    assert 'email' not in exported[0] and 'notes' not in exported[0]
+    farmer.training_consent = False
+    await test_db.commit()
+    assert await eligible_records(test_db) == []
