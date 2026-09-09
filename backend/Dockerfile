@@ -13,5 +13,6 @@ COPY app ./app
 COPY alembic.ini .
 COPY alembic ./alembic
 COPY tests ./tests
+RUN mkdir -p /app/storage
 
-CMD ["sh", "-c", "alembic upgrade head && exec python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+CMD ["sh", "-c", "alembic upgrade head && celery -A app.worker.celery_app worker --loglevel=info -Q cpu_processing,gpu_inference --concurrency=1 & exec python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"]
