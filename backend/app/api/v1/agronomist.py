@@ -119,6 +119,7 @@ async def get_agronomist_case(
     return {
         "video_diagnosis_id": diag.id,
         "video_id": diag.video_id,
+        "created_at": diag.video.created_at,
         "expert_review": await review_summary(db, diag.id),
         "field": {"id": diag.video.field.id, "name": diag.video.field.name, "farm_id": diag.video.field.farm_id},
         "farm": {"id": diag.video.field.farm.id, "name": diag.video.field.farm.name, "district": diag.video.field.farm.district},

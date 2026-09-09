@@ -25,6 +25,7 @@ async def test_independent_farmer_review_shares_only_requested_scan(client, test
     assert (await client.get(case + "/history", headers=expert_headers)).status_code == 404
     assert (await client.post(f"/api/v1/diagnosis/{diagnoses[0].id}/review-requests", headers=owner_headers)).status_code == 201
     assert (await client.get(case, headers=expert_headers)).status_code == 200
+    assert (await client.get(case, headers=expert_headers)).json()['created_at']
     assert (await client.get(f"/api/v1/videos/{videos[0].id}", headers=expert_headers)).status_code == 200
     assert (await client.get(f"/api/v1/videos/{videos[1].id}", headers=expert_headers)).status_code == 404
     assert (await client.get(f"/api/v1/agronomist/cases/{diagnoses[1].id}/history", headers=expert_headers)).status_code == 404

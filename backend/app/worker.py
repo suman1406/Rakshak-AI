@@ -70,7 +70,7 @@ def expire_old_evidence():
 def process_video(self, video_id: str) -> str:
     from .modules.ingestion.service import ingestion_service
 
-    async def run() -> None:
+    async def run() -> bool:
         async with async_session_factory() as db:
             claim = await db.execute(
                 update(Video)
@@ -78,12 +78,14 @@ def process_video(self, video_id: str) -> str:
                 .values(status=VideoStatus.validating, retry_count=self.request.retries, job_started_at=datetime.now(timezone.utc))
             )
             if claim.rowcount != 1:
-                return
+                return False
             await db.commit()
         await ingestion_service.execute_processing_pipeline(video_id)
+        return True
 
     try:
-        _run_sync(run())
+        if not _run_sync(run()):
+            return video_id
     except Exception as exc:
         async def mark_failure() -> None:
             async with async_session_factory() as db:

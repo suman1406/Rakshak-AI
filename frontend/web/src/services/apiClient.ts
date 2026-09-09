@@ -105,7 +105,7 @@ export const apiClient = {
   getFieldHealth: (fieldId: string) => request(`/api/v1/fields/${fieldId}/health`),
   getFarm: (farmId: string) => request(`/api/v1/farms/${farmId}`),
   listFarms: () => requestAll('/api/v1/farms'),
-  listVideos: (fieldId?: string) => request(`/api/v1/videos${fieldId ? `?field_id=${encodeURIComponent(fieldId)}` : ''}`),
+  listVideos: (fieldId?: string) => requestAll(`/api/v1/videos${fieldId ? `?field_id=${encodeURIComponent(fieldId)}` : ''}`),
   listAllVideos: async () => {
     const records: any[] = [];
     for (let offset = 0; ; offset += 100) {
@@ -174,4 +174,3 @@ export type DemoWorkspace = {
   agronomist: null | { open_cases: number; message: string };
   admin: null | { pilot_plan: { code: string; name: string; monthly_price_paise: number; annual_price_paise: number; farm_limit: number; scan_limit: number }; message: string };
 };
-

@@ -88,7 +88,7 @@ export const AgronomistDashboard: React.FC = () => {
               <span className="p-1.5 bg-field-ink text-lime-signal rounded-lg font-bold">
                 <ClipboardList size={18} />
               </span>
-              <h1 className="text-2xl font-extrabold text-field-ink">Agronomist Case Verification Queue</h1>
+              <h1 className="text-2xl font-extrabold text-field-ink">Review queue</h1>
             </div>
             <p className="text-xs text-muted-leaf mt-1">
               Review crop observations and add your independent assessment.
@@ -161,6 +161,7 @@ export const AgronomistDashboard: React.FC = () => {
             <label className="block text-[10px] text-muted-leaf font-bold uppercase mb-1">Status</label>
             <select
               value={statusFilter}
+              aria-label="Status"
               onChange={(e) => setStatusFilter(e.target.value as any)}
               className="w-full p-2 rounded-xl border border-structural bg-field-canvas text-xs font-medium outline-none"
             >
@@ -175,6 +176,7 @@ export const AgronomistDashboard: React.FC = () => {
             <label className="block text-[10px] text-muted-leaf font-bold uppercase mb-1">Severity</label>
             <select
               value={severityFilter}
+              aria-label="Severity"
               onChange={(e) => setSeverityFilter(e.target.value)}
               className="w-full p-2 rounded-xl border border-structural bg-field-canvas text-xs font-medium outline-none"
             >
@@ -190,13 +192,14 @@ export const AgronomistDashboard: React.FC = () => {
             <label className="block text-[10px] text-muted-leaf font-bold uppercase mb-1">Disease Signal</label>
             <select
               value={diseaseFilter}
+              aria-label="Disease signal"
               onChange={(e) => setDiseaseFilter(e.target.value)}
               className="w-full p-2 rounded-xl border border-structural bg-field-canvas text-xs font-medium outline-none"
             >
               <option value="all">All Diseases</option>
               <option value="Rust">Soybean Rust</option>
               <option value="Blight">Bacterial Blight</option>
-              <option value="Cercospora">Cercospora</option>
+              <option value="Frogeye">Frogeye leaf spot</option>
             </select>
           </div>
 
@@ -204,6 +207,7 @@ export const AgronomistDashboard: React.FC = () => {
             <label className="block text-[10px] text-muted-leaf font-bold uppercase mb-1">Min Confidence</label>
             <select
               value={confidenceMin}
+              aria-label="Minimum confidence"
               onChange={(e) => setConfidenceMin(Number(e.target.value))}
               className="w-full p-2 rounded-xl border border-structural bg-field-canvas text-xs font-medium outline-none font-mono"
             >
@@ -218,6 +222,7 @@ export const AgronomistDashboard: React.FC = () => {
             <label className="block text-[10px] text-muted-leaf font-bold uppercase mb-1">Sort Order</label>
             <select
               value={sortBy}
+              aria-label="Sort order"
               onChange={(e) => setSortBy(e.target.value as any)}
               className="w-full p-2 rounded-xl border border-structural bg-field-canvas text-xs font-medium outline-none"
             >
