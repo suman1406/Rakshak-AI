@@ -10,9 +10,9 @@ database_url = settings.DATABASE_URL
 
 if database_url.startswith("sqlite"):
     connect_args["check_same_thread"] = False
-elif "postgresql+" in database_url and "sslmode" in database_url:
+elif database_url.startswith("postgresql+asyncpg://") and "sslmode" in database_url:
     # For NeonDB, parse and handle SSL separately
-    from urllib.parse import urlparse, parse_qs
+    from urllib.parse import urlparse, parse_qs, urlencode
     
     # Extract sslmode from query string
     parsed = urlparse(database_url)
@@ -22,15 +22,18 @@ elif "postgresql+" in database_url and "sslmode" in database_url:
     
     # Rebuild URL without query string for asyncpg
     # Replace postgresql+asyncpg:// with postgresql+asyncpg:// (keep as-is, just remove query)
-    clean_url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+    query_params.pop('sslmode', None)
+    clean_url = parsed._replace(query=urlencode(query_params, doseq=True)).geturl()
     
     # Set SSL based on sslmode
     if sslmode == "require":
         connect_args["ssl"] = True
     elif sslmode == "prefer":
         connect_args["ssl"] = "prefer"
-    else:
+    elif sslmode == 'disable':
         connect_args["ssl"] = False
+    else:
+        connect_args["ssl"] = sslmode
     
     database_url = clean_url
     print(f"Using SSL mode: {sslmode} for database connection")

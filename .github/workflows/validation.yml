@@ -1,0 +1,77 @@
+name: Validate Rakshak
+on:
+  push:
+    branches: [main, 'codex/**']
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: validation-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build API and model runtime
+        run: docker build -t rakshak-prd-validation backend
+      - name: Start isolated PostgreSQL, storage and worker
+        run: docker compose -f docker-compose.validation.yml up -d
+      - name: Wait for migrated API
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:8001/readyz; then exit 0; fi
+            sleep 2
+          done
+          docker compose -f docker-compose.validation.yml logs api
+          exit 1
+      - name: Backend unit and integration tests
+        run: docker compose -f docker-compose.validation.yml exec -T api python -m pytest -q -p no:cacheprovider
+      - name: Actual checkpoint and private evidence flow
+        run: docker compose -f docker-compose.validation.yml exec -T api python scripts/validate_live_stack.py
+      - name: Runtime logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.validation.yml logs --tail=150 api worker
+      - name: Stop validation stack
+        if: always()
+        run: docker compose -f docker-compose.validation.yml down
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install -g pnpm@11.10.0
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm test:contracts
+      - run: pnpm build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8001
+  mobile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: frontend/mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.6'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+      - run: flutter build apk --debug --dart-define=API_BASE_URL=http://10.0.2.2:8001

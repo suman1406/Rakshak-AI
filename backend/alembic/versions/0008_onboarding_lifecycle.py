@@ -15,9 +15,17 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column("users", sa.Column("account_status", sa.String(length=16), nullable=False, server_default="active"))
-    op.add_column("users", sa.Column("consent_accepted_at", sa.DateTime(timezone=True), nullable=True))
-    op.create_index("ix_users_account_status", "users", ["account_status"])
+    inspector = sa.inspect(op.get_bind())
+    columns = {column['name'] for column in inspector.get_columns('users')}
+    if 'account_status' not in columns:
+        op.add_column("users", sa.Column("account_status", sa.String(length=16), nullable=False, server_default="active"))
+    if 'consent_accepted_at' not in columns:
+        op.add_column("users", sa.Column("consent_accepted_at", sa.DateTime(timezone=True), nullable=True))
+    if 'ix_users_account_status' not in {index['name'] for index in inspector.get_indexes('users')}:
+        op.create_index("ix_users_account_status", "users", ["account_status"])
+    # Historical 0001 builds metadata from the application models on fresh installs.
+    if 'onboarding_applications' in inspector.get_table_names():
+        return
     op.create_table(
         "onboarding_applications",
         sa.Column("id", sa.String(length=36), nullable=False),

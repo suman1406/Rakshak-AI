@@ -1,9 +1,9 @@
 import asyncio
 import concurrent.futures
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from celery import Celery
 from .core.config import settings
-from .db.session import async_session_factory
+from .db.session import async_session_factory, engine
 from .models.video import Video, VideoStatus
 from sqlalchemy import select, update
 
@@ -12,8 +12,22 @@ celery_app.conf.task_default_queue = settings.CELERY_CPU_QUEUE
 celery_app.conf.task_routes = {
     "app.worker.process_video": {"queue": settings.CELERY_CPU_QUEUE},
 }
+celery_app.conf.update(task_soft_time_limit=600, task_time_limit=660,
+    task_reject_on_worker_lost=True, broker_connection_retry_on_startup=True,
+    worker_prefetch_multiplier=1,
+    beat_schedule={
+        'recover-stale-scans': {'task': 'app.worker.recover_stale_scans', 'schedule': 60.0},
+        'expire-evidence-daily': {'task': 'app.worker.expire_old_evidence', 'schedule': 86400.0},
+    })
 
 def _run_sync(coro):
+    async def isolated():
+        try:
+            return await coro
+        finally:
+            # Celery tasks use distinct event loops; no pooled connection may
+            # survive its owning loop or be inherited by the next task.
+            await engine.dispose()
     try:
         loop = asyncio.get_running_loop()
     except RuntimeError:
@@ -21,9 +35,36 @@ def _run_sync(coro):
 
     if loop and loop.is_running():
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-            return pool.submit(asyncio.run, coro).result()
+            return pool.submit(asyncio.run, isolated()).result()
     else:
-        return asyncio.run(coro)
+        return asyncio.run(isolated())
+
+
+async def recover_interrupted_scans(db):
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=15)
+    result = await db.execute(update(Video).where(
+        Video.status.in_([VideoStatus.uploaded, VideoStatus.validating, VideoStatus.processing, VideoStatus.analyzing, VideoStatus.aggregating]),
+        Video.updated_at < cutoff,
+    ).values(status=VideoStatus.failed, error_detail='Processing was interrupted. Retry this saved scan.', last_failure_at=datetime.now(timezone.utc)).execution_options(synchronize_session='fetch'))
+    await db.commit()
+    return result.rowcount
+
+
+@celery_app.task
+def recover_stale_scans():
+    async def recover():
+        async with async_session_factory() as db:
+            return await recover_interrupted_scans(db)
+    return _run_sync(recover())
+
+
+@celery_app.task
+def expire_old_evidence():
+    from .retention import expire_evidence
+    async def expire():
+        async with async_session_factory() as db:
+            return await expire_evidence(db, apply=True)
+    return _run_sync(expire())
 
 @celery_app.task(bind=True, max_retries=2, default_retry_delay=10, acks_late=True)
 def process_video(self, video_id: str) -> str:
