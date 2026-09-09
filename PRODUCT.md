@@ -6,7 +6,7 @@ product
 
 ## Users
 
-Farmers recording soybean fields outdoors on phones; agronomists reviewing visual evidence; organizations monitoring their own farms. Farmers need a short, legible path from field selection to capture, results and expert review.
+Mobile is the primary farmer experience. Web prioritizes organizations, agronomists and administrators. Farmers record soybean fields outdoors on phones; agronomists reviewing visual evidence; organizations monitoring their own farms. Farmers need a short, legible path from field selection to capture, results and expert review.
 
 ## Product Purpose
 

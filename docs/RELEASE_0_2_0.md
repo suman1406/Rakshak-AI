@@ -16,7 +16,7 @@ On Vercel or another web host, set `NEXT_PUBLIC_API_URL` to the deployed API HTT
 
 1. Back up the database and existing evidence volume/bucket. Preserve the current deployed revision for rollback.
 2. Check `docs/LOCAL_PILOT_STORAGE.md`. If old records contain local file paths, run the migration on the host that still owns those files before retiring its disk.
-3. Apply schema migrations through `0013_report_provenance`. Older reports intentionally do not receive invented model distributions or versions.
+3. Apply schema migrations through `0014_requested_billing`. Older reports intentionally do not receive invented model distributions or versions.
 4. Deploy API and worker from the same revision and start one beat scheduler. Confirm shared environment values.
 5. Check readiness, login/refresh, upload-to-report, private media, expert review and organization isolation on deployment-specific test records.
 6. Deploy the web build and signed mobile distribution only after its configured API is reachable.
@@ -50,9 +50,9 @@ For release signing, create a private `frontend/mobile/android/key.properties` f
 
 Validated locally on 2026-09-09:
 
-- Backend: the final full suite passed 86 unit/integration tests. The actual CPU checkpoint/PostgreSQL/Redis/private-storage smoke completed, including concurrent access approvals and farmer-to-expert review.
+- Backend: the final full suite passed 90 unit/integration tests. The actual CPU checkpoint/PostgreSQL/Redis/private-storage smoke completed, including concurrent access approvals and farmer-to-expert review.
 - Web: `pnpm lint`, `pnpm test:contracts` and `pnpm build` passed. Browser validation covered public/contact/admin, farmer evidence, organization field creation, valid expert submission dates and completed human review alongside saved model probabilities.
-- Mobile: `flutter analyze --no-pub` reported no issues; `flutter test --no-pub` passed all four tests; `flutter build apk --debug --dart-define=API_BASE_URL=http://10.0.2.2:8001` produced the version 0.2.0+2 artifact.
+- Mobile: `flutter analyze --no-pub` reported no issues; `flutter test --no-pub` passed all six tests; `flutter build apk --debug --dart-define=API_BASE_URL=http://10.0.2.2:8001` produced the version 0.2.0+2 artifact.
 - Git: implementation is grouped on `codex/prd-completion`; mobile workflows are in `55099a2`, mobile identity/signing in `50f509b`, and final review/history/job-state corrections in `02fb0d4`. Earlier focused commits cover model integration, private storage, account controls, contact persistence and web redesign.
 
 The dependency lock records the successfully exercised Python 3.12 CPU runtime. GitHub run [34343937576](https://github.com/suman1406/Rakshak-AI/actions/runs/34343937576) passed all three jobs at `ddb4f19`: fresh locked image, fresh PostgreSQL migrations and real checkpoint smoke, web checks/build, and Flutter analysis/tests/Android build. The existing Vercel integration also created a web preview automatically; its production API integration is not validated by that preview status. No production deployment was performed manually in this session.
@@ -60,3 +60,9 @@ The dependency lock records the successfully exercised Python 3.12 CPU runtime. 
 GitGuardian incident 37119560 identified the historical local MinIO example password in commit `89cf827`, not a production provider key. Commit `308814f` requires a private `S3_SECRET_KEY` and removes the fixed MinIO password. After explicit owner approval, this one incident was classified as a test credential in GitGuardian. Secret scanning remains enabled and commit history is preserved.
 
 The local fresh locked Docker build also passed, followed by a cached rebuild with the final code. The validation stack successfully recreated API/worker containers and ran its bucket initializer with that image. PR [#1](https://github.com/suman1406/Rakshak-AI/pull/1) carries the latest checks and focused commit sequence.
+
+## Final product revision
+
+The final redesign uses forest, mineral white and lime across a photographic public site, organization portfolio chart, dense expert workspace and farmer-first mobile navigation. Android support, privacy, version details, capture recovery and dashboard refresh are connected to the same service. Annual plan selection survives application and approval. Default offers are seeded idempotently without overwriting operator changes: FPO Starter at INR 2,999/month or INR 29,990/year (25 farms, 250 uploads/calendar month UTC); Organization Growth at INR 9,999/month or INR 99,990/year (100 farms, 1,000 uploads/month); custom Enterprise. Farmers remain free during the pilot. Prices are launch assumptions, not validated demand or margins. Payment, taxes, cancellations and refunds require a written agreement; no gateway or automatic charge is implemented or advertised.
+
+Allowance checks serialize on the organization row. A real PostgreSQL race test returned one 201 and one 409 for two concurrent creates at a one-farm limit; one farm persisted and annual billing remained saved. Existing records remain readable at capacity or when paused. See `CHECKLIST_DESIGN_AUDIT.md` for the item-by-item design review and remaining device/operator boundaries.

@@ -38,18 +38,22 @@ The owner approved a practical, accessible redesign and explicitly chose to use 
 
 ## Redesign
 
-Shared olive, warm stone and sunflower identity; bundled Public Sans on web; consistent mobile theme and typography; responsive role navigation; Radix navigation dialog, accordion and button primitives; clear forms, focus states, errors and empty states; actual private images in report viewers; accessible field-indication bars and record tables. Marketing imagery is explicitly illustrative and separate from scan evidence. See `DESIGN.md`.
+Shared forest, mineral white and pale lime identity; bundled Public Sans on web; consistent mobile theme and typography; responsive role navigation; Radix navigation dialog, accordion and button primitives; clear forms, focus states, errors and empty states; actual private images in report viewers; accessible field-indication charts and record tables. Marketing imagery is explicitly illustrative and separate from scan evidence. See `DESIGN.md`.
 
 ## Validation evidence
 
-- Backend: final full unit/integration suite passed 86 tests, including legacy media migration and production-secret regression cases. The release validation record is in `RELEASE_0_2_0.md`.
+- Backend: final full unit/integration suite passed 90 tests, including legacy media migration and production-secret regression cases. The release validation record is in `RELEASE_0_2_0.md`.
 - Actual model smoke: synthetic 11-second video → 28 extracted frames → 15 selected observations → stored unknown assessment with five-class probabilities and model provenance. Original media retrieval succeeded across separate API/worker filesystems; unauthenticated retrieval returned 401.
 - PostgreSQL role smoke: pending expert login denied; simultaneous approval returned one 200 and one 409; requested case became accessible to the assigned expert; review appeared in farmer and expert reports; separate organization could not access private farmer video (404).
 - Web: TypeScript and optimized Next.js builds passed; no-mock integration contract passed. Browser checks covered public rendering at narrow width, contact submission/receipt, administrator inbox/close, protected farmer evidence, and organization field creation/selection.
-- Mobile: analyzer passed; four tests passed including narrow-screen large-text login validation and required registration consent. Android debug APK builds passed; final artifact version is tracked in the release record.
+- Mobile: analyzer passed; six tests passed including narrow-screen large-text login validation and required registration consent. Android debug APK builds passed; final artifact version is tracked in the release record.
 
 ## Explicitly not established by these checks
 
 Production deployment, paid infrastructure capacity, cloud backup restore, email/SMS/WhatsApp providers, mobile store signing, physical camera behavior, iOS builds, GPU performance, field-model accuracy/calibration and pilot outcomes require their own validation. No Android device or emulator was connected during these checks; Windows cannot establish an iOS build.
 
 PRD Phase 2/3 items—regional languages, real-time camera guidance, multiple crops/diseases, validated health score, progression, agronomist marketplace, spatial/weather intelligence—are not represented as complete. Basic saved history is implemented ahead of the broader Phase 2 history features.
+
+## Final redesign and pricing audit
+
+See `CHECKLIST_DESIGN_AUDIT.md` for the ordered Checklist Design review. The second visual revision follows the owner's mobile-first farmer and web-first organization/expert priorities. Pricing is persisted from public selection through administrator approval, with visible usage and transactionally enforced organization allowances. The free farmer pilot has no automatic paid conversion. Browser verification covered monthly/annual prices, selected onboarding interval, responsive navigation, expert queue and organization portfolio records. Flutter welcome rendering and large-text interaction were inspected separately from physical-device claims.
