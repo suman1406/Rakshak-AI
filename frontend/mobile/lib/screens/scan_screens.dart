@@ -9,32 +9,210 @@ import 'report_screens.dart';
 import 'field_setup_screen.dart';
 import 'dart:async';
 
-class NewScanScreen extends StatefulWidget { const NewScanScreen({super.key}); @override State<NewScanScreen> createState() => _NewScanState(); }
+class NewScanScreen extends StatefulWidget {
+  const NewScanScreen({super.key, this.initialFieldId});
+  final String? initialFieldId;
+  @override
+  State<NewScanScreen> createState() => _NewScanState();
+}
+
 class _NewScanState extends State<NewScanScreen> {
-  final formKey = GlobalKey<FormState>(); String? fileName; String? filePath; String? uploadedVideoId; String? uploadError; String? fieldId; List<Map<String, dynamic>> availableFields = []; bool consent = false; bool uploading = false;
-  @override void initState() { super.initState(); _loadFields(); }
-  Future<void> _loadFields() async { try { final fields = await ApiClient.instance.listFields(); if (!mounted) return; setState(() { availableFields = fields; fieldId = fields.isEmpty ? null : fields.first['id'].toString(); }); } catch (_) { if (mounted) setState(() => uploadError = 'Could not load fields. Please try again.'); } }
-  Future<void> chooseVideo() async { final result = await FilePicker.platform.pickFiles(type: FileType.video, withData: false); if (mounted && result != null) setState(() { fileName = result.files.single.name; filePath = result.files.single.path; }); }
-  Future<void> recordVideo() async { final capturedPath = await Navigator.of(context).push<String>(MaterialPageRoute(builder: (_) => const CameraGuidanceScreen())); if (!mounted || capturedPath == null) return; setState(() { filePath = capturedPath; fileName = capturedPath.split(RegExp(r'[/\\]')).last; }); }
+  final formKey = GlobalKey<FormState>();
+  String? fileName;
+  String? filePath;
+  String? uploadedVideoId;
+  String? uploadError;
+  String? fieldId;
+  List<Map<String, dynamic>> availableFields = [];
+  bool consent = false;
+  bool uploading = false;
+  @override
+  void initState() {
+    super.initState();
+    _loadFields();
+  }
+
+  Future<void> _loadFields() async {
+    try {
+      final fields = await ApiClient.instance.listFields();
+      if (!mounted) return;
+      setState(() {
+        availableFields = fields;
+        final selected = fieldId ?? widget.initialFieldId;
+        fieldId = fields.any((field) => field['id'] == selected)
+            ? selected
+            : fields.isEmpty
+                ? null
+                : fields.first['id'].toString();
+      });
+    } catch (_) {
+      if (mounted) {
+        setState(
+            () => uploadError = 'Could not load fields. Please try again.');
+      }
+    }
+  }
+
+  Future<void> chooseVideo() async {
+    final result = await FilePicker.platform
+        .pickFiles(type: FileType.video, withData: false);
+    if (mounted && result != null) {
+      setState(() {
+        fileName = result.files.single.name;
+        filePath = result.files.single.path;
+      });
+    }
+  }
+
+  Future<void> recordVideo() async {
+    final capturedPath = await Navigator.of(context).push<String>(
+        MaterialPageRoute(builder: (_) => const CameraGuidanceScreen()));
+    if (!mounted || capturedPath == null) return;
+    setState(() {
+      filePath = capturedPath;
+      fileName = capturedPath.split(RegExp(r'[/\\]')).last;
+    });
+  }
+
   Future<void> continueToQualityCheck() async {
-    if (!formKey.currentState!.validate() || uploading || fileName == null || !consent) return;
+    if (!formKey.currentState!.validate() ||
+        uploading ||
+        fileName == null ||
+        !consent) {
+      return;
+    }
     setState(() => uploading = true);
     if (filePath != null) {
-      try { final upload = await ApiClient.instance.uploadVideo(fieldId: fieldId!, filePath: filePath!, consent: consent); uploadedVideoId = upload['video_id'] as String?; }
-      catch (exception) { if (mounted) setState(() { uploadError = safeErrorMessage(exception, fallback: 'The video could not be uploaded. Please try again.'); uploading = false; }); return; }
+      try {
+        final upload = await ApiClient.instance.uploadVideo(
+            fieldId: fieldId!, filePath: filePath!, consent: consent);
+        uploadedVideoId = upload['video_id'] as String?;
+      } catch (exception) {
+        if (mounted) {
+          setState(() {
+            uploadError = safeErrorMessage(exception,
+                fallback: 'The video could not be uploaded. Please try again.');
+            uploading = false;
+          });
+        }
+        return;
+      }
     }
     if (!mounted) return;
     setState(() => uploading = false);
     navigateTo(context, VideoQualityCheckScreen(videoId: uploadedVideoId));
   }
+
   @override
-  Widget build(BuildContext context) => AppPage(title: 'New scan', onBack: () => Navigator.pop(context), child: PageContent(children: [Text('Capture a clear view', style: Theme.of(context).textTheme.headlineSmall), const SizedBox(height: 8), const Text('Choose the crop and field, then send a short walkthrough video.'), const SizedBox(height: 24), Form(key: formKey, child: Column(children: [TextFormField(initialValue: 'Soybean', readOnly: true, decoration: const InputDecoration(labelText: 'Crop', prefixIcon: Icon(Icons.grass_outlined)), validator: requiredScanField), const SizedBox(height: 14), DropdownButtonFormField<String>(initialValue: fieldId, decoration: const InputDecoration(labelText: 'Field', prefixIcon: Icon(Icons.location_on_outlined)), items: availableFields.map((field) => DropdownMenuItem(value: field['id'].toString(), child: Text(field['name']?.toString() ?? 'Field'))).toList(), onChanged: (value) => setState(() => fieldId = value), validator: (value) => value == null || value.isEmpty ? 'Create a field before uploading' : null)])), if (availableFields.isEmpty) TextButton(onPressed: () async { await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FieldSetupScreen())); if (mounted) await _loadFields(); }, child: const Text('Add your first field')), const SizedBox(height: 20), AppCard(child: Column(children: [Icon(fileName == null ? Icons.video_file_outlined : Icons.check_circle_rounded, color: fileName == null ? RakshakColors.leaf : RakshakColors.ink, size: 44), const SizedBox(height: 8), Text(fileName ?? 'No video selected', style: Theme.of(context).textTheme.titleMedium), const SizedBox(height: 4), const Text('MP4 or MOV · up to 100 MB'), const SizedBox(height: 14), SecondaryAction(label: 'Choose video', icon: Icons.upload_file_rounded, onPressed: chooseVideo), const SizedBox(height: 10), SecondaryAction(label: 'Record in app', icon: Icons.videocam_outlined, onPressed: recordVideo)])), if (uploadError != null) ...[const SizedBox(height: 12), AppCard(color: RakshakColors.error, child: Text('Upload failed: $uploadError', style: const TextStyle(color: RakshakColors.errorText)))], const SizedBox(height: 12), CheckboxListTile(contentPadding: EdgeInsets.zero, value: consent, onChanged: (value) => setState(() { consent = value ?? false; uploadError = null; }), controlAffinity: ListTileControlAffinity.leading, title: const Text('I understand this is decision support, not a confirmed diagnosis.')), const SizedBox(height: 8), PrimaryAction(label: uploading ? 'Uploading...' : 'Continue to quality check', icon: Icons.arrow_forward_rounded, onPressed: fileName != null && fieldId != null && consent && !uploading ? continueToQualityCheck : null), const SizedBox(height: 16), const SafetyNote()]));
+  Widget build(BuildContext context) => AppPage(
+      title: 'New scan',
+      onBack: () => Navigator.pop(context),
+      child: PageContent(children: [
+        Text('Capture a clear view',
+            style: Theme.of(context).textTheme.headlineSmall),
+        const SizedBox(height: 8),
+        const Text(
+            'Choose the crop and field, then send a short walkthrough video.'),
+        const SizedBox(height: 24),
+        Form(
+            key: formKey,
+            child: Column(children: [
+              TextFormField(
+                  initialValue: 'Soybean',
+                  readOnly: true,
+                  decoration: const InputDecoration(
+                      labelText: 'Crop',
+                      prefixIcon: Icon(Icons.grass_outlined)),
+                  validator: requiredScanField),
+              const SizedBox(height: 14),
+              DropdownButtonFormField<String>(
+                  key: ValueKey(fieldId),
+                  initialValue: fieldId,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                      labelText: 'Field',
+                      prefixIcon: Icon(Icons.location_on_outlined)),
+                  items: availableFields
+                      .map((field) => DropdownMenuItem(
+                          value: field['id'].toString(),
+                          child: Text(field['name']?.toString() ?? 'Field')))
+                      .toList(),
+                  onChanged: (value) => setState(() => fieldId = value),
+                  validator: (value) => value == null || value.isEmpty
+                      ? 'Create a field before uploading'
+                      : null)
+            ])),
+        if (availableFields.isEmpty)
+          TextButton(
+              onPressed: () async {
+                await Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => const FieldSetupScreen()));
+                if (mounted) await _loadFields();
+              },
+              child: const Text('Add your first field')),
+        const SizedBox(height: 20),
+        AppCard(
+            child: Column(children: [
+          Icon(
+              fileName == null
+                  ? Icons.video_file_outlined
+                  : Icons.check_circle_rounded,
+              color: fileName == null ? RakshakColors.leaf : RakshakColors.ink,
+              size: 44),
+          const SizedBox(height: 8),
+          Text(fileName ?? 'No video selected',
+              style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 4),
+          const Text('MP4 or MOV · up to 100 MB'),
+          const SizedBox(height: 14),
+          SecondaryAction(
+              label: 'Choose video',
+              icon: Icons.upload_file_rounded,
+              onPressed: chooseVideo),
+          const SizedBox(height: 10),
+          SecondaryAction(
+              label: 'Record in app',
+              icon: Icons.videocam_outlined,
+              onPressed: recordVideo)
+        ])),
+        if (uploadError != null) ...[
+          const SizedBox(height: 12),
+          AppCard(
+              color: RakshakColors.error,
+              child: Text('Upload failed: $uploadError',
+                  style: const TextStyle(color: RakshakColors.errorText)))
+        ],
+        const SizedBox(height: 12),
+        CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            value: consent,
+            onChanged: (value) => setState(() {
+                  consent = value ?? false;
+                  uploadError = null;
+                }),
+            controlAffinity: ListTileControlAffinity.leading,
+            title: const Text(
+                'I agree to processing this field video for an AI assessment. This is decision support, not a confirmed diagnosis.')),
+        const SizedBox(height: 8),
+        PrimaryAction(
+            label: uploading ? 'Uploading...' : 'Continue to quality check',
+            icon: Icons.arrow_forward_rounded,
+            onPressed:
+                fileName != null && fieldId != null && consent && !uploading
+                    ? continueToQualityCheck
+                    : null),
+        const SizedBox(height: 16),
+        const SafetyNote()
+      ]));
 }
-String? requiredScanField(String? value) => value == null || value.trim().isEmpty ? 'Required' : null;
+
+String? requiredScanField(String? value) =>
+    value == null || value.trim().isEmpty ? 'Required' : null;
 
 class CameraGuidanceScreen extends StatefulWidget {
   const CameraGuidanceScreen({super.key});
-  @override State<CameraGuidanceScreen> createState() => _CameraGuidanceState();
+  @override
+  State<CameraGuidanceScreen> createState() => _CameraGuidanceState();
 }
 
 class _CameraGuidanceState extends State<CameraGuidanceScreen> {
@@ -47,10 +225,13 @@ class _CameraGuidanceState extends State<CameraGuidanceScreen> {
     if (!mounted) return;
     if (!cameraStatus.isGranted || !microphoneStatus.isGranted) {
       setState(() => capturing = false);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Camera and microphone access are required to record a field video.')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+              'Camera and microphone access are required to record a field video.')));
       return;
     }
-    final video = await ImagePicker().pickVideo(source: ImageSource.camera, maxDuration: const Duration(seconds: 30));
+    final video = await ImagePicker().pickVideo(
+        source: ImageSource.camera, maxDuration: const Duration(seconds: 30));
     if (!mounted) return;
     setState(() => capturing = false);
     if (video != null) Navigator.of(context).pop(video.path);
@@ -69,17 +250,26 @@ class _CameraGuidanceState extends State<CameraGuidanceScreen> {
             child: Container(
               width: 220,
               height: 300,
-              decoration: BoxDecoration(border: Border.all(color: RakshakColors.signal, width: 2), borderRadius: BorderRadius.circular(22)),
-              child: const Center(child: Icon(Icons.eco_rounded, color: RakshakColors.signal, size: 76)),
+              decoration: BoxDecoration(
+                  border: Border.all(color: RakshakColors.signal, width: 2),
+                  borderRadius: BorderRadius.circular(22)),
+              child: const Center(
+                  child: Icon(Icons.eco_rounded,
+                      color: RakshakColors.signal, size: 76)),
             ),
           ),
         ),
         Padding(
           padding: const EdgeInsets.all(20),
           child: Column(children: [
-            const Text('Record for 10–30 seconds. Walk slowly, keep leaves 30–60 cm away, and avoid shaking the camera.', textAlign: TextAlign.center),
+            const Text(
+                'Record for 10–30 seconds. Walk slowly, keep leaves 30–60 cm away, and avoid shaking the camera.',
+                textAlign: TextAlign.center),
             const SizedBox(height: 14),
-            PrimaryAction(label: capturing ? 'Opening camera...' : 'Capture video', icon: Icons.fiber_manual_record, onPressed: capturing ? null : captureVideo),
+            PrimaryAction(
+                label: capturing ? 'Opening camera...' : 'Capture video',
+                icon: Icons.fiber_manual_record,
+                onPressed: capturing ? null : captureVideo),
           ]),
         ),
       ]),
@@ -92,22 +282,165 @@ class VideoQualityCheckScreen extends StatelessWidget {
   final String? videoId;
   final String? filePath;
   @override
-  Widget build(BuildContext context) => AppPage(title: 'Video uploaded', onBack: () => Navigator.pop(context), child: PageContent(children: [AppCard(child: Column(children: [const Icon(Icons.cloud_upload_outlined, color: RakshakColors.ink, size: 58), const SizedBox(height: 12), Text(videoId == null ? 'The upload did not return a video record.' : 'Your video is queued for backend validation and analysis.', style: const TextStyle(fontWeight: FontWeight.w800), textAlign: TextAlign.center)])), const SizedBox(height: 24), const AppCard(child: Text('Quality results are shown only after the backend processes this video.')), const SizedBox(height: 16), PrimaryAction(label: 'Check analysis status', icon: Icons.auto_awesome, onPressed: videoId == null ? null : () => navigateTo(context, AnalyzingCropHealthScreen(videoId: videoId!)))]));
+  Widget build(BuildContext context) => AppPage(
+      title: 'Video uploaded',
+      onBack: () => Navigator.pop(context),
+      child: PageContent(children: [
+        AppCard(
+            child: Column(children: [
+          const Icon(Icons.cloud_upload_outlined,
+              color: RakshakColors.ink, size: 58),
+          const SizedBox(height: 12),
+          Text(
+              videoId == null
+                  ? 'The upload did not return a video record.'
+                  : 'Your video is queued for backend validation and analysis.',
+              style: const TextStyle(fontWeight: FontWeight.w800),
+              textAlign: TextAlign.center)
+        ])),
+        const SizedBox(height: 24),
+        const AppCard(
+            child: Text(
+                'Quality results are shown only after the backend processes this video.')),
+        const SizedBox(height: 16),
+        PrimaryAction(
+            label: 'Check analysis status',
+            icon: Icons.auto_awesome,
+            onPressed: videoId == null
+                ? null
+                : () => navigateTo(
+                    context, AnalyzingCropHealthScreen(videoId: videoId!)))
+      ]));
 }
 
 class QualityCheckFailedScreen extends StatelessWidget {
   const QualityCheckFailedScreen({super.key});
   @override
-  Widget build(BuildContext context) => AppPage(title: 'Video needs another try', onBack: () => Navigator.pop(context), child: PageContent(crossAxisAlignment: CrossAxisAlignment.center, children: [const SizedBox(height: 64), const Icon(Icons.videocam_off_outlined, color: RakshakColors.warningText, size: 72), const SizedBox(height: 20), Text('We could not use this video', textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineSmall), const SizedBox(height: 10), const Text('Try better light, slower movement, and keep the crop visible in every frame.', textAlign: TextAlign.center), const SizedBox(height: 24), PrimaryAction(label: 'Try again', onPressed: () => navigateTo(context, const NewScanScreen()))]));
+  Widget build(BuildContext context) => AppPage(
+      title: 'Video needs another try',
+      onBack: () => Navigator.pop(context),
+      child:
+          PageContent(crossAxisAlignment: CrossAxisAlignment.center, children: [
+        const SizedBox(height: 64),
+        const Icon(Icons.videocam_off_outlined,
+            color: RakshakColors.warningText, size: 72),
+        const SizedBox(height: 20),
+        Text('We could not use this video',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.headlineSmall),
+        const SizedBox(height: 10),
+        const Text(
+            'Try better light, slower movement, and keep the crop visible in every frame.',
+            textAlign: TextAlign.center),
+        const SizedBox(height: 24),
+        PrimaryAction(
+            label: 'Try again',
+            onPressed: () => navigateTo(context, const NewScanScreen()))
+      ]));
 }
 
-class AnalyzingCropHealthScreen extends StatefulWidget { const AnalyzingCropHealthScreen({super.key, required this.videoId}); final String videoId; @override State<AnalyzingCropHealthScreen> createState() => _AnalyzingState(); }
+class AnalyzingCropHealthScreen extends StatefulWidget {
+  const AnalyzingCropHealthScreen({super.key, required this.videoId});
+  final String videoId;
+  @override
+  State<AnalyzingCropHealthScreen> createState() => _AnalyzingState();
+}
+
 class _AnalyzingState extends State<AnalyzingCropHealthScreen> {
-  late Future<Map<String, dynamic>> status;
+  Map<String, dynamic>? status;
   Timer? pollTimer;
-  bool terminal = false;
-  Future<Map<String, dynamic>> fetchStatus() async { final value = await ApiClient.instance.videoStatus(widget.videoId); terminal = ['ready', 'failed', 'insufficient_evidence'].contains(value['status']); return value; }
-  @override void initState() { super.initState(); status = fetchStatus(); pollTimer = Timer.periodic(const Duration(seconds: 5), (_) { if (mounted && !terminal) setState(() => status = fetchStatus()); }); }
-  @override void dispose() { pollTimer?.cancel(); super.dispose(); }
-  @override Widget build(BuildContext context) => FutureBuilder<Map<String, dynamic>>(future: status, builder: (context, snapshot) { if (snapshot.connectionState != ConnectionState.done) return const Scaffold(body: Center(child: CircularProgressIndicator())); if (snapshot.hasError) return AppPage(title: 'Analysis status', child: PageContent(children: [const AppCard(child: Text('Could not load status. Please try again.')), PrimaryAction(label: 'Try again', onPressed: () => setState(() => status = ApiClient.instance.videoStatus(widget.videoId)))])); final value = snapshot.data!; final state = value['status']?.toString() ?? 'unknown'; final complete = state == 'ready' || state == 'insufficient_evidence' || state == 'failed'; return AppPage(title: 'Analysis status', child: PageContent(crossAxisAlignment: CrossAxisAlignment.center, children: [const SizedBox(height: 44), const Icon(Icons.auto_awesome, color: RakshakColors.ink, size: 56), const SizedBox(height: 18), Text('Current status: $state', style: Theme.of(context).textTheme.headlineSmall), const SizedBox(height: 8), Text(complete ? 'The backend has completed processing this video.' : 'The backend is still processing this video. Check again shortly.', textAlign: TextAlign.center), const SizedBox(height: 28), PrimaryAction(label: complete ? 'View report' : 'Refresh status', onPressed: () { if (complete) { navigateTo(context, CropHealthReportScreen(videoId: widget.videoId)); } else { setState(() => status = ApiClient.instance.videoStatus(widget.videoId)); } })])); });
+  bool loading = false;
+  String? error;
+  bool get complete =>
+      ['ready', 'failed', 'insufficient_evidence'].contains(status?['status']);
+  @override
+  void initState() {
+    super.initState();
+    fetchStatus();
+  }
+
+  Future<void> fetchStatus() async {
+    if (loading) return;
+    pollTimer?.cancel();
+    setState(() {
+      loading = true;
+      error = null;
+    });
+    try {
+      final value = await ApiClient.instance.videoStatus(widget.videoId);
+      if (mounted) setState(() => status = value);
+    } catch (exception) {
+      if (mounted) {
+        setState(() => error = safeErrorMessage(exception,
+            fallback: 'Could not check your scan. Try again when connected.'));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => loading = false);
+        if (!complete && error == null) {
+          pollTimer = Timer(const Duration(seconds: 5), fetchStatus);
+        }
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    pollTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = status?['status']?.toString().replaceAll('_', ' ') ??
+        'Checking your scan';
+    return AppPage(
+        title: 'Analysis status',
+        onBack: () => Navigator.pop(context),
+        child: PageContent(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const SizedBox(height: 36),
+              Icon(complete ? Icons.task_alt : Icons.hourglass_top,
+                  color: RakshakColors.ink, size: 56),
+              const SizedBox(height: 20),
+              Text(state,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.headlineSmall),
+              const SizedBox(height: 12),
+              Text(
+                  complete
+                      ? 'Your scan result is available.'
+                      : 'Your video is saved. You can leave this screen and return from scan history.',
+                  textAlign: TextAlign.center),
+              if (loading)
+                const Padding(
+                    padding: EdgeInsets.all(20),
+                    child: LinearProgressIndicator()),
+              if (error != null)
+                Padding(
+                    padding: const EdgeInsets.only(top: 20),
+                    child: AppCard(
+                        color: RakshakColors.error, child: Text(error!))),
+              const SizedBox(height: 24),
+              PrimaryAction(
+                  label: complete
+                      ? 'View result'
+                      : error != null
+                          ? 'Try again'
+                          : 'Check now',
+                  onPressed: loading
+                      ? null
+                      : () async {
+                          if (complete) {
+                            await Navigator.of(context).push(MaterialPageRoute(
+                                builder: (_) => CropHealthReportScreen(
+                                    videoId: widget.videoId)));
+                            if (mounted) fetchStatus();
+                          } else {
+                            fetchStatus();
+                          }
+                        }),
+            ]));
+  }
 }
