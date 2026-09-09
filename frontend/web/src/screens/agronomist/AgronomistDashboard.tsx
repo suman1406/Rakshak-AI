@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { liveWorkspaceApi } from '../../services/liveWorkspaceApi';
 
@@ -23,6 +23,7 @@ export const AgronomistDashboard: React.FC = () => {
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const requestVersion = useRef(0);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -34,6 +35,7 @@ export const AgronomistDashboard: React.FC = () => {
   const [sortBy, setSortBy] = useState<'priority' | 'date'>('priority');
 
   const fetchQueue = async () => {
+    const version = ++requestVersion.current;
     setLoading(true);
     setError('');
     try {
@@ -57,14 +59,16 @@ export const AgronomistDashboard: React.FC = () => {
       sorted.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
     }
 
+    if (version !== requestVersion.current) return;
     setMetrics(m);
     setCases(sorted);
-    } catch (e) { setError(e instanceof Error ? e.message : 'Could not load review queue'); }
-    finally { setLoading(false); }
+    } catch (e) { if (version === requestVersion.current) setError(e instanceof Error ? e.message : 'Could not load review queue'); }
+    finally { if (version === requestVersion.current) setLoading(false); }
   };
 
   useEffect(() => {
     fetchQueue();
+    return () => { requestVersion.current++; };
   }, [search, statusFilter, severityFilter, cropFilter, diseaseFilter, confidenceMin, sortBy]);
 
   const handleResetFilters = () => {

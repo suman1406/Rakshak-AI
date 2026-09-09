@@ -8,6 +8,8 @@ import { FarmerWorkspace } from './screens/farmer/FarmerWorkspace';
 
 // Public Pages
 import { LandingPage } from './screens/public/LandingPage';
+import { ForFarmersPage } from './screens/public/ForFarmersPage';
+import { NotFoundPage } from './screens/public/NotFoundPage';
 import { AboutPage } from './screens/public/AboutPage';
 import { HowItWorksPage } from './screens/public/HowItWorksPage';
 import { PricingPage } from './screens/public/PricingPage';
@@ -49,6 +51,7 @@ export function App() {
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<LandingPage />} />
+          <Route path="/for-farmers" element={<ForFarmersPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/how-it-works" element={<HowItWorksPage />} />
           <Route path="/pricing" element={<PricingPage />} />
@@ -130,7 +133,7 @@ export function App() {
           </Route>
 
           {/* Fallback Route */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Router></DemoModeProvider>
     </AuthProvider>
