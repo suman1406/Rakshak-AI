@@ -9,6 +9,7 @@ from .farms import router as farms_router
 from .fields import router as fields_router
 from .onboarding import router as onboarding_router
 from .videos import router as videos_router
+from .contact import router as contact_router
 
 api_router = APIRouter()
 
@@ -22,3 +23,4 @@ api_router.include_router(demo_router)
 api_router.include_router(agronomist_router)
 api_router.include_router(b2b_router)
 api_router.include_router(admin_router)
+api_router.include_router(contact_router)
