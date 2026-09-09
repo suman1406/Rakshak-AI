@@ -20,6 +20,7 @@ import { RegisterPage, ForgotPasswordPage } from './screens/auth/RegisterPage';
 import { OnboardingPage } from './screens/auth/OnboardingPage';
 import { ApplicationPage } from './screens/auth/ApplicationPage';
 import { AdminDashboard } from './screens/admin/AdminDashboard';
+import { InquiriesPage } from './screens/admin/InquiriesPage';
 import { DemoDataPage } from './screens/admin/DemoDataPage';
 
 // Agronomist Pages
@@ -95,6 +96,7 @@ export function App() {
             <Route path="farms/:id" element={<OrgFarmDetailsPage />} />
             <Route path="fields/:id" element={<OrgFieldDetailsPage />} />
             <Route path="reports" element={<OrgReportsPage />} />
+            <Route path="scans" element={<FarmerWorkspace basePath="/organization/scans" />} />
           </Route>
 
           {/* Settings Routes (Protected) */}
@@ -123,6 +125,7 @@ export function App() {
           >
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="inquiries" element={<InquiriesPage />} />
             <Route path="demo-data" element={<DemoDataPage />} />
           </Route>
 

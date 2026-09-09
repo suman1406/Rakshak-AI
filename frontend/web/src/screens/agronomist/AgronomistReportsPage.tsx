@@ -1,25 +1,14 @@
-import React from 'react';
-import { FileBarChart } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { apiClient } from '../../services/apiClient';
+import { downloadCsv } from '../../services/reportExport';
 
+type Review = { id: string; diagnosis_id: string; field_name: string; reviewed_at: string; is_healthy: boolean; severity_level: number; notes: string | null; elapsed_minutes: number };
 export const AgronomistReportsPage: React.FC = () => {
-  return (
-    <div className="space-y-6 font-sans">
-      <div className="bg-pure-surface border border-structural p-6 rounded-3xl shadow-2xs space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="p-1.5 bg-field-ink text-lime-signal rounded-lg">
-              <FileBarChart size={18} />
-            </span>
-            <h1 className="text-2xl font-extrabold text-field-ink">Agronomist Audit Reports</h1>
-          </div>
-        </div>
-        <p className="text-xs text-muted-leaf">Exportable logs for verification SLAs and disease trend audits</p>
-      </div>
-
-      <div className="bg-pure-surface border border-structural p-6 rounded-3xl shadow-xs space-y-4">
-        <h3 className="font-bold text-xs text-field-ink">Report API unavailable</h3>
-        <p className="text-xs text-muted-leaf">The backend has no agronomist SLA export endpoint. Demo reports and fake downloads were removed rather than presenting them as live records.</p>
-      </div>
-    </div>
-  );
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  async function load() { setLoading(true); setError(''); try { setReviews(await apiClient.getAgronomistReviews()); } catch (e) { setError(e instanceof Error ? e.message : 'Could not load reviews'); } finally { setLoading(false); } }
+  useEffect(() => { void load(); }, []);
+  return <div className="farmer-workspace"><header className="workspace-heading"><div><p className="eyebrow">EXPERT AUDIT</p><h1>Your completed reviews</h1><p>Latest 500 records. Elapsed time is measured from upload to review, including queue time.</p></div><button className="action secondary" disabled={!reviews.length || loading || !!error} onClick={() => downloadCsv('rakshak-reviews.csv', [['Review reference', 'Field', 'Reviewed at', 'Healthy override', 'Visual severity', 'Elapsed minutes', 'Notes'], ...reviews.map(review => [review.id, review.field_name, review.reviewed_at, review.is_healthy, review.severity_level, review.elapsed_minutes, review.notes])])}>Download CSV</button></header>{error && <p role="alert">{error}</p>}<button className="text-action" disabled={loading} onClick={() => void load()}>Refresh</button><section className="workspace-panel">{loading ? <p>Loading review records…</p> : !reviews.length ? <p>Your completed reviews will appear here.</p> : <ul className="scan-list">{reviews.map(review => <li key={review.id}><div><strong>{review.field_name}</strong><p>{new Date(review.reviewed_at).toLocaleString()}</p><p>{review.notes || 'No notes recorded'}</p></div><Link className="text-action" to={`/agronomist/cases/${review.diagnosis_id}`}>View evidence</Link></li>)}</ul>}</section></div>;
 };

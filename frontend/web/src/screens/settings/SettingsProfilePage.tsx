@@ -1,130 +1,16 @@
 import React, { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { apiClient } from '../../services/apiClient';
 import { useAuth } from '../../context/AuthContext';
-import { RoleBadge } from '../../components/shared/RoleBadge';
-import { Link, useLocation } from 'react-router-dom';
-import { User, Building2, Bell, Shield, LogOut, Sparkles, CheckCircle2 } from 'lucide-react';
-
+import { Button } from '../../components/ui/button';
 export const SettingsLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const location = useLocation();
-  const { user, role, logout } = useAuth();
-
-  const tabs = [
-    { name: 'User Profile', path: '/settings/profile', icon: User },
-    { name: 'Organization', path: '/settings/organization', icon: Building2 },
-    { name: 'Notifications', path: '/settings/notifications', icon: Bell },
-    { name: 'Security & Consent', path: '/settings/security', icon: Shield },
-  ];
-
-  return (
-    <div className="space-y-6 font-sans max-w-4xl mx-auto">
-      <div className="bg-pure-surface border border-structural p-6 rounded-3xl shadow-2xs space-y-2">
-        <h1 className="text-2xl font-extrabold text-field-ink">Settings & Preferences</h1>
-        <p className="text-xs text-muted-leaf">Manage user profiles, team permissions, and privacy consent</p>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-structural pb-1 overflow-x-auto text-xs">
-        {tabs.filter(tab => role !== 'farmer' || tab.path === '/settings/profile' || tab.path === '/settings/security').map((tab) => {
-          const Icon = tab.icon;
-          const isActive = location.pathname === tab.path;
-          return (
-            <Link
-              key={tab.path}
-              to={tab.path}
-              className={`px-4 py-2.5 rounded-xl font-bold transition flex items-center gap-2 whitespace-nowrap ${
-                isActive
-                  ? 'bg-field-ink text-white shadow-xs'
-                  : 'text-muted-leaf bg-pure-surface hover:text-field-ink border border-structural'
-              }`}
-            >
-              <Icon size={14} />
-              <span>{tab.name}</span>
-            </Link>
-          );
-        })}
-      </div>
-
-      <div className="bg-pure-surface border border-structural p-6 sm:p-8 rounded-3xl shadow-xs">
-        {children}
-      </div>
-    </div>
-  );
+  const location = useLocation(); const { role } = useAuth();
+  const tabs = [{ name: 'Profile', path: '/settings/profile' }, ...(['enterprise','admin','org_admin'].includes(role || '') ? [{ name: 'Organization', path: '/settings/organization' }] : []), { name: 'Scan updates', path: '/settings/notifications' }, { name: 'Security & consent', path: '/settings/security' }];
+  return <div className="farmer-workspace settings-workspace"><header className="workspace-heading"><div><h1>Your settings</h1><p>Manage your account and how your records are used.</p></div></header><nav className="settings-tabs" aria-label="Settings sections">{tabs.map(tab => <Link key={tab.path} to={tab.path} aria-current={location.pathname === tab.path ? 'page' : undefined}>{tab.name}</Link>)}</nav><section className="workspace-panel">{children}</section></div>;
 };
-
 export const SettingsProfilePage: React.FC = () => {
-  const { user, role, logout } = useAuth();
-  const [name, setName] = useState(user?.name || '');
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState('');
-  async function save() {
-    setSaving(true); setMessage('');
-    try { await apiClient.updateProfile({ display_name: name.trim() }); setMessage('Your profile was saved.'); }
-    catch (e) { setMessage(e instanceof Error ? e.message : 'Could not save your profile.'); }
-    finally { setSaving(false); }
-  }
-
-  return (
-    <SettingsLayout>
-      <div className="space-y-6 text-xs">
-        <div className="flex items-center justify-between pb-4 border-b border-structural">
-          <div>
-            <h3 className="font-bold text-sm text-field-ink">User Profile</h3>
-            <p className="text-muted-leaf">Personal details for active persona</p>
-          </div>
-          <RoleBadge role={role || 'farmer'} />
-        </div>
-
-        <div className="space-y-4">
-          <div>
-            <label className="block font-semibold mb-1">Full Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={event => setName(event.target.value)}
-              maxLength={255}
-              className="w-full p-2.5 rounded-xl border border-structural bg-field-canvas font-medium outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="block font-semibold mb-1">Email Address</label>
-            <input
-              type="text"
-              readOnly
-              value={user?.email || ''}
-              className="w-full p-2.5 rounded-xl border border-structural bg-field-canvas font-medium outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="block font-semibold mb-1">Assigned District Coverage</label>
-            <input
-              type="text"
-              readOnly
-              value={user?.district || 'Not assigned'}
-              className="w-full p-2.5 rounded-xl border border-structural bg-field-canvas font-medium outline-none"
-            />
-          </div>
-
-          <div className="p-4 bg-soft-healthy rounded-2xl border border-emerald-200 flex items-center justify-between text-emerald-950 font-semibold">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 size={16} />
-              <span>Your workspace access is active</span>
-            </div>
-          </div>
-
-          <button className="action" onClick={save} disabled={saving || !name.trim()}>{saving ? 'Saving…' : 'Save profile'}</button>
-          {message && <p role="status">{message}</p>}
-          <button
-            onClick={logout}
-            className="px-5 py-2.5 bg-red-50 text-alert-red border border-red-200 font-bold rounded-xl hover:bg-red-100 transition flex items-center gap-2"
-          >
-            <LogOut size={14} />
-            <span>Sign out</span>
-          </button>
-        </div>
-      </div>
-    </SettingsLayout>
-  );
+  const { user, role, refreshUser } = useAuth();
+  const [name, setName] = useState(user?.name || ''); const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [message, setMessage] = useState('');
+  async function save(event: React.FormEvent) { event.preventDefault(); setBusy(true); setError(''); setMessage(''); try { await apiClient.updateProfile({ display_name: name.trim() }); await refreshUser(); setMessage('Your profile is saved.'); } catch (e) { setError(e instanceof Error ? e.message : 'Could not save your profile'); } finally { setBusy(false); } }
+  return <SettingsLayout><h2>Your profile</h2><form className="workspace-form" onSubmit={save}><label htmlFor="profile-name">Your name<input id="profile-name" value={name} onChange={e => setName(e.target.value)} required maxLength={255} autoComplete="name" /></label><dl className="profile-details"><div><dt>Account</dt><dd>{user?.email}</dd></div><div><dt>Workspace role</dt><dd>{role?.replace('_',' ')}</dd></div></dl>{error && <p role="alert" className="message error">{error}</p>}{message && <p role="status" className="message">{message}</p>}<Button busy={busy} disabled={!name.trim()}>{busy ? 'Saving…' : 'Save profile'}</Button></form></SettingsLayout>;
 };

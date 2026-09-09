@@ -1,25 +1,19 @@
-import React from 'react';
-import { FileBarChart } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { liveWorkspaceApi } from '../../services/liveWorkspaceApi';
+import { exportFields } from '../../services/reportExport';
+import { Farm } from '../../types';
 
 export const OrgReportsPage: React.FC = () => {
-  return (
-    <div className="space-y-6 font-sans">
-      <div className="bg-pure-surface border border-structural p-6 rounded-3xl shadow-2xs space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="p-1.5 bg-field-ink text-lime-signal rounded-lg">
-              <FileBarChart size={18} />
-            </span>
-            <h1 className="text-2xl font-extrabold text-field-ink">Organization Intelligence Reports</h1>
-          </div>
-        </div>
-        <p className="text-xs text-muted-leaf">Generate exportable PDF/CSV reports for FPO management and regional authorities</p>
-      </div>
-
-      <div className="bg-pure-surface border border-structural p-6 rounded-3xl shadow-xs space-y-4 text-xs">
-        <h3 className="font-bold text-sm text-field-ink">Report exports are not available yet</h3>
-        <p className="text-muted-leaf leading-relaxed">The current backend exposes dashboard and drill-down analytics, but it does not provide report creation, storage, or download endpoints. Fixture reports have been removed so this screen does not claim that an export was generated.</p>
-      </div>
-    </div>
-  );
+  const [farms, setFarms] = useState<Farm[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  async function load() {
+    setLoading(true); setError('');
+    try { setFarms(await liveWorkspaceApi.getFarms()); }
+    catch (e) { setError(e instanceof Error ? e.message : 'Could not load records'); }
+    finally { setLoading(false); }
+  }
+  useEffect(() => { void load(); }, []);
+  const count = farms.reduce((sum, farm) => sum + farm.fields.length, 0);
+  return <div className="farmer-workspace"><header className="workspace-heading"><div><p className="eyebrow">ORGANIZATION RECORDS</p><h1>Field reports</h1><p>Download the latest assessment for each field in your organization.</p></div></header><section className="workspace-panel"><h2>Field assessment register</h2>{error ? <p role="alert">{error}</p> : <p>{loading ? 'Loading your records…' : `${count} fields across ${farms.length} farms. The export includes dates, indications and visual severity.`}</p>}<p className="safety-copy">Exports contain private field records. Share them only with authorized members. AI assessments remain advisory.</p><div className="workspace-actions"><button className="action" disabled={loading || !count || !!error} onClick={() => exportFields(farms)}>Download CSV</button><button className="action secondary" disabled={loading} onClick={() => void load()}>Refresh records</button></div></section></div>;
 };

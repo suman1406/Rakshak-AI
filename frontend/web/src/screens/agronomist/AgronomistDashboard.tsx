@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { liveWorkspaceApi } from '../../services/liveWorkspaceApi';
-import { useDemoMode } from '../../context/DemoModeContext';
+
 import { Case, AgronomistMetrics, ReviewStatus } from '../../types';
 import { SeverityBadge, ReviewStatusBadge } from '../../components/shared/RoleBadge';
 import {
@@ -18,10 +18,11 @@ import {
 } from 'lucide-react';
 
 export const AgronomistDashboard: React.FC = () => {
-  const { enabled: demoEnabled, workspace: demoWorkspace } = useDemoMode();
+
   const [metrics, setMetrics] = useState<AgronomistMetrics | null>(null);
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   // Filters
   const [search, setSearch] = useState('');
@@ -34,7 +35,9 @@ export const AgronomistDashboard: React.FC = () => {
 
   const fetchQueue = async () => {
     setLoading(true);
-    let c = demoEnabled ? [] : await liveWorkspaceApi.getCases();
+    setError('');
+    try {
+    let c = await liveWorkspaceApi.getCases();
     c = c.filter((item) =>
       (statusFilter === 'all' || item.reviewStatus === statusFilter) &&
       (severityFilter === 'all' || item.severity === severityFilter) &&
@@ -43,7 +46,7 @@ export const AgronomistDashboard: React.FC = () => {
       (!confidenceMin || item.confidence >= confidenceMin) &&
       (!search.trim() || [item.id, item.farmName, item.fieldName, item.fpoName].some((value) => value.toLowerCase().includes(search.trim().toLowerCase())))
     );
-    const m = demoEnabled ? { openCases: demoWorkspace?.agronomist?.open_cases || 0, highPriorityCases: 0, awaitingReview: 0, reviewedThisWeek: 0, averageReviewTimeMinutes: 0 } : await liveWorkspaceApi.getAgronomistMetrics(c);
+    const m = await liveWorkspaceApi.getAgronomistMetrics(c);
 
     // Sorting
     let sorted = [...c];
@@ -56,12 +59,13 @@ export const AgronomistDashboard: React.FC = () => {
 
     setMetrics(m);
     setCases(sorted);
-    setLoading(false);
+    } catch (e) { setError(e instanceof Error ? e.message : 'Could not load review queue'); }
+    finally { setLoading(false); }
   };
 
   useEffect(() => {
     fetchQueue();
-  }, [search, statusFilter, severityFilter, cropFilter, diseaseFilter, confidenceMin, sortBy, demoEnabled, demoWorkspace]);
+  }, [search, statusFilter, severityFilter, cropFilter, diseaseFilter, confidenceMin, sortBy]);
 
   const handleResetFilters = () => {
     setSearch('');
@@ -75,6 +79,7 @@ export const AgronomistDashboard: React.FC = () => {
 
   return (
     <div className="space-y-6 font-sans">
+      {error && <div className="message error" role="alert">{error}<button onClick={() => void fetchQueue()}>Try again</button></div>}
       {/* Page Title & Metrics Bar */}
       <div className="bg-pure-surface border border-structural p-6 rounded-3xl shadow-2xs space-y-4">
         <div className="flex items-center justify-between">
@@ -86,12 +91,12 @@ export const AgronomistDashboard: React.FC = () => {
               <h1 className="text-2xl font-extrabold text-field-ink">Agronomist Case Verification Queue</h1>
             </div>
             <p className="text-xs text-muted-leaf mt-1">
-              {demoEnabled ? demoWorkspace?.agronomist?.message || 'Demo mode has no review cases.' : 'Audit AI-generated soybean crop disease indications and issue verified advice'}
+              Review crop observations and add your independent assessment.
             </p>
           </div>
 
           <span className="text-xs font-mono bg-soft-healthy text-emerald-800 px-3 py-1 rounded-full font-bold">
-            Lab Operational SLA: 11m
+            Human review
           </span>
         </div>
 
@@ -115,7 +120,7 @@ export const AgronomistDashboard: React.FC = () => {
               <span className="font-extrabold text-lg text-emerald-900 font-mono">{metrics.reviewedThisWeek}</span>
             </div>
             <div className="p-3.5 bg-field-canvas rounded-2xl border border-structural">
-              <span className="text-[10px] text-muted-leaf uppercase font-mono block">Avg Review Time</span>
+              <span className="text-[10px] text-muted-leaf uppercase font-mono block">Upload to review</span>
               <span className="font-extrabold text-lg text-field-ink font-mono">{metrics.averageReviewTimeMinutes} mins</span>
             </div>
           </div>
@@ -129,6 +134,7 @@ export const AgronomistDashboard: React.FC = () => {
             <Search size={16} className="absolute left-3.5 top-3 text-muted-leaf" />
             <input
               type="text"
+              aria-label="Search review queue"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by Case ID, Farm, Field, or FPO..."
@@ -238,7 +244,7 @@ export const AgronomistDashboard: React.FC = () => {
               <Search size={20} />
             </div>
             <p className="font-bold text-sm text-field-ink">No matching cases found</p>
-            <p className="text-xs text-muted-leaf">{demoEnabled ? 'This is intentional: demo mode never fabricates AI diagnoses or human-review work.' : 'Try clearing your search query or adjusting filter parameters.'}</p>
+            <p className="text-xs text-muted-leaf">New requests appear here when a farmer asks for review. Clear filters to see all accessible cases.</p>
             <button
               onClick={handleResetFilters}
               className="px-4 py-2 bg-field-ink text-white font-bold text-xs rounded-xl"
@@ -306,3 +312,4 @@ export const AgronomistDashboard: React.FC = () => {
     </div>
   );
 };
+

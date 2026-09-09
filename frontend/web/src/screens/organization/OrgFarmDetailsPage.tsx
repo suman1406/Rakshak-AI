@@ -9,15 +9,20 @@ export const OrgFarmDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [farm, setFarm] = useState<Farm | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [revision, setRevision] = useState(0);
 
   useEffect(() => {
     const fetchFarm = async () => {
+      setLoading(true); setError('');
       if (!id) throw new Error('A farm identifier is required.');
       setFarm(await liveWorkspaceApi.getFarmById(id));
       setLoading(false);
     };
-    fetchFarm();
-  }, [id]);
+    fetchFarm().catch(e => { setError(e.message); setLoading(false); });
+  }, [id, revision]);
+
+  if (error) return <div className="message error" role="alert">{error}<button onClick={() => setRevision(value => value + 1)}>Try again</button></div>;
 
   if (loading || !farm) {
     return <div className="p-8 text-center text-xs text-muted-leaf">Loading farm intelligence profile...</div>;
@@ -82,7 +87,7 @@ export const OrgFarmDetailsPage: React.FC = () => {
                   <td className="p-3 font-bold text-field-ink">{f.name}</td>
                   <td className="p-3 text-muted-leaf">{f.crop}</td>
                   <td className="p-3 text-muted-leaf font-mono">{f.areaAcres} Acres</td>
-                  <td className="p-3 font-mono font-bold text-field-ink">{f.healthScore}/100</td>
+                  <td className="p-3 text-field-ink">Not validated</td>
                   <td className="p-3 font-semibold text-alert-red">{f.primaryDiseaseSignal || 'Healthy'}</td>
                   <td className="p-3 text-right">
                     <Link

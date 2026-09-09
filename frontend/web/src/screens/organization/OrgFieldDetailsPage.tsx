@@ -107,27 +107,27 @@ export const OrgFieldDetailsPage: React.FC = () => {
                 <th className="p-3 font-bold">Disease Indication</th>
                 <th className="p-3 font-bold">Confidence</th>
                 <th className="p-3 font-bold">Severity</th>
-                <th className="p-3 font-bold">Health Score</th>
+                
                 <th className="p-3 font-bold">Agronomist Verified</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-structural">
               {field.scanHistory.map((s) => (
                 <tr key={s.id} className="hover:bg-field-canvas/60 transition">
-                  <td className="p-3 font-mono text-field-ink">{s.date}</td>
+                  <td className="p-3 font-mono text-field-ink">{new Date(s.date).toLocaleString()}</td>
                   <td className="p-3 font-bold text-field-ink">{s.diseaseIndication}</td>
-                  <td className="p-3 font-mono">{s.confidence}%</td>
+                  <td className="p-3 font-mono">{s.confidence == null ? 'Not available' : `${s.confidence}%`}</td>
                   <td className="p-3">
                     <SeverityBadge severity={s.severity} />
                   </td>
-                  <td className="p-3 font-mono font-bold text-field-ink">{s.healthScore}/100</td>
+                  
                   <td className="p-3">
                     {s.verifiedByAgronomist ? (
                       <span className="inline-flex items-center gap-1 text-emerald-700 font-bold">
                         <CheckCircle2 size={14} /> Verified
                       </span>
                     ) : (
-                      <span className="text-muted-leaf font-mono">Pending</span>
+                      <span className="text-muted-leaf font-mono">No review recorded</span>
                     )}
                   </td>
                 </tr>
@@ -139,3 +139,4 @@ export const OrgFieldDetailsPage: React.FC = () => {
     </div>
   );
 };
+

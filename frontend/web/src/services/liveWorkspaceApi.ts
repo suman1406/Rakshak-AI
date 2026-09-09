@@ -9,14 +9,9 @@ const priority = (confidence?: number) => confidence == null || confidence < 0.6
 
 const toEvidenceFrames = (frames: RecordValue[] = []): EvidenceFrame[] => frames.map((frame, index) => ({
   frameNumber: frame.sequence_index ?? index + 1,
-  timestampSeconds: frame.sequence_index ?? index + 1,
   // Frame content is protected by bearer authentication. The UI deliberately does not
   // substitute a fixture image while the backend has no signed or token-aware image URL.
   thumbnailUrl: frame.evidence_url || '',
-  leafRegionsCount: 0,
-  lesionsCount: 0,
-  confidenceScore: Math.round((frame.is_selected ? 1 : 0) * 100),
-  leafRegions: [],
   notes: frame.is_selected ? 'Selected as evidence by the processing pipeline.' : 'Not selected as supporting evidence.',
 }));
 
@@ -29,25 +24,31 @@ const toCase = (diagnosis: RecordValue, context: Partial<RecordValue> = {}): Cas
   fieldName: context.field?.name || 'Not available',
   fpoName: context.farm?.org_id ? 'Organization workspace' : 'Not available',
   district: context.farm?.district || 'Not available',
-  crop: context.field?.crop_id || 'Soybean',
+  crop: 'Soybean',
   aiIndication: diseaseLabel(diagnosis.disease),
   confidence: Math.round((diagnosis.confidence || 0) * 100),
-  severity: severity(diagnosis.severity_level),
+  severity: diagnosis.is_unknown ? 'Uncertain' : severity(diagnosis.severity_level),
   submittedAt: diagnosis.created_at || '',
-  reviewStatus: diagnosis.verifications_count > 0 ? 'reviewed' : diagnosis.is_unknown ? 'needs_inspection' : 'awaiting_review',
+  reviewStatus: diagnosis.verifications_count > 0 || diagnosis.expert_review?.status === 'completed' ? 'reviewed' : diagnosis.is_unknown ? 'needs_inspection' : 'awaiting_review',
   priority: priority(diagnosis.confidence),
   estimatedAffectedPlantsPercent: Math.round((diagnosis.affected_plant_estimate || 0) * 100),
   framesAnalyzedCount: diagnosis.total_frames || 0,
   supportingFramesCount: diagnosis.supporting_frames || 0,
-  leafRegionsAnalyzedCount: 0,
-  probabilities: [{ disease: diseaseLabel(diagnosis.disease), probability: Math.round((diagnosis.confidence || 0) * 100) }],
+  probabilities: Object.entries(diagnosis.probability_distribution || {}).map(([disease, probability]) => ({ disease: diseaseLabel(disease), probability: Math.round(Number(probability) * 100) })).sort((a, b) => b.probability - a.probability),
   explanation: diagnosis.explanation || 'No explanation is available for this analysis.',
   evidenceFrames: toEvidenceFrames(diagnosis.frames),
+  agronomistVerification: diagnosis.expert_review?.status === 'completed' ? {
+    verifiedBy: diagnosis.expert_review.reviewer,
+    verifiedAt: diagnosis.expert_review.reviewed_at,
+    verifiedDisease: diagnosis.expert_review.disease,
+    expertNotes: diagnosis.expert_review.notes || 'No additional notes recorded.',
+  } : undefined,
 });
 
 const toField = (field: RecordValue, farm?: RecordValue, videos: RecordValue[] = []): Field => {
   const latest = videos[0];
-  const status = latest?.status === 'ready' ? 'At Risk' : latest?.status === 'insufficient_evidence' ? 'At Risk' : 'Healthy';
+  const diagnosis = latest?.status === 'ready' ? latest.diagnosis : null;
+  const status = !latest ? 'Not assessed' : !diagnosis || diagnosis.is_unknown ? 'Uncertain' : diagnosis.disease === 'healthy' ? 'Healthy' : 'At Risk';
   return {
     id: field.id,
     name: field.name,
@@ -55,23 +56,21 @@ const toField = (field: RecordValue, farm?: RecordValue, videos: RecordValue[] =
     farmName: farm?.name || 'Not available',
     fpoName: farm?.org_id ? 'Organization workspace' : 'Not available',
     district: farm?.district || 'Not available',
-    crop: field.crop_id || 'Not set',
+    crop: 'Soybean',
     areaAcres: field.area_hectares == null ? 0 : Number((field.area_hectares * 2.47105).toFixed(2)),
-    healthScore: 0,
     healthStatus: status,
     latestScanDate: latest?.created_at || '',
-    primaryDiseaseSignal: latest?.status === 'ready' ? 'Analysis available' : latest?.status || 'No scans yet',
-    severity: latest?.status === 'ready' ? 'Moderate' : 'Uncertain',
+    primaryDiseaseSignal: diagnosis ? diseaseLabel(diagnosis.disease) : latest?.status || 'No scans yet',
+    severity: !diagnosis || diagnosis.is_unknown ? 'Uncertain' : severity(diagnosis.severity_level),
     totalScansCount: videos.length,
     scanHistory: videos.map((video) => ({
       id: video.video_id,
       date: video.created_at,
-      crop: field.crop_id || 'Not set',
-      diseaseIndication: video.status === 'ready' ? 'Analysis available' : video.status,
-      confidence: 0,
-      severity: video.status === 'ready' ? 'Moderate' : 'Uncertain',
-      healthScore: 0,
-      verifiedByAgronomist: false,
+      crop: 'Soybean',
+      diseaseIndication: video.diagnosis ? diseaseLabel(video.diagnosis.disease) : video.status,
+      confidence: video.diagnosis ? Math.round(video.diagnosis.confidence * 100) : null,
+      severity: !video.diagnosis || video.diagnosis.is_unknown ? 'Uncertain' : severity(video.diagnosis.severity_level),
+      verifiedByAgronomist: (video.diagnosis?.verifications_count || 0) > 0,
     })),
   };
 };
@@ -95,13 +94,14 @@ export const liveWorkspaceApi = {
   },
 
   async getAgronomistMetrics(cases: Case[]): Promise<AgronomistMetrics> {
-    const reviewedThisWeek = cases.filter((item) => item.reviewStatus === 'reviewed' && Date.now() - new Date(item.submittedAt).getTime() < 7 * 24 * 60 * 60 * 1000).length;
+    const reviews = await apiClient.getAgronomistReviews() as RecordValue[];
+    const reviewedThisWeek = reviews.filter(item => Date.now() - new Date(item.reviewed_at).getTime() < 7 * 24 * 60 * 60 * 1000).length;
     return {
       openCases: cases.filter((item) => item.reviewStatus !== 'reviewed').length,
       highPriorityCases: cases.filter((item) => item.priority === 'high').length,
       awaitingReview: cases.filter((item) => item.reviewStatus === 'awaiting_review').length,
       reviewedThisWeek,
-      averageReviewTimeMinutes: 0,
+      averageReviewTimeMinutes: reviews.length ? Math.round(reviews.reduce((sum, item) => sum + item.elapsed_minutes, 0) / reviews.length) : 0,
     };
   },
 
@@ -109,7 +109,7 @@ export const liveWorkspaceApi = {
     const [farms, fields, videos] = await Promise.all([
       apiClient.listFarms() as Promise<RecordValue[]>,
       apiClient.listFields() as Promise<RecordValue[]>,
-      apiClient.listVideos() as Promise<RecordValue[]>,
+      apiClient.listAllVideos() as Promise<RecordValue[]>,
     ]);
     return farms
       .filter((farm) => !district || district === 'all' || farm.district === district)
@@ -123,9 +123,8 @@ export const liveWorkspaceApi = {
           district: farm.district || 'Not available',
           ownerName: farm.owner_user_id ? 'Farm member' : 'Not available',
           totalFieldsCount: farmFields.length,
-          healthScore: 0,
-          riskStatus: scans.some((scan) => scan.status === 'ready') ? 'Moderate Risk' : 'Low Risk',
-          diseaseSignalsCount: scans.filter((scan) => scan.status === 'ready').length,
+          riskStatus: farmFields.some(field => field.severity === 'Severe') ? 'High Risk' : farmFields.some(field => field.healthStatus === 'At Risk') ? 'Moderate Risk' : farmFields.length && farmFields.every(field => field.healthStatus === 'Healthy') ? 'Low Risk' : scans.length ? 'Uncertain' : 'Not assessed',
+          diseaseSignalsCount: farmFields.filter(field => field.healthStatus === 'At Risk').length,
           totalScansCount: scans.length,
           fields: farmFields,
           recentCases: [],
@@ -170,3 +169,4 @@ export const liveWorkspaceApi = {
     };
   },
 };
+

@@ -111,11 +111,11 @@ export const AgronomistCaseReviewPage: React.FC = () => {
         {/* Left Col: Probability Distribution & Frame Stats (5 cols) */}
         <div className="lg:col-span-5 bg-pure-surface border border-structural p-6 rounded-3xl shadow-xs space-y-5 text-xs">
           <div className="flex items-center justify-between border-b border-structural pb-3">
-            <h3 className="font-bold text-sm text-field-ink">AI Probability Distribution</h3>
+            <h3 className="font-bold text-sm text-field-ink">Model probability estimates</h3>
             <SeverityBadge severity={caseData.severity} />
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-3">{caseData.probabilities.length === 0 && <p className="text-muted-leaf">The full distribution was not stored for this older assessment.</p>}
             {caseData.probabilities.map((prob) => (
               <div key={prob.disease} className="space-y-1">
                 <div className="flex justify-between font-semibold">
@@ -155,7 +155,7 @@ export const AgronomistCaseReviewPage: React.FC = () => {
             </div>
             <div className="p-2.5 bg-field-canvas rounded-xl border border-structural">
               <span className="text-[10px] text-muted-leaf block">Leaf Regions</span>
-              <span className="font-bold text-field-ink font-mono">{caseData.leafRegionsAnalyzedCount}</span>
+              <span className="font-bold text-field-ink font-mono">Not measured</span>
             </div>
           </div>
         </div>
@@ -182,7 +182,7 @@ export const AgronomistCaseReviewPage: React.FC = () => {
             <div>
               <h2 className="text-base font-bold text-field-ink">Agronomist Verification Controls</h2>
               <p className="text-muted-leaf text-[11px]">
-                Submit your certified expert decision to update the field health ledger and advise the farmer.
+                Record your assessment and observations for the farmer. Model confidence and severity are not field-validated.
               </p>
             </div>
           </div>
@@ -192,7 +192,7 @@ export const AgronomistCaseReviewPage: React.FC = () => {
           <div className="p-4 bg-soft-healthy border border-emerald-300 rounded-2xl flex items-center justify-between text-emerald-950 font-bold">
             <div className="flex items-center gap-2">
               <CheckCircle2 size={18} className="text-emerald-700" />
-              <span>Verification was recorded in the backend review queue.</span>
+              <span>Your review is saved and available to the farmer.</span>
             </div>
             <Link to="/agronomist/dashboard" className="px-3 py-1 bg-field-ink text-white text-xs rounded-lg font-mono">
               Return to Queue
@@ -204,9 +204,9 @@ export const AgronomistCaseReviewPage: React.FC = () => {
           {error && <p role="alert" className="message error">{error}</p>}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block font-bold mb-1.5 text-field-ink">Verification Action</label>
+              <label htmlFor="review-action" className="block font-bold mb-1.5 text-field-ink">Verification action</label>
               <select
-                value={decision}
+                id="review-action" value={decision}
                 onChange={(e) => setDecision(e.target.value as any)}
                 className="w-full p-3 rounded-xl border border-structural bg-field-canvas font-medium text-xs outline-none"
               >
@@ -219,9 +219,9 @@ export const AgronomistCaseReviewPage: React.FC = () => {
 
             {decision === 'changed' && (
               <div>
-                <label className="block font-bold mb-1.5 text-field-ink">Corrected Disease Diagnosis</label>
+                <label htmlFor="review-disease" className="block font-bold mb-1.5 text-field-ink">Corrected disease</label>
                 <select
-                  value={verifiedDisease}
+                  id="review-disease" value={verifiedDisease}
                   onChange={(e) => setVerifiedDisease(e.target.value)}
                   className="w-full p-3 rounded-xl border border-structural bg-field-canvas font-medium text-xs outline-none"
                 >
@@ -235,8 +235,9 @@ export const AgronomistCaseReviewPage: React.FC = () => {
 
           {decision !== 'marked_healthy' && decision !== 'marked_uncertain' && <div className="workspace-form"><label>Your independent severity assessment<select value={expertSeverity} onChange={e => setExpertSeverity(e.target.value)}><option value="0">Healthy</option><option value="1">Early</option><option value="2">Moderate</option><option value="3">Severe</option></select></label><label>Your estimated affected percentage<input type="number" min="0" max="100" step="1" required value={affectedPercent} onChange={e => setAffectedPercent(e.target.value)} /></label></div>}
           <div>
-            <label className="block font-bold mb-1.5 text-field-ink">Expert Notes & Next Steps Advisory</label>
+            <label htmlFor="review-notes" className="block font-bold mb-1.5 text-field-ink">Your observations and next steps</label>
             <textarea
+              id="review-notes" maxLength={2000}
               rows={4}
               value={expertNote}
               onChange={(e) => setExpertNote(e.target.value)}
@@ -247,7 +248,7 @@ export const AgronomistCaseReviewPage: React.FC = () => {
 
           <button
             type="submit"
-            disabled={submitting || verifiedSuccess}
+            disabled={submitting || verifiedSuccess || caseData.reviewStatus === 'reviewed'}
             className="w-full py-3.5 bg-field-ink text-white font-bold text-sm rounded-xl hover:bg-opacity-90 transition flex items-center justify-center gap-2 shadow-sm"
           >
             <Send size={16} className="text-lime-signal" />
@@ -265,8 +266,7 @@ export const AgronomistCaseReviewPage: React.FC = () => {
                 {new Date(caseData.agronomistVerification.verifiedAt).toLocaleString()}
               </p>
               <p>
-                <strong>Decision:</strong> {caseData.agronomistVerification.decision} (
-                {caseData.agronomistVerification.verifiedDisease})
+                <strong>Assessment:</strong> {caseData.agronomistVerification.verifiedDisease}
               </p>
               <p>
                 <strong>Notes:</strong> {caseData.agronomistVerification.expertNotes}
@@ -278,3 +278,4 @@ export const AgronomistCaseReviewPage: React.FC = () => {
     </div>
   );
 };
+
