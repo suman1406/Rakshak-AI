@@ -6,7 +6,9 @@ Checklist Design v3.2.1 supplies the original item names and descriptions below.
 
 Evidence: local validation API, annual plan preselection in browser, organization portfolio and agronomist queue captures, backend regression tests, Flutter analysis and narrow/large-text widget tests. Native camera controls, haptics, cold launch, VoiceOver and NVDA still require their named environments.
 
-Corrections from this review: dedicated missing-page recovery; readable flexible mobile brand row; mobile support/privacy/version access; camera error recovery; home refresh after capture and pull-to-refresh; organization refresh and clear-filters; annual billing preserved through approval; plan usage visibility; no repeated profile save without changes; pricing cancellation/refund explanations; browser-storage disclosure.
+The final web revision was informed by the owner’s ElevenLabs, Stripe, Razorpay and boAt references. Desktop and narrow-browser checks cover workflow selectors, FAQ, navigation, organization search/filter/export, expert filters and administration views. Additional navigation regressions at 1440, 1024, 390 and 320px verified footer-to-page resets, sticky headers, mobile menu dismissal and section-link clearance. Source, loaded-state captures and interaction results are kept separate from physical-device claims.
+
+Corrections from this review: dedicated missing-page recovery; readable flexible mobile brand row; mobile support/privacy/version access; camera error recovery; home refresh after capture and pull-to-refresh; organization refresh and clear-filters; annual billing preserved through approval; plan usage visibility; no repeated profile save without changes; pricing cancellation/refund explanations; browser-storage disclosure; immersive landing story; local Geist font; quieter workspace navigation; distinct unscanned metrics; focused administration views; stronger footer contrast; constrained keyboard-scrollable expert tables; custom R-and-leaf identity; larger working text; sticky public/workspace headers; route scroll reset with preserved section anchors.
 
 Scope exclusions: carts, checkout, cards, promotions, affiliate/referral, paywalls, messaging, maps, calendar/Gantt, Kanban, public profiles, invitations, social identity, 2FA, API-key management, external integrations, editorial/careers/press/event pages, carousels and sliders are not advertised pilot features. Native selects are audited as inputs rather than custom dropdown menus. The optional introduction uses steps, not a task-completion checklist. No external push-notification channel or live status service is configured. These exclusions do not imply those future features are implemented.
 
@@ -17,9 +19,9 @@ Legend: 🟢 Present; 🟡 partially present or explicitly limited; ⚪ not need
 | | Item | Why |
 |---|---|---|
 | 🟢 | **Headline** — A single, clear statement of what the product does or the value it delivers | Hero gives the crop-care outcome; subheadline identifies soybean video evidence. |
-| 🟢 | **Subheadline** — A supporting line that adds context or specificity to the headline claim | Subheadline connects farmer capture to the team workspace. |
-| 🟢 | **Hero visual** — An image, illustration, or product screenshot that reinforces the headline and makes the page feel tangible | Rendered photo and clearly labeled app preview support the product story. |
-| 🟢 | **Primary CTA** — One clear action for the visitor to take (sign up, start a trial, book a demo) | Bring your team is the primary filled action. |
+| 🟢 | **Subheadline** — A supporting line that adds context or specificity to the headline claim | Subheadline connects crop evidence, AI perspective and human expertise. |
+| 🟢 | **Hero visual** — An image, illustration, or product screenshot that reinforces the headline and makes the page feel tangible | Generated landscape, an explorable capture/review journey and a clearly labeled workspace illustration support the product story. |
+| 🟢 | **Primary CTA** — One clear action for the visitor to take (sign up, start a trial, book a demo) | Start your workspace is the primary filled action; pilot access repeats at the end. |
 | ⚪ | **Social proof** — Customer logos, testimonials, review scores, or user counts that validate the claim. | No verified customer endorsements were supplied; fabricated social proof is excluded. |
 | 🟢 | **Key benefits** — A concise breakdown of the main reasons a visitor should care, focused on outcomes not features. | Evidence and expert follow-up sections describe practical benefits. |
 | 🟢 | **Objection handling** — Content that addresses the most common reasons a visitor would not convert e.g. price, complexity, commitment | FAQ covers users, uncertainty, connectivity and privacy. |
@@ -338,9 +340,9 @@ Legend: 🟢 Present; 🟡 partially present or explicitly limited; ⚪ not need
 
 | | Item | Why |
 |---|---|---|
-| 🟢 | **Type scale** — A defined set of font sizes with a consistent ratio between them, covering everything from captions to display headings | Public Sans and Roboto scales span captions through display headings. |
+| 🟢 | **Type scale** — A defined set of font sizes with a consistent ratio between them, covering everything from captions to display headings | Geist Variable and Roboto scales span captions through display headings. |
 | 🟢 | **Semantic text styles** — Named styles that describe role rather than size so usage is driven by meaning, not pixel values e.g. display-large, body-default, label-small, caption | Shared heading/body/label styles describe content roles. |
-| 🟢 | **Typeface selection and loading** — The chosen typefaces detailing style and weight e.g. Inclusive Sans Medium | Public Sans is bundled; mobile uses Roboto with explicit button styling. |
+| 🟢 | **Typeface selection and loading** — The chosen typefaces detailing style and weight e.g. Inclusive Sans Medium | Geist Variable is bundled; mobile uses Roboto with explicit button styling. |
 | 🟢 | **Line height per style** — Line height defined explicitly for every text style since tightly spaced headings and readable body text require different values | Theme line heights distinguish headings and body copy. |
 | 🟢 | **Letter spacing per style** — Letter spacing defined per style where needed | Display headings use restrained tracking. |
 | 🟢 | **Responsive type behaviour** — How text styles respond to viewport size, whether through fluid type scaling, breakpoint-based overrides, or fixed sizes with responsive layout compensation | Web breakpoints and Flutter text scaling adapt typography. |
@@ -357,7 +359,7 @@ Legend: 🟢 Present; 🟡 partially present or explicitly limited; ⚪ not need
 | 🟢 | **Feedback colors** — A consistent set of colors for success, warning, error, and informational states — used across alerts, form validation, badges, and status indicators. | Warning, error and healthy surfaces accompany textual status. |
 | 🟡 | **Contrast ratios (accessibility)** — A breakdown of text and interactive element color combinations verified to meet WCAG AA contrast minimums — 4.5:1 for normal text, 3:1 for large text and UI components | Primary pairs are calculated; not every legacy utility pair has been measured. |
 | ⚪ | **Dark and light mode definition** — A complete parallel set of semantic token values for the opposite mode | One outdoor-readable light content theme is intentional. |
-| 🟢 | **Brand color integration** — Brand colors mapped into the semantic system in a way that maintains accessibility | Lime carries forest text and the forest rail carries light text. |
+| 🟢 | **Brand color integration** — Brand colors mapped into the semantic system in a way that maintains accessibility | Dark green text sits on pale sage navigation; mobile lime retains forest text. The light public footer was corrected during rendered review. |
 | 🟢 | **Color blindness considerations** — The palette tested against common color vision deficiencies for when color is used to convey state | Every status has a text label; the chart includes a textual legend. |
 
 ## [Spacing / Grid — Design system](https://www.checklist.design/design-system/spacing-and-grid)
@@ -524,16 +526,16 @@ Legend: 🟢 Present; 🟡 partially present or explicitly limited; ⚪ not need
 | 🟢 | **Search** — The ability to find a specific keyword or row | Search narrows the visible review records. |
 | 🟢 | **Actions** — Performing a task based on the row and information seen e.g. view, edit, delete | A visible review action opens each case. |
 | 🟢 | **Filter and sort** — Allow users to customise what they want to see in the table and in which order | Status/severity filters and sort controls are available. |
-| 🟢 | **Responsiveness** — Determine the structure on significantly smaller devices - whether the information collapses into an accordion for example | Overflow tables scroll within their container. |
+| 🟢 | **Responsiveness** — Determine the structure on significantly smaller devices - whether the information collapses into an accordion for example | Organization records stack on narrow screens. Expert tables scroll within a keyboard-focusable region; hidden labels are contained to prevent page overflow. |
 | 🟡 | **Pagination** — Breakpoints in the table for digesting information in parts | Records are fetched across API pages; the UI does not yet offer page-size controls. |
 
 ## [Tabs — Design system](https://www.checklist.design/design-system/tabs)
 
 | | Item | Why |
 |---|---|---|
-| 🟢 | **Labels** — Name of each tab | Settings and mobile destinations have concise labels. |
+| 🟢 | **Labels** — Name of each tab | Administration uses Access requests, Pilot plans and Decision history; marketing preview selectors and mobile destinations are labeled. |
 | 🟢 | **Content area** — Where the content for the active tab is displayed | The active section has a dedicated content area. |
-| 🟢 | **Style** — How the active tab and inactive tabs differentiate visually, as well as the tab container overall | Current-page styling differentiates navigation. |
+| 🟢 | **Style** — How the active tab and inactive tabs differentiate visually, as well as the tab container overall | Current-page navigation, pressed view buttons and a selected administration underline distinguish the active view. |
 | 🟢 | **Item order** — Consider the arrangement of tabs to be ordered by popularity or familiarity | Farmer navigation puts Home, Fields and Scan before account controls. |
 | 🟢 | **States** — Default, active, hover are the key states | Native selection and web focus states remain visible. |
 
@@ -657,7 +659,7 @@ Legend: 🟢 Present; 🟡 partially present or explicitly limited; ⚪ not need
 |---|---|---|
 | ⚪ | **Date range selector** — A date picker with shortcuts for today, last 7 days, last 30 days, this month, and custom range | The overview explicitly shows latest field indications; report pages provide historical date filters. |
 | 🟢 | **Headline metrics** — The most important numbers displayed as prominent headline figures | Counts summarize actual filtered fields. |
-| 🟢 | **Charts with labels and axes** — Visualisations with clearly labelled axes, a legend where needed, and readable tick marks | The donut has a full text legend and counts; axes do not apply. |
+| 🟢 | **Charts with labels and axes** — Visualisations with clearly labelled axes, a legend where needed, and readable tick marks | The donut has a full text legend and counts. Unscanned fields are distinct from uncertain assessments; axes do not apply. |
 | ⚪ | **Period comparison** — A percentage or absolute change indicator showing how each metric has moved relative to the prior period | No validated trend comparison is claimed from a latest-scan snapshot. |
 | 🟢 | **Segment breakdown** — The ability to slice a metric by properties e.g. channel, device, geography, or another attribute | District and assessment filters scope the same chart and export. |
 | 🟢 | **Last updated indicator** — A visible timestamp or refresh button showing when the data was last updated (if it is not automatically refreshing) | Refresh records explicitly reloads the dataset. |

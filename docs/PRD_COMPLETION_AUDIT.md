@@ -38,7 +38,7 @@ The owner approved a practical, accessible redesign and explicitly chose to use 
 
 ## Redesign
 
-Shared forest, mineral white and pale lime identity; bundled Public Sans on web; consistent mobile theme and typography; responsive role navigation; Radix navigation dialog, accordion and button primitives; clear forms, focus states, errors and empty states; actual private images in report viewers; accessible field-indication charts and record tables. Marketing imagery is explicitly illustrative and separate from scan evidence. See `DESIGN.md`.
+Shared forest, mineral white and pale lime identity; bundled Geist Variable on web; consistent mobile theme and typography; responsive role navigation; Radix navigation dialog, accordion and button primitives; clear forms, focus states, errors and empty states; actual private images in report viewers; accessible field-indication charts and record tables. Marketing imagery is explicitly illustrative and separate from scan evidence. See `DESIGN.md`.
 
 ## Validation evidence
 
@@ -56,4 +56,14 @@ PRD Phase 2/3 items—regional languages, real-time camera guidance, multiple cr
 
 ## Final redesign and pricing audit
 
-See `CHECKLIST_DESIGN_AUDIT.md` for the ordered Checklist Design review. The second visual revision follows the owner's mobile-first farmer and web-first organization/expert priorities. Pricing is persisted from public selection through administrator approval, with visible usage and transactionally enforced organization allowances. The free farmer pilot has no automatic paid conversion. Browser verification covered monthly/annual prices, selected onboarding interval, responsive navigation, expert queue and organization portfolio records. Flutter welcome rendering and large-text interaction were inspected separately from physical-device claims.
+See `CHECKLIST_DESIGN_AUDIT.md` for the ordered Checklist Design review. The final visual revision follows the owner's mobile-first farmer and web-first organization/expert priorities. Pricing is persisted from public selection through administrator approval, with visible usage and transactionally enforced organization allowances. The free farmer pilot has no automatic paid conversion. Browser verification covered monthly/annual prices, selected onboarding interval, responsive navigation, expert queue and organization portfolio records. Flutter welcome rendering and large-text interaction were inspected separately from physical-device claims.
+
+## Immersive web revision
+
+The owner’s ElevenLabs, Stripe, Razorpay and boAt references informed a cinematic soybean landscape, interactive capture/understand/review narrative and explorable product illustration. Shared web navigation, forms and public pages now use Geist and restrained sage surfaces. Organization records have separate unscanned/uncertain counts, actionable filters and responsive rows; experts get progressive filters and a keyboard-scrollable table; administration separates requests, plans and history. The superseded web stylesheet and font dependency were removed. Marketing illustrations never become operational records. Final source/build and browser evidence are recorded in `RELEASE_0_2_0.md`.
+
+## Branding and navigation refinement
+
+Rakshak AI retains its name with a custom R-and-leaf monogram, capitalized wordmark, web favicon and matching mobile launcher icons. Working labels now generally use 14–16px and body copy 16–18px. Public and workspace headers remain visible while scrolling. New routes reset to the top; fragment links preserve their section with clearance below the header.
+
+Local browser checks passed at 1440, 1024, 390 and 320px for sticky public navigation, footer-to-page scroll reset, mobile menu navigation and section links. Role dashboards retained their live search, filters and exports without horizontal page overflow. Web production build and source contract passed; Flutter analysis and all six tests passed, including narrow-screen text scaling. Review duration now distinguishes unavailable history from a valid zero-minute value; the queue footer states which metrics are filtered.

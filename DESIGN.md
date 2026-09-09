@@ -1,37 +1,45 @@
 # Rakshak AI design system
 
-## Direction
+## Direction and users
 
-A practical field notebook with the clarity of an expert workspace. Farmers need readable outdoor screens; agronomists need evidence and dense review controls; organizations need honest summaries of their own fields. Warm, calm and grounded in actual observations.
+Rakshak connects a farmer's observation with an organization's records and an agronomist's independent assessment. The public website should feel immersive, confident and tangible. The working product should feel calm, precise and easy to scan. Farmers use the mobile app outdoors; organization and expert users primarily work at a desk. These environments share the R-and-leaf identity but need different density and visual emphasis.
+
+## Reference direction
+
+The owner requested the presentation quality of [ElevenLabs](https://elevenlabs.io/), [Stripe](https://stripe.com/in), [Razorpay](https://razorpay.com/) and [boAt](https://www.boat-lifestyle.com/). Their live landing pages were inspected on 2026-09-09. The applied principles are a distinctive first impression, generous editorial typography, strong imagery, explorable product stories and deliberate pacing. Brand artwork, commercial claims, logos and customer statistics are not copied.
+
+The landing page opens with a generated soybean landscape, a short outcome statement and an interactive capture / understand / review journey. A separate workspace illustration explains the product. Subsequent sections alternate photographic evidence, role-specific pathways, privacy, questions and pilot access. The working dashboards use quiet navigation and real records rather than marketing imagery.
 
 ## Identity and color
 
-Use the outlined sprout mark with the lowercase Rakshak AI wordmark. Forest ink (#143b2c), mineral canvas (#f5f8f5), white surfaces, muted green text (#58685f), pale lime accent (#d4ef86), and sage borders (#dfe7df). Amber means uncertainty; red means a failed action or disease indication requiring attention. Pair every color with a text label. No glow, decorative gradients or glass panels.
+Use the custom R monogram with a leaf-shaped aperture and the capitalized Rakshak AI wordmark. The vector master is `frontend/web/public/rakshak-symbol.svg`; the favicon and mobile icons use this same mark. Web semantic tokens are in `frontend/web/src/saas.css`: deep green ink, near-white surfaces, pale sage navigation and restrained green actions. Main product supporting text uses #64725a on near-white. Green, amber and terracotta distinguish clear observations, uncertainty and disease indications; every state also has a text label. Unscanned records remain separate from uncertain results.
 
-## Typography
+Mobile retains forest #143b2c, canvas #f5f8f5, muted text #58685f, pale lime #d4ef86 and borders #dfe7df. Outdoor readability takes priority over decorative density.
 
-Web: locally bundled Public Sans Variable. Mobile: platform-compatible Roboto. Body text 16px; supporting labels at least 13px on web, with mobile theme text scaling supported. Product headings 24–32px, sentence case, medium weight. Marketing headlines can be larger, with short readable lines. Numeric data must retain its unit and scope.
+## Typography and layout
 
-## Layout and components
+Web uses locally bundled Geist Variable; mobile uses Roboto. Working web labels are generally 14–16px and body text 16–18px, page headings 27–30px, and summary values 30–37px. Tiny labels belong only to explicitly illustrative product graphics, not primary controls. Marketing headings use a larger scale with short lines. Preserve units, scope and unavailable values in numeric displays.
 
-Public pages share navigation, generous content spacing and footer. Authentication and applications share a photo-and-form shell that becomes a single task column on phones. Desktop workspaces use a forest navigation rail and compact context bar. On small screens the Radix navigation dialog supports keyboard focus and closing. Mobile has Home / Fields / Scan / History / Profile destinations.
+The desktop shell uses a pale navigation rail, workspace context, page breadcrumb and account controls. Organization summaries use one metric strip, a labeled distribution and actionable next steps above a filterable record table. Agronomist search/status/sort controls stay visible; additional filters expand on demand. Administration separates access requests, plans and decision history. Narrow organization records become stacked rows; dense expert evidence tables may scroll within their own container.
 
-Use bordered evidence panels, 12px controls and 18–24px panels, and tables or lists for records. Radix primitives back the navigation dialog, accordion and polymorphic buttons. Public Sans is bundled, not fetched at runtime. Primary actions are forest or lime; secondary actions are outlined. Buttons have visible busy/disabled states and at least 44px target height. Keep visible labels, keyboard focus, sensible tab order and reduced-motion support.
+Public pages share a sticky navigation header and footer. Workspace headers also stay visible. Route changes start at the top; explicit section links retain their target below the header. Applications use the existing photo-and-form shell, stacking on narrow screens. Mobile has Home / Fields / Scan / History / Profile destinations, with capture central.
 
-## Truthful data and states
+Use 6–10px corners for web controls and panels, subtle borders and little elevation. Marketing depth is reserved for the landscape interaction and workspace illustration. Avoid wrapping every heading or metric in its own card. Shared base styles live in `index.css`; `saas.css` owns the current web design. The superseded `premium.css` is removed.
 
-Never manufacture counts, leaf detections, probabilities, reviews, health scores or pricing discounts. Unavailable historical values remain unavailable. A generic COCO detector does not verify soybean plants. Current classifier and severity outputs are labeled as an unvalidated pilot baseline; independent expert review is a separate record.
+## Interaction and accessibility
 
-Empty states lead to a real next step. Failed requests retain form input and offer retry. Processing uses actual server state, never a simulated progress percentage. Original video and frame evidence require authorization. Demo fixtures stay out of operational dashboards.
+Keep native labels, Radix dialog focus management, visible keyboard focus, meaningful links and explicit loading/error/empty states. Farmer and primary public actions target 44px; compact desktop controls remain at least 32px and expand on phones. Product figures always reflect their filter scope. Never show invented progress, trends, customer activity or diagnostic confidence.
 
-## Asset provenance
+The landscape has one entrance transition. Scrolling reveals sections once without pinning or hijacking scroll. Workflow changes animate briefly after the visitor chooses a step. Reduced-motion preference disables animation and leaves all content visible. No continuous background animation, automatic carousel or autoplay audio is used.
 
-`frontend/web/public/soybean-field.png` and the equivalent mobile asset are generated marketing illustrations, created during the 2026-09-09 redesign. They are not field evidence, customer photos or model evaluation data. Keep illustrative labeling in public context. Model reports use only the uploaded scan's actual images.
+Target WCAG AA and verify rendered contrast, responsive layouts and keyboard operation. Browser geometry checks and source inspection do not establish complete screen-reader compliance. Physical camera, device text scaling and platform accessibility require separate device evidence.
 
-## Reference direction and revision
+## Truthful data and assets
 
-Revision 0.2.0 replaces the initial olive/sunflower direction with forest, mineral white and lime. Farmer mobile capture is primary; web prioritizes organization portfolios, agronomist evidence review and platform administration. The photographic hero and strong hierarchy were informed by [Cansaas Agra](https://dribbble.com/shots/27322745-Agra-Agriculture-Landing-Page). The evidence-led workspace hierarchy was informed by [RonDesignLab Farm Management](https://dribbble.com/shots/25188771-Farm-Management-SaaS-Dashboard). Their artwork, customer claims and data were not copied. A generated three-screen mobile concept served as direction, not runtime proof.
+Never manufacture counts, detections, probabilities, reviews, health scores or discounts. Model results are an unvalidated soybean pilot baseline; an independent expert assessment is a separate record. Processing follows actual server status. Original videos and frames require authorization. Demo fixtures stay outside operational workspaces.
+
+`frontend/web/public/field-landscape.webp` is a generated marketing landscape created on 2026-09-09 and encoded as WebP (about 350 KB). `soybean-field.png` and its mobile counterpart are generated marketing illustrations. They are not customer photos, field evidence or model evaluation data. The interactive website scenes are explicitly labeled illustrations. Reports use only the uploaded scan's actual media.
 
 ## Contribution checks
 
-Target WCAG AA. Use semantic tokens for repeated colors and state labels alongside color; use 4/8px spacing increments and 44px minimum action targets. Keep Public Sans on web and Roboto on mobile. Native controls and Radix dialogs retain keyboard semantics and focus management. Verify narrow layouts, large text, form errors, empty records, loading and reduced motion before changing shared components. Screen-reader/device testing must be recorded separately from source and widget checks. Dense web tables may scroll horizontally; farmer screens stack content. Avoid inventing alternate themes or density switches without a product need. Token changes belong in the release changelog and both platform themes.
+Keep the established brand and role hierarchy. Check loading, errors, empty results, filters, exports, focus, reduced motion and narrow layouts when changing shared components. Run TypeScript, the no-mock contract and a production build. Record browser interactions and screenshots separately from backend tests, Flutter widget renders, device checks and production deployment proof. Update `docs/CHECKLIST_DESIGN_AUDIT.md` when the user-facing flow changes.
