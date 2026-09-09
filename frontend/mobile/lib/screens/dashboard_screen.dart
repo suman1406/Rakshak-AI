@@ -128,15 +128,7 @@ class _DashboardTabState extends State<DashboardTab> {
             },
             child: PageContent(children: [
               const SizedBox(height: 12),
-              const Row(children: [
-                Icon(Icons.spa, color: RakshakColors.ink),
-                SizedBox(width: 8),
-                Text('Rakshak AI',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        color: RakshakColors.ink,
-                        fontSize: 20))
-              ]),
+              const RakshakBrand(),
               const SizedBox(height: 26),
               Text(
                   widget.fieldsOnly ? 'Your fields' : 'Your fields,\nin focus.',

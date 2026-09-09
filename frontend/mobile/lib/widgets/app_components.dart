@@ -1,6 +1,25 @@
 import 'package:flutter/material.dart';
 import '../core/app_theme.dart';
 
+class RakshakBrand extends StatelessWidget {
+  const RakshakBrand({super.key});
+  @override
+  Widget build(BuildContext context) => Semantics(
+      label: 'Rakshak AI',
+      excludeSemantics: true,
+      child: Row(children: [
+        Image.asset('assets/rakshak-symbol.png', width: 40, height: 40),
+        const SizedBox(width: 10),
+        const Flexible(
+            child: Text('Rakshak AI',
+                style: TextStyle(
+                    fontSize: 25,
+                    letterSpacing: -0.8,
+                    fontWeight: FontWeight.w700,
+                    color: RakshakColors.ink)))
+      ]));
+}
+
 void navigateTo(BuildContext context, Widget page) =>
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
 

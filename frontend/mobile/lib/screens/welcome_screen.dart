@@ -11,17 +11,7 @@ class WelcomeScreen extends StatelessWidget {
           body: SafeArea(
               child: PageContent(children: [
         const SizedBox(height: 18),
-        const Row(children: [
-          Icon(Icons.spa_outlined, color: RakshakColors.ink, size: 30),
-          SizedBox(width: 10),
-          Flexible(
-              child: Text('rakshak ai',
-                  style: TextStyle(
-                      fontSize: 25,
-                      letterSpacing: -1,
-                      fontWeight: FontWeight.w700,
-                      color: RakshakColors.ink)))
-        ]),
+        const RakshakBrand(),
         const SizedBox(height: 28),
         ClipRRect(
             borderRadius: BorderRadius.circular(24),
