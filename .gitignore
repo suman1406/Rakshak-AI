@@ -51,3 +51,7 @@ model/dataset/
 model/dataset_split/
 model/raw_downloads/
 *.tsbuildinfo
+**/key.properties
+*.jks
+*.keystore
+**/android/.kotlin/
