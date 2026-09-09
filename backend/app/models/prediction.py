@@ -1,7 +1,7 @@
 import enum
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, Integer, JSON, SmallInteger, String
+from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, Integer, JSON, SmallInteger, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from ..db.base import Base
 
@@ -67,6 +67,7 @@ class VideoDiagnosis(Base):
         default=DecisionAuthorityStatus.advisory_only
     )
     explanation: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    action_items: Mapped[str | None] = mapped_column(Text, nullable=True)  # newline-separated steps
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 
     video: Mapped["Video"] = relationship("Video", back_populates="diagnoses")

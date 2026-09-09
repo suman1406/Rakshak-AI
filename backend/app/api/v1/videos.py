@@ -198,7 +198,7 @@ async def get_video_analysis(
             "aggregation": diagnosis_row.aggregation_model_version,
         },
         explanation=diagnosis_row.explanation or canned["explanation"],
-        action_items=canned["action_items"],
+        action_items=diagnosis_row.action_items or canned["action_items"],
     )
 
 @router.get("/{video_id}/frames")

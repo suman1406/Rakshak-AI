@@ -351,6 +351,7 @@ class VideoIngestionService:
             aggregation_model_version="bayes-v1.0",
             decision_authority=DecisionAuthorityStatus.advisory_only,
             explanation=explanation,
+            action_items="\n".join(item for item in action_items if item.strip()) or None,
         )
         db.add(diagnosis)
 

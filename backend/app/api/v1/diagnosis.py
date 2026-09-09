@@ -67,7 +67,7 @@ async def get_diagnosis_report(
         total_frames=diag.total_frames or 0,
         decision_authority=diag.decision_authority,
         explanation=diag.explanation or canned["explanation"],
-        action_items=canned["action_items"],
+        action_items=diag.action_items or canned["action_items"],
         created_at=diag.created_at,
     )
 
