@@ -42,7 +42,7 @@ Shared olive, warm stone and sunflower identity; bundled Public Sans on web; con
 
 ## Validation evidence
 
-- Backend: full unit/integration suite passed 82 tests, including legacy media migration; four production-secret regression cases passed afterward. The release validation record is in `RELEASE_0_2_0.md`.
+- Backend: final full unit/integration suite passed 86 tests, including legacy media migration and production-secret regression cases. The release validation record is in `RELEASE_0_2_0.md`.
 - Actual model smoke: synthetic 11-second video → 28 extracted frames → 15 selected observations → stored unknown assessment with five-class probabilities and model provenance. Original media retrieval succeeded across separate API/worker filesystems; unauthenticated retrieval returned 401.
 - PostgreSQL role smoke: pending expert login denied; simultaneous approval returned one 200 and one 409; requested case became accessible to the assigned expert; review appeared in farmer and expert reports; separate organization could not access private farmer video (404).
 - Web: TypeScript and optimized Next.js builds passed; no-mock integration contract passed. Browser checks covered public rendering at narrow width, contact submission/receipt, administrator inbox/close, protected farmer evidence, and organization field creation/selection.

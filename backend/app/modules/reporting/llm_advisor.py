@@ -94,8 +94,8 @@ async def generate_advisory_report(
         or None if the LLM call fails
     """
     # Check if Groq API key is configured
-    if not settings.GROQ_API_KEY:
-        logger.warning("GROQ_API_KEY not configured, cannot generate LLM advisory report")
+    if not settings.GROQ_API_KEY or not settings.GROQ_MODEL or settings.GROQ_MODEL.startswith('configure-'):
+        logger.info("Optional advisory provider is not configured; using conservative templates")
         return None
 
     try:

@@ -6,7 +6,7 @@ A soybean video-assessment pilot with one connected FastAPI API, background mode
 
 Requires Docker, Node 22 with pnpm 11.10, and Flutter 3.41.6 for mobile.
 
-1. Copy `.env.example` to `.env`. Set a unique `JWT_SECRET_KEY` and your initial administrator email/passphrase. Keep the populated file private.
+1. Copy `.env.example` to `.env`. Set unique `JWT_SECRET_KEY` and `S3_SECRET_KEY` values and your initial administrator email/passphrase. The local stack uses `S3_SECRET_KEY` as its private MinIO password (at least 8 characters). Keep the populated file private.
 2. Run `docker compose up --build -d`. This starts PostgreSQL, Redis, private MinIO storage, API, worker and scheduler. The API runs at `http://localhost:8000`; `/readyz` checks the database, queue and evidence bucket.
 3. In `frontend/web`, run `pnpm install --frozen-lockfile`. Set `NEXT_PUBLIC_API_URL=http://localhost:8000` in its local environment, then `pnpm dev`.
 4. Register a farmer account to add fields and upload 10–30 second videos. Organization and agronomist applications require approval in the initial administrator's workspace.

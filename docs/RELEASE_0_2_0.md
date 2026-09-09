@@ -50,9 +50,11 @@ For release signing, create a private `frontend/mobile/android/key.properties` f
 
 Validated locally on 2026-09-09:
 
-- Backend: 82 unit/integration tests passed; four additional production-secret regression cases passed. The actual CPU checkpoint/PostgreSQL/Redis/private-storage smoke completed, including concurrent access approvals and farmer-to-expert review.
+- Backend: the final full suite passed 86 unit/integration tests. The actual CPU checkpoint/PostgreSQL/Redis/private-storage smoke completed, including concurrent access approvals and farmer-to-expert review.
 - Web: `pnpm lint`, `pnpm test:contracts` and `pnpm build` passed. Browser validation covered public/contact/admin, farmer evidence, organization field creation, valid expert submission dates and completed human review alongside saved model probabilities.
 - Mobile: `flutter analyze --no-pub` reported no issues; `flutter test --no-pub` passed all four tests; `flutter build apk --debug --dart-define=API_BASE_URL=http://10.0.2.2:8001` produced the version 0.2.0+2 artifact.
 - Git: implementation is grouped on `codex/prd-completion`; mobile workflows are in `55099a2`, mobile identity/signing in `50f509b`, and final review/history/job-state corrections in `02fb0d4`. Earlier focused commits cover model integration, private storage, account controls, contact persistence and web redesign.
 
-The dependency lock records the successfully exercised Python 3.12 CPU runtime. A fresh build of that lock and the remote GitHub workflow must also pass before release approval. No production deployment has been performed in this session.
+The dependency lock records the successfully exercised Python 3.12 CPU runtime. GitHub run [34343937576](https://github.com/suman1406/Rakshak-AI/actions/runs/34343937576) passed all three jobs at `ddb4f19`: fresh locked image, fresh PostgreSQL migrations and real checkpoint smoke, web checks/build, and Flutter analysis/tests/Android build. The existing Vercel integration also created a web preview automatically; its production API integration is not validated by that preview status. No production deployment was performed manually in this session.
+
+GitGuardian incident 37119560 identifies the historical local MinIO example password in commit `89cf827`, not a production provider key. The current Compose configuration now requires a private `S3_SECRET_KEY` and contains no fixed MinIO password. The historical incident requires authenticated review in GitGuardian; it is not suppressed or erased from the focused commit history.
