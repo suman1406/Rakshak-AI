@@ -14,6 +14,7 @@ from app.core.logging import RequestLoggingMiddleware, logger
 from app.db.base import Base
 from app.db.bootstrap_accounts import ensure_bootstrap_access_accounts, ensure_initial_admin_account
 from app.db.catalog import ensure_disease_catalog
+from app.db.plans import ensure_launch_plans
 from app.db.session import async_session_factory, engine
 from app.media_storage import media_storage
 
@@ -54,6 +55,7 @@ async def lifespan(app: FastAPI):
     # Seed disease taxonomy catalog (idempotent — safe on every restart)
     async with async_session_factory() as session:
         await ensure_disease_catalog(session)
+        await ensure_launch_plans(session)
     logger.info("Database schema initialized successfully.")
     cache_maintenance = asyncio.create_task(maintain_evidence_cache())
     try:

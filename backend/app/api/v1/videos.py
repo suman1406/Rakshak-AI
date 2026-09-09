@@ -73,6 +73,8 @@ async def upload_video(
     field_result = await db.execute(select(Field).join(Field.farm).where(Field.id == field_id, field_scope(current_user)))
     if field_result.scalar_one_or_none() is None:
         raise HTTPException(status_code=404, detail="Field not found")
+    from app.core.entitlements import require_capacity
+    await require_capacity(db, current_user.org_id, 'scans')
     video = await ingestion_service.init_upload(
         file=file,
         field_id=field_id,

@@ -18,6 +18,12 @@ from app.modules.reporting.result_contract import disease_slug
 
 router = APIRouter(prefix="/b2b", tags=["B2B / Enterprise"])
 
+@router.get('/subscription')
+async def get_subscription(current_user: Annotated[User, Depends(require_role(UserRole.enterprise))],
+                           db: Annotated[AsyncSession, Depends(get_db)]):
+    from app.core.entitlements import organization_usage
+    return await organization_usage(db, current_user.org_id)
+
 
 @router.get("/dashboard")
 async def get_b2b_dashboard(

@@ -126,6 +126,7 @@ export const apiClient = {
   getVideoAnalysis: (videoId: string) => request(`/api/v1/videos/${videoId}/analysis`),
   getVideoFrames: (videoId: string) => request(`/api/v1/videos/${videoId}/frames`),
   getB2BDashboard: () => request('/api/v1/b2b/dashboard'),
+  getSubscription: () => request('/api/v1/b2b/subscription'),
   getAgronomistQueue: (limit = 50) => request(`/api/v1/agronomist/queue?limit=${limit}`),
   getAgronomistReviews: () => request('/api/v1/agronomist/reviews?limit=500'),
   getAgronomistCase: (diagnosisId: string) => request(`/api/v1/agronomist/cases/${diagnosisId}`),
@@ -149,7 +150,7 @@ export const apiClient = {
   changePassword: (current_password: string, new_password: string) => request('/api/v1/auth/password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ current_password, new_password }) }),
   logoutAll: () => request('/api/v1/auth/logout-all', { method: 'POST' }),
   listPublicPlans: () => request('/api/v1/onboarding/plans') as Promise<Array<{ code: string; name: string; monthly_price_paise: number | null; annual_price_paise: number | null; farm_limit: number | null; scan_limit: number | null }>>,
-  submitApplication: (payload: { application_type: 'agronomist' | 'organization'; email: string; access_phrase: string; display_name: string; consent_to_data_processing: boolean; organization_name?: string; organization_type?: string; requested_plan_code?: string }) => request('/api/v1/onboarding/applications', {
+  submitApplication: (payload: { application_type: 'agronomist' | 'organization'; email: string; access_phrase: string; display_name: string; consent_to_data_processing: boolean; organization_name?: string; organization_type?: string; requested_plan_code?: string; requested_billing_interval?: 'monthly' | 'annual' }) => request('/api/v1/onboarding/applications', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
   }) as Promise<{ reference: string; status: 'pending'; message: string }>,
   listAdminApplications: (applicationStatus = 'pending') => request(`/api/v1/admin/onboarding-applications?application_status=${encodeURIComponent(applicationStatus)}`),

@@ -33,6 +33,13 @@ async def list_public_plans(db: Annotated[AsyncSession, Depends(get_db)]):
 
 @router.post("/applications", response_model=ApplicationReceipt, status_code=status.HTTP_202_ACCEPTED)
 async def create_application(payload: ApplicationCreate, db: Annotated[AsyncSession, Depends(get_db)]):
+    if payload.requested_plan_code:
+        plan = (await db.execute(select(Plan).where(
+            Plan.code == payload.requested_plan_code,
+            Plan.is_public.is_(True), Plan.is_active.is_(True),
+        ))).scalar_one_or_none()
+        if plan is None:
+            raise HTTPException(422, "This plan is no longer available. Choose a published plan or discuss access with the team.")
     conditions = []
     if payload.email:
         conditions.append(User.email == payload.email)
@@ -59,6 +66,7 @@ async def create_application(payload: ApplicationCreate, db: Annotated[AsyncSess
         organization_name=payload.organization_name,
         requested_org_type=payload.organization_type.value if payload.organization_type else None,
         requested_plan_code=payload.requested_plan_code,
+        requested_billing_interval=payload.requested_billing_interval,
     )
     db.add(application)
     await db.flush()

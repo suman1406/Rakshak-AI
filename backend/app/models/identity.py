@@ -72,6 +72,7 @@ class OnboardingApplication(Base):
     organization_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     requested_org_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
     requested_plan_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    requested_billing_interval: Mapped[str] = mapped_column(String(16), default='monthly', server_default='monthly', nullable=False)
     reviewer_user_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id"), nullable=True)
     review_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

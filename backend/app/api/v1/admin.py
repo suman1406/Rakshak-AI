@@ -86,6 +86,7 @@ async def list_onboarding_applications(
             "organization_name": application.organization_name,
             "organization_type": application.requested_org_type,
             "requested_plan_code": application.requested_plan_code,
+            "requested_billing_interval": application.requested_billing_interval,
             "review_note": application.review_note,
             "created_at": application.created_at,
             "reviewed_at": application.reviewed_at,
@@ -125,7 +126,7 @@ async def decide_onboarding_application(
             if application.requested_plan_code:
                 plan = (await db.execute(select(Plan).where(Plan.code == application.requested_plan_code, Plan.is_active.is_(True)))).scalar_one_or_none()
                 if plan:
-                    db.add(OrganizationSubscription(organization_id=organization.id, plan_id=plan.id, status=SubscriptionStatus.trial.value))
+                    db.add(OrganizationSubscription(organization_id=organization.id, plan_id=plan.id, status=SubscriptionStatus.trial.value, billing_interval=application.requested_billing_interval))
         else:
             applicant.role = UserRole.agronomist
     else:

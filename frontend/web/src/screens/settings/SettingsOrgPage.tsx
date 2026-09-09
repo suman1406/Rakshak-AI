@@ -5,10 +5,12 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 export function SettingsOrgPage() {
+  const { role } = useAuth();
   const [data, setData] = useState<any>(null);
+  const [subscription, setSubscription] = useState<any>(null);
   const [error, setError] = useState('');
-  useEffect(() => { apiClient.getB2BDashboard().then(setData).catch(e => setError(e.message)); }, []);
-  return <SettingsLayout><h2 className="text-xl font-semibold mb-4">Your organization</h2>{error ? <p role="alert">{error}</p> : !data ? <p>Loading organization records…</p> : <dl className="report-facts"><div><dt>Organization</dt><dd>{data.organization_name || 'No organization assigned'}</dd></div><div><dt>Farms</dt><dd>{data.total_farms}</dd></div><div><dt>Fields</dt><dd>{data.total_fields}</dd></div></dl>}</SettingsLayout>;
+  useEffect(() => { apiClient.getB2BDashboard().then(setData).catch(e => setError(e.message)); if (role === 'enterprise' || role === 'org_admin') apiClient.getSubscription().then(setSubscription).catch(e => setError(e.message)); }, [role]);
+  return <SettingsLayout><h2 className="text-xl font-semibold mb-4">Your organization</h2>{error ? <p role="alert">{error}</p> : !data ? <p role="status">Loading organization records…</p> : <dl className="report-facts"><div><dt>Organization</dt><dd>{data.organization_name || 'No organization assigned'}</dd></div><div><dt>Farms</dt><dd>{data.total_farms}</dd></div><div><dt>Fields</dt><dd>{data.total_fields}</dd></div></dl>}{subscription && <section className="subscription-panel"><p className="eyebrow">Plan and usage</p><h2>{subscription.plan}</h2><p>{subscription.status} · {subscription.billing_interval || 'Billing not assigned'}</p><dl className="report-facts"><div><dt>Farms</dt><dd>{subscription.farms_used} / {subscription.farm_limit ?? 'By agreement'}</dd></div><div><dt>Scans this month (UTC)</dt><dd>{subscription.scans_used} / {subscription.scan_limit ?? 'By agreement'}</dd></div></dl><p>New uploads count toward the monthly allowance. Retrying an existing scan does not count twice. Billing is managed by the team; no automatic payment is taken here.</p><Link className="text-action" to="/contact">Discuss your plan or allowance</Link></section>}</SettingsLayout>;
 }
 
 export function SettingsNotificationsPage() {
