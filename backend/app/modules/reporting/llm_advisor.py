@@ -57,12 +57,12 @@ OUTPUT FORMAT (JSON only, no other text):
 }}
 
 REQUIREMENTS:
-1. Always include the safety disclaimer
-2. Never provide lethal chemical recipes or dosages
-3. Provide 3-5 actionable steps that the farmer can take
-4. Be specific to the crop and disease when giving advice
-5. Keep explanations clear and concise
-6. Consider the severity level when generating action items
+1. Always include the safety disclaimer: "AI estimate, not a confirmed diagnosis. Consult an agronomist."
+2. Never make absolute or overconfident certainty claims (do not use words like '100%', 'definitely', 'guaranteed', 'cured', or 'confirmed diagnosis'). Frame findings as visual indicators or potential symptoms.
+3. Never prescribe chemical dosages, spray recipes, or lethal chemical amounts.
+4. Provide 3-5 actionable steps that the farmer can take (scouting, irrigation adjustments, consulting extension officers).
+5. Keep explanations clear, honest, and concise.
+6. Consider the severity level when generating action items.
 
 Return ONLY valid JSON, no markdown formatting, no explanations."""
     return prompt
