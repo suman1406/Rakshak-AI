@@ -1,138 +1,18 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Sprout } from 'lucide-react';
-import { PublicNavbar } from '../../components/layout/PublicNavbar';
+import { ArrowRight } from 'lucide-react';
+import { AuthShell } from '../../components/ui/auth-shell';
+import { Button } from '../../components/ui/button';
 import { apiClient } from '../../services/apiClient';
-
 export const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [consent, setConsent] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!apiClient.isConfigured()) {
-      setError('Registration service is not configured. Set NEXT_PUBLIC_API_URL and try again.');
-      return;
-    }
-    setError('');
-    setSubmitting(true);
-    try {
-      await apiClient.register({ display_name: name.trim(), email: email.trim(), password, consent_to_data_processing: consent });
-      navigate('/login', { replace: true, state: { registered: true } });
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'We could not create the account. Please try again.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-field-canvas font-sans">
-      <PublicNavbar />
-      <div className="flex items-center justify-center p-4 py-12">
-      <div className="max-w-md w-full bg-pure-surface border border-structural p-8 rounded-3xl shadow-sm space-y-6">
-        <div className="text-center space-y-2">
-          <Link to="/" className="inline-flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-field-ink text-lime-signal flex items-center justify-center font-bold">
-              <Sprout size={22} />
-            </div>
-          </Link>
-          <h1 className="text-2xl font-extrabold text-field-ink">Register for Rakshak AI</h1>
-          <p className="text-xs text-muted-leaf">Create a farmer account to record and review your fields</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-          <div>
-            <label className="block font-semibold mb-1">Full Name</label>
-            <input
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Ramesh Patil"
-              className="w-full p-2.5 rounded-xl border border-structural bg-field-canvas text-xs outline-none"
-            />
-          </div>
-
-          <label className="flex items-start gap-2 rounded-xl border border-structural bg-field-canvas p-3 text-[11px] text-muted-leaf">
-            <input type="checkbox" required checked={consent} onChange={(event) => setConsent(event.target.checked)} className="mt-0.5" />
-            <span>I agree to the processing of my account and field data for the Rakshak service, as described in the <Link to="/privacy" className="font-semibold text-field-ink underline">privacy notice</Link>.</span>
-          </label>
-
-          <div>
-            <label className="block font-semibold mb-1">Password</label>
-            <input
-              type="password"
-              required
-              minLength={8}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="new-password"
-              placeholder="At least 8 characters"
-              className="w-full p-2.5 rounded-xl border border-structural bg-field-canvas text-xs outline-none"
-            />
-          </div>
-
-          {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-alert-red">{error}</p>}
-
-          <div>
-            <label className="block font-semibold mb-1">Email Address</label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="ramesh@example.com"
-              className="w-full p-2.5 rounded-xl border border-structural bg-field-canvas text-xs outline-none"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full py-3 bg-field-ink text-white font-bold rounded-xl hover:bg-opacity-90 disabled:opacity-60 transition"
-          >
-            {submitting ? 'Creating account...' : 'Create farmer account'}
-          </button>
-        </form>
-
-        <div className="text-center text-xs text-muted-leaf pt-2 border-t border-structural">
-          Already registered for a workspace?{' '}
-          <Link to="/login" className="font-bold text-field-ink hover:underline">
-            Sign in
-          </Link>
-        </div>
-      </div>
-      </div>
-    </div>
-  );
+  const [name, setName] = useState(''); const [email, setEmail] = useState(''); const [password, setPassword] = useState(''); const [consent, setConsent] = useState(false); const [busy, setBusy] = useState(false); const [error, setError] = useState('');
+  async function submit(event: React.FormEvent) {
+    event.preventDefault(); setError(''); setBusy(true);
+    try { await apiClient.register({ display_name: name.trim(), email: email.trim(), password, consent_to_data_processing: consent }); navigate('/login', { replace: true, state: { registered: true } }); }
+    catch (e) { setError(e instanceof Error ? e.message : 'Could not create your account. Please try again.'); }
+    finally { setBusy(false); }
+  }
+  return <AuthShell title="Start with your field." description="Create your farmer account. Add a field, then record your first observation."><form className="workspace-form" onSubmit={submit}><label htmlFor="register-name">Your name<input id="register-name" required maxLength={255} autoComplete="name" value={name} onChange={e => setName(e.target.value)} /></label><label htmlFor="register-email">Email address<input id="register-email" type="email" required autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} /></label><label htmlFor="register-password">Password<input id="register-password" type="password" required minLength={8} maxLength={72} autoComplete="new-password" value={password} onChange={e => setPassword(e.target.value)} aria-describedby="password-guidance" /></label><p id="password-guidance" className="helper-copy">Use at least 8 characters.</p><label className="consent-control"><input type="checkbox" required checked={consent} onChange={e => setConsent(e.target.checked)} /><span>I agree to account and field-data processing as described in the <Link to="/privacy">privacy notice</Link>. Optional training use is a separate choice.</span></label>{error && <div className="message error" role="alert">{error}</div>}<Button type="submit" busy={busy} disabled={!consent || !name.trim()}>{busy ? 'Creating account…' : 'Create farmer account'}{!busy && <ArrowRight size={18} />}</Button></form><div className="auth-alternate"><p>Already have an account? <Link to="/login">Sign in</Link></p><p>Joining as an agronomist or organization? <Link to="/onboarding">Choose your workspace</Link></p></div></AuthShell>;
 };
-
-export const ForgotPasswordPage: React.FC = () => {
-  return (
-    <div className="min-h-screen bg-field-canvas font-sans">
-      <PublicNavbar />
-      <div className="flex items-center justify-center p-4 py-12">
-      <div className="max-w-md w-full bg-pure-surface border border-structural p-8 rounded-3xl shadow-sm space-y-6 text-xs text-center">
-        <Link to="/" className="inline-flex items-center gap-2">
-          <div className="w-10 h-10 rounded-xl bg-field-ink text-lime-signal flex items-center justify-center font-bold">
-            <Sprout size={22} />
-          </div>
-        </Link>
-        <h1 className="text-2xl font-extrabold text-field-ink">Reset Password</h1>
-
-        <p className="text-muted-leaf leading-relaxed">
-          Password reset is not available in this deployment yet. Contact your workspace administrator or the Fasal Rakshak support team to regain access.
-        </p>
-        <Link to="/contact" className="block py-2.5 bg-field-ink text-white font-bold rounded-xl">Contact support</Link>
-        <Link to="/login" className="block py-2.5 border border-structural font-bold rounded-xl">Return to login</Link>
-      </div>
-      </div>
-    </div>
-  );
-};
+export const ForgotPasswordPage: React.FC = () => <AuthShell title="Let's get you back in." description="If you cannot sign in, contact the team for account-recovery support."><p>Automatic email recovery is not enabled for this pilot. For your privacy, changing account access requires verification by the support team.</p><div className="workspace-form"><Button asChild><Link to="/contact">Contact support <ArrowRight size={18} /></Link></Button><Button asChild variant="secondary"><Link to="/login">Return to sign in</Link></Button></div></AuthShell>;

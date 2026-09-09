@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, UserRole } from '../types';
-import { apiClient } from '../services/apiClient';
+import { apiClient, ApiError } from '../services/apiClient';
 
 interface AuthContextType {
   user: User | null;
@@ -9,6 +9,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (emailOrPhone: string, password: string) => Promise<UserRole>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -41,8 +42,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (isWebRole(account.role)) setUser(toUser(account));
         else apiClient.logout();
       })
-      .catch(() => {
-        apiClient.logout();
+      .catch((error) => {
+        if (error instanceof ApiError && [401, 403].includes(error.status)) apiClient.logout();
         setUser(null);
       })
       .finally(() => setIsLoading(false));
@@ -68,8 +69,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     apiClient.logout();
     setUser(null);
   };
+  const refreshUser = async () => { const account = await apiClient.getCurrentUser(); if (isWebRole(account.role)) setUser(toUser(account)); };
 
-  return <AuthContext.Provider value={{ user, role: user?.role || null, isAuthenticated: !!user, isLoading, login, logout }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, role: user?.role || null, isAuthenticated: !!user, isLoading, login, logout, refreshUser }}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {

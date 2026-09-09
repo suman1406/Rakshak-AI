@@ -44,7 +44,18 @@ const request = async (path: string, init: RequestInit = {}, canRefresh = true):
   return parseResponse(response);
 };
 
+const requestAll = async (path: string): Promise<any[]> => {
+  const records: any[] = [];
+  for (let offset = 0; ; offset += 100) {
+    const page = await request(`${path}${path.includes('?') ? '&' : '?'}limit=100&offset=${offset}`);
+    records.push(...page);
+    if (page.length < 100) return records;
+  }
+};
 export const apiClient = {
+  contact: (payload: { name: string; email: string; message: string; consent: boolean }) => request('/api/v1/contact', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
+  listInquiries: () => request('/api/v1/admin/inquiries'),
+  closeInquiry: (id: string) => request(`/api/v1/admin/inquiries/${id}/close`, { method: 'POST' }),
   mediaBlob: async (path: string): Promise<Blob> => {
     if (!path.startsWith('/api/v1/videos/')) throw new Error('Invalid evidence path');
     const fetchMedia = () => fetch(`${API_BASE_URL}${path}`, { headers: { Authorization: `Bearer ${window.localStorage.getItem(TOKEN_KEY) || ''}` } });
@@ -81,7 +92,7 @@ export const apiClient = {
   },
   getCurrentUser: async () => {
     const data = await request('/api/v1/auth/me');
-    return data as { id: string; email?: string; phone?: string; role: UserRole; org_id?: string; display_name?: string; account_status: string };
+    return data as { id: string; email?: string; phone?: string; role: UserRole; org_id?: string; display_name?: string; account_status: string; training_consent: boolean };
   },
   logout: () => {
     if (typeof window !== 'undefined') {
@@ -89,12 +100,20 @@ export const apiClient = {
       window.localStorage.removeItem(REFRESH_KEY);
     }
   },
-  listFields: () => request('/api/v1/fields'),
+  listFields: () => requestAll('/api/v1/fields'),
   getField: (fieldId: string) => request(`/api/v1/fields/${fieldId}`),
   getFieldHealth: (fieldId: string) => request(`/api/v1/fields/${fieldId}/health`),
   getFarm: (farmId: string) => request(`/api/v1/farms/${farmId}`),
-  listFarms: () => request('/api/v1/farms'),
+  listFarms: () => requestAll('/api/v1/farms'),
   listVideos: (fieldId?: string) => request(`/api/v1/videos${fieldId ? `?field_id=${encodeURIComponent(fieldId)}` : ''}`),
+  listAllVideos: async () => {
+    const records: any[] = [];
+    for (let offset = 0; ; offset += 100) {
+      const page = await request(`/api/v1/videos?limit=100&offset=${offset}`);
+      records.push(...page);
+      if (page.length < 100) return records;
+    }
+  },
   getVideo: (videoId: string) => request(`/api/v1/videos/${videoId}`),
   uploadVideo: (fieldId: string, file: File, consent: boolean) => {
     const formData = new FormData();
@@ -108,6 +127,7 @@ export const apiClient = {
   getVideoFrames: (videoId: string) => request(`/api/v1/videos/${videoId}/frames`),
   getB2BDashboard: () => request('/api/v1/b2b/dashboard'),
   getAgronomistQueue: (limit = 50) => request(`/api/v1/agronomist/queue?limit=${limit}`),
+  getAgronomistReviews: () => request('/api/v1/agronomist/reviews?limit=500'),
   getAgronomistCase: (diagnosisId: string) => request(`/api/v1/agronomist/cases/${diagnosisId}`),
   getAgronomistCaseHistory: (diagnosisId: string) => request(`/api/v1/agronomist/cases/${diagnosisId}/history`),
   claimAgronomistCase: (diagnosisId: string) => request(`/api/v1/agronomist/cases/${diagnosisId}/claim`, { method: 'POST' }),
@@ -125,7 +145,9 @@ export const apiClient = {
     const suffix = query.toString();
     return request(`/api/v1/b2b/drilldown${suffix ? `?${suffix}` : ''}`);
   },
-  updateProfile: (payload: { display_name: string }) => request('/api/v1/auth/me', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
+  updateProfile: (payload: { display_name?: string; training_consent?: boolean }) => request('/api/v1/auth/me', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
+  changePassword: (current_password: string, new_password: string) => request('/api/v1/auth/password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ current_password, new_password }) }),
+  logoutAll: () => request('/api/v1/auth/logout-all', { method: 'POST' }),
   listPublicPlans: () => request('/api/v1/onboarding/plans') as Promise<Array<{ code: string; name: string; monthly_price_paise: number | null; annual_price_paise: number | null; farm_limit: number | null; scan_limit: number | null }>>,
   submitApplication: (payload: { application_type: 'agronomist' | 'organization'; email: string; access_phrase: string; display_name: string; consent_to_data_processing: boolean; organization_name?: string; organization_type?: string; requested_plan_code?: string }) => request('/api/v1/onboarding/applications', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
@@ -152,3 +174,4 @@ export type DemoWorkspace = {
   agronomist: null | { open_cases: number; message: string };
   admin: null | { pilot_plan: { code: string; name: string; monthly_price_paise: number; annual_price_paise: number; farm_limit: number; scan_limit: number }; message: string };
 };
+

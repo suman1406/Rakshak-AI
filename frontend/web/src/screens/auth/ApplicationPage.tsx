@@ -1,30 +1,41 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { CheckCircle2, ShieldCheck } from 'lucide-react';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { CheckCircle2 } from 'lucide-react';
 import { apiClient } from '../../services/apiClient';
-import { PublicNavbar } from '../../components/layout/PublicNavbar';
+import { AuthShell } from '../../components/ui/auth-shell';
+import { Button } from '../../components/ui/button';
 
-const ORG_TYPES = [
-  ['fpo', 'Farmer producer organization'], ['insurer', 'Insurer'], ['input_company', 'Input company'],
-  ['bank', 'Bank or lender'], ['gov', 'Government program'], ['research', 'Research institution'], ['other', 'Other organization'],
-];
-
+const ORG_TYPES = [['fpo', 'Farmer producer organization'], ['insurer', 'Insurer'], ['input_company', 'Input company'], ['bank', 'Bank or lender'], ['gov', 'Government program'], ['research', 'Research institution'], ['other', 'Other organization']];
 export const ApplicationPage: React.FC = () => {
   const { kind } = useParams<{ kind: 'agronomist' | 'organization' }>();
+  const [search] = useSearchParams();
   const applicationType = kind === 'agronomist' ? 'agronomist' : 'organization';
   const [plans, setPlans] = useState<Array<{ code: string; name: string }>>([]);
+  const [planError, setPlanError] = useState('');
   const [name, setName] = useState(''); const [email, setEmail] = useState(''); const [phrase, setPhrase] = useState('');
-  const [organizationName, setOrganizationName] = useState(''); const [organizationType, setOrganizationType] = useState('fpo'); const [plan, setPlan] = useState('');
+  const [organizationName, setOrganizationName] = useState(''); const [organizationType, setOrganizationType] = useState('fpo'); const [plan, setPlan] = useState(search.get('plan') || '');
   const [consent, setConsent] = useState(false); const [error, setError] = useState(''); const [receipt, setReceipt] = useState<{ reference: string; message: string } | null>(null); const [submitting, setSubmitting] = useState(false);
-  useEffect(() => { apiClient.listPublicPlans().then((items) => { setPlans(items); setPlan(items[0]?.code || ''); }).catch(() => setPlans([])); }, []);
-  const submit = async (event: React.FormEvent) => {
-    event.preventDefault(); setError(''); setSubmitting(true);
-    try {
-      const result = await apiClient.submitApplication({ application_type: applicationType, display_name: name.trim(), email: email.trim(), access_phrase: phrase, consent_to_data_processing: consent, ...(applicationType === 'organization' ? { organization_name: organizationName.trim(), organization_type: organizationType, requested_plan_code: plan || undefined } : {}) });
-      setReceipt(result);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : 'We could not submit your application.'); } finally { setSubmitting(false); }
-  };
-  if (receipt) return <div className="min-h-screen bg-field-canvas"><PublicNavbar /><main className="max-w-xl mx-auto px-4 py-20"><section className="rounded-3xl border border-structural bg-pure-surface p-8 text-center space-y-4"><CheckCircle2 className="mx-auto text-emerald-600" size={38}/><h1 className="text-2xl font-extrabold text-field-ink">Application received</h1><p className="text-sm text-muted-leaf">Reference <span className="font-mono font-bold text-field-ink">{receipt.reference}</span></p><p className="text-sm text-muted-leaf">{receipt.message}</p><Link to="/login" className="inline-flex rounded-xl bg-field-ink px-4 py-3 text-xs font-bold text-white">Return to sign in</Link></section></main></div>;
-  const title = applicationType === 'agronomist' ? 'Apply as an agronomist' : 'Apply for an organization workspace';
-  return <div className="min-h-screen bg-field-canvas"><PublicNavbar /><main className="max-w-xl mx-auto px-4 py-12"><section className="rounded-3xl border border-structural bg-pure-surface p-6 sm:p-8 space-y-6"><div><p className="eyebrow">Reviewed access</p><h1 className="mt-2 text-2xl font-extrabold text-field-ink">{title}</h1><p className="mt-2 text-sm text-muted-leaf">A platform administrator reviews this request before the workspace is enabled. We do not collect payment details here.</p></div><form className="space-y-4" onSubmit={submit}><label className="block text-xs font-semibold">Your name<input required value={name} onChange={(e) => setName(e.target.value)} className="mt-1.5 w-full rounded-xl border border-structural bg-field-canvas p-3" /></label><label className="block text-xs font-semibold">Email address<input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1.5 w-full rounded-xl border border-structural bg-field-canvas p-3" /></label><label className="block text-xs font-semibold">Choose an access phrase<input required minLength={8} type="password" autoComplete="new-password" value={phrase} onChange={(e) => setPhrase(e.target.value)} className="mt-1.5 w-full rounded-xl border border-structural bg-field-canvas p-3" /><span className="mt-1 block font-normal text-muted-leaf">This is your personal sign-in secret, never a shared administrator phrase.</span></label>{applicationType === 'organization' && <><label className="block text-xs font-semibold">Organization name<input required value={organizationName} onChange={(e) => setOrganizationName(e.target.value)} className="mt-1.5 w-full rounded-xl border border-structural bg-field-canvas p-3" /></label><label className="block text-xs font-semibold">Organization type<select value={organizationType} onChange={(e) => setOrganizationType(e.target.value)} className="mt-1.5 w-full rounded-xl border border-structural bg-field-canvas p-3">{ORG_TYPES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>{plans.length > 0 && <label className="block text-xs font-semibold">Pilot plan<select value={plan} onChange={(e) => setPlan(e.target.value)} className="mt-1.5 w-full rounded-xl border border-structural bg-field-canvas p-3">{plans.map((item) => <option key={item.code} value={item.code}>{item.name}</option>)}</select></label>}</>}<label className="flex items-start gap-2 rounded-xl border border-structural bg-field-canvas p-3 text-xs text-muted-leaf"><input required checked={consent} onChange={(e) => setConsent(e.target.checked)} type="checkbox" className="mt-0.5"/><span>I consent to data processing for reviewing and operating this request, according to the <Link to="/privacy" className="font-semibold underline">privacy notice</Link>.</span></label>{error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-alert-red">{error}</p>}<button disabled={submitting} className="w-full rounded-xl bg-field-ink py-3 text-xs font-bold text-white disabled:opacity-60">{submitting ? 'Submitting application…' : 'Submit for review'}</button></form><p className="flex gap-2 text-xs text-muted-leaf"><ShieldCheck size={16} className="shrink-0 text-field-ink"/>Approval is recorded with the reviewing administrator. Rejected applications cannot sign in.</p></section></main></div>;
+  useEffect(() => {
+    if (applicationType !== 'organization') return;
+    let active = true;
+    apiClient.listPublicPlans().then(items => { if (active) { setPlans(items); setPlan(current => items.some(item => item.code === current) ? current : ''); } }).catch(() => { if (active) { setPlan(''); setPlanError('Plans could not be loaded. You can still apply and discuss a plan with the team.'); } });
+    return () => { active = false; };
+  }, [applicationType]);
+  async function submit(event: React.FormEvent) {
+    event.preventDefault(); setError('');
+    if (new TextEncoder().encode(phrase).length > 72) { setError('Use a password of at most 72 bytes. Non-English characters can take more than one byte.'); return; }
+    setSubmitting(true);
+    try { setReceipt(await apiClient.submitApplication({ application_type: applicationType, display_name: name.trim(), email: email.trim(), access_phrase: phrase, consent_to_data_processing: consent, ...(applicationType === 'organization' ? { organization_name: organizationName.trim(), organization_type: organizationType, requested_plan_code: plan || undefined } : {}) })); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : 'We could not submit your application.'); }
+    finally { setSubmitting(false); }
+  }
+  if (receipt) return <AuthShell title="Your application is saved." description="The team will review your request before enabling access."><div role="status" className="workspace-form"><CheckCircle2 size={32}/><p>Reference <strong className="request-reference">{receipt.reference}</strong></p><p>{receipt.message}</p><Button asChild><Link to="/login">Return to sign in</Link></Button><p>Need to follow up? <Link to="/contact">Contact the team</Link> with your reference.</p></div></AuthShell>;
+  return <AuthShell title={applicationType === 'agronomist' ? 'Bring your expertise.' : 'Bring your field team.'} description={applicationType === 'agronomist' ? 'Apply for an agronomist workspace to review crop evidence.' : 'Request a shared workspace for your organization.'}><form className="workspace-form" onSubmit={submit}>
+    <label>Your name<input required maxLength={255} autoComplete="name" value={name} onChange={e => setName(e.target.value)}/></label>
+    <label>Email address<input required type="email" maxLength={320} autoComplete="email" value={email} onChange={e => setEmail(e.target.value)}/></label>
+    <label>Choose a password<input required minLength={8} maxLength={72} type="password" autoComplete="new-password" value={phrase} onChange={e => setPhrase(e.target.value)}/></label><p className="helper-copy">At least 8 characters. You will use this to sign in once your request is approved.</p>
+    {applicationType === 'organization' && <><label>Organization name<input required maxLength={255} autoComplete="organization" value={organizationName} onChange={e => setOrganizationName(e.target.value)}/></label><label>Organization type<select value={organizationType} onChange={e => setOrganizationType(e.target.value)}>{ORG_TYPES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>{plans.length > 0 && <label>Requested plan<select value={plan} onChange={e => setPlan(e.target.value)}><option value="">Discuss with the team</option>{plans.map(item => <option key={item.code} value={item.code}>{item.name}</option>)}</select></label>}{planError && <p className="helper-copy" role="status">{planError}</p>}</>}
+    <label className="consent-control"><input required checked={consent} onChange={e => setConsent(e.target.checked)} type="checkbox"/><span>I agree to data processing for reviewing and operating this request. <Link to="/privacy">Read the privacy notice.</Link></span></label>
+    {error && <p role="alert" className="message error">{error}</p>}<Button busy={submitting} disabled={!consent || !name.trim() || (applicationType === 'organization' && !organizationName.trim())}>{submitting ? 'Submitting…' : 'Submit for review'}</Button>
+    </form><div className="auth-alternate"><p>An administrator reviews every application. This request does not collect payment or activate a subscription.</p><p>Already approved? <Link to="/login">Sign in</Link></p></div></AuthShell>;
 };
