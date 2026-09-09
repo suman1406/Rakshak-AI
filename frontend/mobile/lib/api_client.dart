@@ -12,6 +12,17 @@ class ApiClient {
 
   static final instance = ApiClient();
   final String baseUrl;
+  Future<dynamic> contact(
+          {required String name,
+          required String email,
+          required String message,
+          required bool consent}) =>
+      _post('/api/v1/contact', {
+        'name': name,
+        'email': email,
+        'message': message,
+        'consent': consent
+      });
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   String? _accessToken;
 

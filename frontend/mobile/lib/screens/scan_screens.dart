@@ -165,15 +165,15 @@ class _NewScanState extends State<NewScanScreen> {
           const SizedBox(height: 4),
           const Text('MP4 or MOV · up to 100 MB'),
           const SizedBox(height: 14),
-          SecondaryAction(
-              label: 'Choose video',
-              icon: Icons.upload_file_rounded,
-              onPressed: chooseVideo),
+          PrimaryAction(
+              label: 'Record a field video',
+              icon: Icons.videocam_outlined,
+              onPressed: uploading ? null : recordVideo),
           const SizedBox(height: 10),
           SecondaryAction(
-              label: 'Record in app',
-              icon: Icons.videocam_outlined,
-              onPressed: recordVideo)
+              label: 'Choose a saved video',
+              icon: Icons.upload_file_rounded,
+              onPressed: uploading ? null : chooseVideo)
         ])),
         if (uploadError != null) ...[
           const SizedBox(height: 12),
@@ -220,21 +220,31 @@ class _CameraGuidanceState extends State<CameraGuidanceScreen> {
 
   Future<void> captureVideo() async {
     setState(() => capturing = true);
-    final cameraStatus = await Permission.camera.request();
-    final microphoneStatus = await Permission.microphone.request();
-    if (!mounted) return;
-    if (!cameraStatus.isGranted || !microphoneStatus.isGranted) {
+    try {
+      final cameraStatus = await Permission.camera.request();
+      final microphoneStatus = await Permission.microphone.request();
+      if (!mounted) return;
+      if (!cameraStatus.isGranted || !microphoneStatus.isGranted) {
+        setState(() => capturing = false);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                'Camera and microphone access are required to record a field video.')));
+        return;
+      }
+      final video = await ImagePicker().pickVideo(
+          source: ImageSource.camera, maxDuration: const Duration(seconds: 30));
+      if (!mounted) return;
       setState(() => capturing = false);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text(
-              'Camera and microphone access are required to record a field video.')));
-      return;
+      if (video != null) Navigator.of(context).pop(video.path);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                'Could not open the camera. Try again or choose a saved video.')));
+      }
+    } finally {
+      if (mounted) setState(() => capturing = false);
     }
-    final video = await ImagePicker().pickVideo(
-        source: ImageSource.camera, maxDuration: const Duration(seconds: 30));
-    if (!mounted) return;
-    setState(() => capturing = false);
-    if (video != null) Navigator.of(context).pop(video.path);
   }
 
   @override

@@ -15,22 +15,40 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int tab = 0;
+  int revision = 0;
   @override
   Widget build(BuildContext context) => Scaffold(
         body: SafeArea(
             child: [
-          const DashboardTab(),
+          DashboardTab(key: ValueKey('home-$revision')),
+          DashboardTab(key: ValueKey('fields-$revision'), fieldsOnly: true),
+          const SizedBox.shrink(),
           const ScanHistoryScreen(),
           const ProfileScreen()
         ][tab]),
         bottomNavigationBar: NavigationBar(
             selectedIndex: tab,
-            onDestinationSelected: (value) => setState(() => tab = value),
+            onDestinationSelected: (value) async {
+              if (value == 2) {
+                await Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const NewScanScreen()));
+                if (mounted) setState(() => revision++);
+              } else {
+                setState(() => tab = value);
+              }
+            },
             destinations: const [
+              NavigationDestination(
+                  icon: Icon(Icons.home_outlined),
+                  selectedIcon: Icon(Icons.home),
+                  label: 'Home'),
               NavigationDestination(
                   icon: Icon(Icons.grass_outlined),
                   selectedIcon: Icon(Icons.grass),
                   label: 'Fields'),
+              NavigationDestination(
+                  icon: Icon(Icons.add_circle_outline, size: 30),
+                  label: 'Scan'),
               NavigationDestination(
                   icon: Icon(Icons.history), label: 'History'),
               NavigationDestination(
@@ -40,7 +58,8 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class DashboardTab extends StatefulWidget {
-  const DashboardTab({super.key});
+  const DashboardTab({super.key, this.fieldsOnly = false});
+  final bool fieldsOnly;
   @override
   State<DashboardTab> createState() => _DashboardTabState();
 }
@@ -99,72 +118,140 @@ class _DashboardTabState extends State<DashboardTab> {
         final name = (value.user['display_name']?.toString() ?? 'farmer')
             .split(' ')
             .first;
-        return PageContent(children: [
-          const SizedBox(height: 12),
-          Text('Your fields, $name',
-              style: Theme.of(context).textTheme.headlineSmall),
-          const SizedBox(height: 8),
-          const Text('A closer look at your crop. One visit at a time.'),
-          const SizedBox(height: 24),
-          PrimaryAction(
-              label: 'Record a crop scan',
-              icon: Icons.videocam_outlined,
-              onPressed: () => open(const NewScanScreen())),
-          const SizedBox(height: 12),
-          const Text('Soybean · 10–30 seconds · Several plants',
-              style: TextStyle(color: RakshakColors.leaf)),
-          const SizedBox(height: 28),
-          SectionHeading(
-              title: 'Your fields',
-              actionLabel: 'Add field',
-              onAction: () => open(const FieldSetupScreen())),
-          const SizedBox(height: 12),
-          if (value.fields.isEmpty)
-            const EmptyState(
-                icon: Icons.grass_outlined,
-                title: 'Start with your first field',
-                body:
-                    'Give it a name you will recognize when you return. Your scans stay with this field.'),
-          for (final field in value.fields)
-            Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _FieldCard(
-                    field: field,
-                    latestVideo: latest[field['id'].toString()],
-                    onTap: () => open(FieldDetailsScreen(
+        return RefreshIndicator(
+            onRefresh: () async {
+              final pending = _load();
+              setState(() => data = pending);
+              try {
+                await pending;
+              } catch (_) {/* FutureBuilder displays retry. */}
+            },
+            child: PageContent(children: [
+              const SizedBox(height: 12),
+              const Row(children: [
+                Icon(Icons.spa, color: RakshakColors.ink),
+                SizedBox(width: 8),
+                Text('Rakshak AI',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        color: RakshakColors.ink,
+                        fontSize: 20))
+              ]),
+              const SizedBox(height: 26),
+              Text(
+                  widget.fieldsOnly ? 'Your fields' : 'Your fields,\nin focus.',
+                  style: Theme.of(context)
+                      .textTheme
+                      .displaySmall
+                      ?.copyWith(letterSpacing: -1.4)),
+              const SizedBox(height: 10),
+              Text(
+                  'Hello, $name. ${widget.fieldsOnly ? 'Keep every observation with its field.' : 'A little closer to your crop, every visit.'}'),
+              const SizedBox(height: 24),
+              if (!widget.fieldsOnly)
+                _CapturePanel(onRecord: () => open(const NewScanScreen())),
+              const SizedBox(height: 28),
+              SectionHeading(
+                  title: 'Your fields',
+                  actionLabel: 'Add field',
+                  onAction: () => open(const FieldSetupScreen())),
+              const SizedBox(height: 12),
+              if (value.fields.isEmpty)
+                const EmptyState(
+                    icon: Icons.grass_outlined,
+                    title: 'Start with your first field',
+                    body:
+                        'Give it a name you will recognize when you return. Your scans stay with this field.'),
+              for (final field
+                  in (widget.fieldsOnly ? value.fields : value.fields.take(3)))
+                Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _FieldCard(
                         field: field,
-                        latestVideo: latest[field['id'].toString()])))),
-          const SizedBox(height: 20),
-          const SectionHeading(title: 'Recent scans'),
-          const SizedBox(height: 12),
-          if (value.videos.isEmpty)
-            const Text('Your first scan will appear here after upload.'),
-          for (final video in value.videos.take(5))
-            Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: InkWell(
-                    onTap: () => open(AnalyzingCropHealthScreen(
-                        videoId: video['video_id'].toString())),
-                    child: AppCard(
-                        child: Row(children: [
-                      const Icon(Icons.video_file_outlined),
-                      const SizedBox(width: 12),
-                      Expanded(
-                          child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                            Text(_readable(video['status']),
-                                style: Theme.of(context).textTheme.titleMedium),
-                            Text(_date(video['created_at']),
-                                style:
-                                    const TextStyle(color: RakshakColors.leaf))
-                          ])),
-                      const Icon(Icons.chevron_right)
-                    ])))),
-          const SizedBox(height: 16),
-          const SafetyNote(),
-        ]);
+                        latestVideo: latest[field['id'].toString()],
+                        onTap: () => open(FieldDetailsScreen(
+                            field: field,
+                            latestVideo: latest[field['id'].toString()])))),
+              if (!widget.fieldsOnly) ...[
+                const SizedBox(height: 20),
+                const SectionHeading(title: 'Recent scans'),
+                const SizedBox(height: 12),
+                if (value.videos.isEmpty)
+                  const Text('Your first scan will appear here after upload.'),
+                for (final video in value.videos.take(5))
+                  Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: InkWell(
+                          onTap: () => open(AnalyzingCropHealthScreen(
+                              videoId: video['video_id'].toString())),
+                          child: AppCard(
+                              child: Row(children: [
+                            const Icon(Icons.video_file_outlined),
+                            const SizedBox(width: 12),
+                            Expanded(
+                                child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                  Text(_readable(video['status']),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium),
+                                  Text(_date(video['created_at']),
+                                      style: const TextStyle(
+                                          color: RakshakColors.leaf))
+                                ])),
+                            const Icon(Icons.chevron_right)
+                          ])))),
+                const SizedBox(height: 16),
+                const SafetyNote(),
+              ],
+            ]));
       });
+}
+
+class _CapturePanel extends StatelessWidget {
+  const _CapturePanel({required this.onRecord});
+  final VoidCallback onRecord;
+  @override
+  Widget build(BuildContext context) => Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+            color: RakshakColors.ink, borderRadius: BorderRadius.circular(24)),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Image.asset('assets/soybean-field.png',
+              height: 130,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              excludeFromSemantics: true),
+          Padding(
+              padding: const EdgeInsets.all(22),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Take a closer look.',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 25,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -.5)),
+                    const SizedBox(height: 8),
+                    const Text(
+                        'Record several plants. Keep the evidence. Decide what to do next.',
+                        style:
+                            TextStyle(color: Color(0xffe3eedd), fontSize: 15)),
+                    const SizedBox(height: 20),
+                    PrimaryAction(
+                        label: 'Record a scan',
+                        icon: Icons.videocam_outlined,
+                        onPressed: onRecord),
+                    const SizedBox(height: 12),
+                    const Text('Soybean · 10–30 seconds',
+                        style:
+                            TextStyle(color: Color(0xffd4dfd7), fontSize: 13)),
+                  ])),
+        ]),
+      );
 }
 
 String _readable(dynamic value) =>

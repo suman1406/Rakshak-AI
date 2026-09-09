@@ -19,7 +19,8 @@ class RakshakApp extends StatelessWidget {
 
 class SessionGate extends StatefulWidget {
   const SessionGate({super.key});
-  @override State<SessionGate> createState() => _SessionGateState();
+  @override
+  State<SessionGate> createState() => _SessionGateState();
 }
 
 class _SessionGateState extends State<SessionGate> {
@@ -28,7 +29,10 @@ class _SessionGateState extends State<SessionGate> {
   Widget build(BuildContext context) => FutureBuilder<bool>(
         future: session,
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          if (!snapshot.hasData) {
+            return const Scaffold(
+                body: Center(child: CircularProgressIndicator()));
+          }
           return snapshot.data! ? const HomeScreen() : const WelcomeScreen();
         },
       );

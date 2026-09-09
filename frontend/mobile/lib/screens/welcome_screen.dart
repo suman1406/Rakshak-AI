@@ -14,30 +14,27 @@ class WelcomeScreen extends StatelessWidget {
         const Row(children: [
           Icon(Icons.spa_outlined, color: RakshakColors.ink, size: 30),
           SizedBox(width: 10),
-          Text('rakshak ai',
-              style: TextStyle(
-                  fontSize: 25,
-                  letterSpacing: -1,
-                  fontWeight: FontWeight.w700,
-                  color: RakshakColors.ink))
+          Flexible(
+              child: Text('rakshak ai',
+                  style: TextStyle(
+                      fontSize: 25,
+                      letterSpacing: -1,
+                      fontWeight: FontWeight.w700,
+                      color: RakshakColors.ink)))
         ]),
         const SizedBox(height: 28),
         ClipRRect(
-            borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(64),
-                topRight: Radius.circular(10),
-                bottomLeft: Radius.circular(10),
-                bottomRight: Radius.circular(10)),
+            borderRadius: BorderRadius.circular(24),
             child: Image.asset('assets/soybean-field.png',
-                height: 210,
+                height: 260,
                 width: double.infinity,
                 fit: BoxFit.cover,
                 semanticLabel: 'Illustrative soybean field in morning light')),
         const SizedBox(height: 26),
-        Text('A closer look.\nA clearer next step.',
+        Text('Your field.\nA closer look.',
             style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                fontSize: 36,
-                fontWeight: FontWeight.w600,
+                fontSize: 40,
+                fontWeight: FontWeight.w700,
                 letterSpacing: -1.5)),
         const SizedBox(height: 14),
         const Text(

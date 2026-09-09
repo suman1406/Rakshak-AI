@@ -19,12 +19,20 @@ class _FeedbackState extends State<FeedbackScreen> {
     setState(() => submitting = true);
     try {
       final note = noteController.text.trim();
-      await ApiClient.instance.submitFeedback(widget.diagnosisId!, correctionType: 'other', note: 'Rating: $rating/5${note.isEmpty ? '' : '. $note'}');
+      await ApiClient.instance.submitFeedback(widget.diagnosisId!,
+          correctionType: 'other',
+          note: 'Rating: $rating/5${note.isEmpty ? '' : '. $note'}');
       if (mounted) Navigator.of(context).pop();
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Could not submit feedback: $error')));
+      }
+    } finally {
+      if (mounted) setState(() => submitting = false);
     }
-    catch (error) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not submit feedback: $error'))); }
-    finally { if (mounted) setState(() => submitting = false); }
   }
+
   @override
   Widget build(BuildContext context) => AppPage(
       title: 'Share feedback',
@@ -54,7 +62,8 @@ class _FeedbackState extends State<FeedbackScreen> {
           ])
         ])),
         const SizedBox(height: 18),
-        TextField(controller: noteController,
+        TextField(
+            controller: noteController,
             maxLines: 5,
             decoration: InputDecoration(
                 labelText: 'Add a note (optional)', alignLabelWithHint: true)),

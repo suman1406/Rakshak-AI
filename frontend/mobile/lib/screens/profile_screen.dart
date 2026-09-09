@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'support_screen.dart';
 import '../api_client.dart';
 import '../core/app_theme.dart';
 import '../widgets/app_components.dart';
@@ -87,6 +88,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
           SecondaryAction(
               label: 'Security & consent',
               onPressed: () => navigateTo(context, const SecurityScreen())),
+          const SizedBox(height: 16),
+          SecondaryAction(
+              label: 'Help & support',
+              onPressed: () => navigateTo(context, const SupportScreen())),
+          const SizedBox(height: 12),
+          SecondaryAction(
+              label: 'Privacy & terms',
+              onPressed: () => navigateTo(context, const PrivacyTermsScreen())),
+          const SizedBox(height: 24),
+          const Text('Rakshak AI · Version 0.2.0 (2)'),
           const SizedBox(height: 16),
           SecondaryAction(
               label: 'Sign out',

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'support_screen.dart';
 import 'dart:convert';
 import '../api_client.dart';
 import '../core/app_theme.dart';
@@ -184,6 +185,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     controlAffinity: ListTileControlAffinity.leading,
                     title: const Text(
                         'I agree to processing my account and field data for this service.')),
+                TextButton(onPressed: () => navigateTo(context, const PrivacyTermsScreen()), child: const Text('Read privacy and terms')),
                 if (error != null) ...[
                   AppCard(
                       color: RakshakColors.error,

@@ -40,6 +40,7 @@ class PageContent extends StatelessWidget {
   final CrossAxisAlignment crossAxisAlignment;
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 36),
       child:
           Column(crossAxisAlignment: crossAxisAlignment, children: children));
@@ -92,8 +93,11 @@ class AppCard extends StatelessWidget {
           color: color,
           border:
               Border.all(color: RakshakColors.border.withValues(alpha: .75)),
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: const []),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: const [
+            BoxShadow(
+                color: Color(0x04143b2c), blurRadius: 18, offset: Offset(0, 5))
+          ]),
       child: child);
 }
 
