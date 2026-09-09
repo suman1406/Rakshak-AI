@@ -35,6 +35,8 @@ async def get_current_user(
         user = result.scalar_one_or_none()
         if not user:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Account not found")
+        if payload.get("version", 0) != user.token_version:
+            raise HTTPException(status_code=401, detail="Session has been revoked")
         if user.account_status != AccountStatus.active.value:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is not active")
         return user
