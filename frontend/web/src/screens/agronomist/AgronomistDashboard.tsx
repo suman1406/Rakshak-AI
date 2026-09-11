@@ -103,7 +103,7 @@ export const AgronomistDashboard: React.FC = () => {
       <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4 flex flex-wrap items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-2.5 text-amber-900 font-semibold">
           <Database size={17} className="shrink-0 text-amber-800" />
-          <span>No review cases are included because demo mode does not fabricate AI diagnoses or human-review work.</span>
+          <span>Demo farms for <strong>Rakshak Demonstration Cooperative</strong> belong to <strong>Rakshak Demo Farmer</strong> (<code>farmer@rakshak.local</code>). No review cases are shown because demo mode never fabricates AI diagnoses or human-review work.</span>
         </div>
         <button className="action secondary text-xs py-1.5 px-3" onClick={() => setDemoMode(false)}>
           Switch to Live workspace
@@ -140,11 +140,42 @@ export const AgronomistDashboard: React.FC = () => {
       {loading ? (
         <div className="portfolio-loading" role="status" aria-busy="true"><RotateCcw size={17} className="ui-spinner"/>Updating the review queue…</div>
       ) : isDemoMode ? (
-        <div className="portfolio-empty">
-          <ClipboardList size={30}/>
-          <h3>No demo review cases</h3>
-          <p>No review cases are included because demo mode does not fabricate AI diagnoses or human-review work. Switch to Live workspace to review real field evidence.</p>
-          <button className="action secondary" onClick={() => setDemoMode(false)}>Switch to Live workspace</button>
+        <div className="p-6 space-y-4 bg-pure-surface rounded-2xl border border-structural text-xs">
+          <div className="flex items-center gap-3">
+            <ClipboardList size={28} className="text-muted-leaf shrink-0" />
+            <div>
+              <h3 className="font-bold text-sm text-field-ink">Demo Context: 0 Real Review Cases</h3>
+              <p className="text-muted-leaf mt-0.5">
+                The demonstration workspace contains <strong>6 farms</strong> and <strong>12 soybean fields</strong> owned by <strong>Rakshak Demo Farmer</strong> (<code>farmer@rakshak.local</code>) under <strong>Rakshak Demonstration Cooperative</strong>.
+                Fasal Rakshak AI never fabricates artificial AI diagnoses, confidence metrics, or review cases.
+              </p>
+            </div>
+          </div>
+          <div className="p-4 bg-field-canvas rounded-xl border border-structural space-y-2">
+            <div className="font-bold text-field-ink text-xs">Seeded Demo Infrastructure (Rakshak Demo Farmer):</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+              {[
+                { farm: "Narmada Field Collective", district: "Sehore", fields: "North Plot 1, South Plot 1" },
+                { farm: "Green Ridge Farm", district: "Sehore", fields: "North Plot 2, South Plot 2" },
+                { farm: "Riverbend Soybean Farm", district: "Dewas", fields: "North Plot 3, South Plot 3" },
+                { farm: "Sankalp Field Group", district: "Dewas", fields: "North Plot 4, South Plot 4" },
+                { farm: "Ujjain Crop Circle", district: "Ujjain", fields: "North Plot 5, South Plot 5" },
+                { farm: "Malwa Demonstration Farm", district: "Ujjain", fields: "North Plot 6, South Plot 6" },
+              ].map(item => (
+                <div key={item.farm} className="p-2.5 bg-pure-surface rounded-lg border border-structural">
+                  <p className="font-bold text-field-ink">{item.farm}</p>
+                  <p className="text-[11px] text-muted-leaf">{item.district} District · 2 fields</p>
+                  <p className="text-[10px] font-mono text-muted-leaf mt-1">{item.fields}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center justify-between pt-1">
+            <span className="text-muted-leaf">Currently 0 real review cases submitted. To review real field video evidence, switch to a live workspace.</span>
+            <button className="action secondary text-xs py-1.5 px-3" onClick={() => setDemoMode(false)}>
+              Switch to Live workspace
+            </button>
+          </div>
         </div>
       ) : !cases.length ? (
         <div className="portfolio-empty">

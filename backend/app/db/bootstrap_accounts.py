@@ -11,10 +11,13 @@ from app.core.security import get_password_hash
 from app.models.identity import OrgType, Organization, User, UserRole
 
 
-BOOTSTRAP_ORGANIZATION_NAME = "Rakshak Access Workspace"
+from app.db.demo_data import DEMO_ORG
+
+BOOTSTRAP_ORGANIZATION_NAME = DEMO_ORG
 BOOTSTRAP_ACCOUNTS = (
     ("agronomist@rakshak.local", "Rakshak Agronomist", UserRole.agronomist),
     ("workspace@rakshak.local", "Rakshak Workspace", UserRole.enterprise),
+    ("farmer@rakshak.local", "Rakshak Demo Farmer", UserRole.farmer),
 )
 
 
@@ -51,7 +54,7 @@ async def ensure_bootstrap_access_accounts(db: AsyncSession, password: str) -> l
         )
     ).scalar_one_or_none()
     if organization is None:
-        organization = Organization(name=BOOTSTRAP_ORGANIZATION_NAME, org_type=OrgType.other)
+        organization = Organization(name=BOOTSTRAP_ORGANIZATION_NAME, org_type=OrgType.fpo)
         db.add(organization)
         await db.flush()
 

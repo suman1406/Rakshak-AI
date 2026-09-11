@@ -77,7 +77,7 @@ export function demoWorkspaceToFarms(workspace: DemoWorkspace | null): Farm[] {
         name: farmName,
         fpoName: orgName,
         district,
-        ownerName: workspace.farmer?.display_name || 'Demo Farmer',
+        ownerName: workspace.farmer?.display_name || 'Rakshak Demo Farmer',
         totalFieldsCount: mappedFields.length,
         riskStatus: 'Not assessed',
         diseaseSignalsCount: 0,

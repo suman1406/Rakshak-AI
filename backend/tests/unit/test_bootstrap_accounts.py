@@ -21,9 +21,8 @@ async def test_bootstrap_creates_only_access_accounts_and_is_idempotent(test_db)
         )
     ).scalar_one()
     accounts = (await test_db.execute(select(User).order_by(User.email))).scalars().all()
-    assert [(account.email, account.role, account.org_id) for account in accounts] == [
-        (email, role, organization.id) for email, _, role in BOOTSTRAP_ACCOUNTS
-    ]
+    expected_accounts = sorted([(email, role, organization.id) for email, _, role in BOOTSTRAP_ACCOUNTS], key=lambda item: item[0])
+    assert [(account.email, account.role, account.org_id) for account in accounts] == expected_accounts
 
     assert await ensure_bootstrap_access_accounts(test_db, "A-different-password") == []
     accounts_after_retry = (await test_db.execute(select(User))).scalars().all()

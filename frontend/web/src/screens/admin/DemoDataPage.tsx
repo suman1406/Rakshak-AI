@@ -63,6 +63,41 @@ export const DemoDataPage: React.FC = () => {
         </div>
       </section>
 
+      {status?.available && (
+        <section className="rounded-3xl border border-structural bg-pure-surface p-6 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="font-bold text-field-ink text-sm">Demo Workspace / Demo Member</h2>
+            <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-bold text-amber-900">Synthetic Demo Member</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs pt-1">
+            <div>
+              <span className="text-[10px] text-muted-leaf uppercase font-mono block">Name</span>
+              <span className="font-bold text-field-ink">Rakshak Demo Farmer</span>
+            </div>
+            <div>
+              <span className="text-[10px] text-muted-leaf uppercase font-mono block">Email</span>
+              <a href="mailto:farmer@rakshak.local" className="font-mono text-field-ink hover:underline">farmer@rakshak.local</a>
+            </div>
+            <div>
+              <span className="text-[10px] text-muted-leaf uppercase font-mono block">Role</span>
+              <span className="font-semibold text-field-ink">Farmer</span>
+            </div>
+            <div>
+              <span className="text-[10px] text-muted-leaf uppercase font-mono block">Organization</span>
+              <span className="font-semibold text-field-ink">Rakshak Demonstration Cooperative</span>
+            </div>
+            <div>
+              <span className="text-[10px] text-muted-leaf uppercase font-mono block">Farms</span>
+              <span className="font-mono font-bold text-field-ink">6 farms</span>
+            </div>
+            <div>
+              <span className="text-[10px] text-muted-leaf uppercase font-mono block">Fields</span>
+              <span className="font-mono font-bold text-field-ink">12 fields</span>
+            </div>
+          </div>
+        </section>
+      )}
+
       {status && <p className="rounded-xl border border-structural bg-pure-surface p-4 text-sm text-muted-leaf">{status.message}</p>}
     </div>
   );

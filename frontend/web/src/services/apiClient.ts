@@ -171,7 +171,7 @@ export type DemoField = { reference: string; name: string; farm_name: string; di
 export type DemoWorkspace = {
   available: boolean; message: string;
   organization: null | { name: string; farms: Array<{ reference: string; name: string; district: string; owner_name: string; fields: DemoField[] }>; metrics: { total_farms: number; total_fields: number; videos: number; reports: number } };
-  farmer: null | { display_name: string; fields: DemoField[]; videos: [] };
+  farmer: null | { display_name: string; email?: string; fields: DemoField[]; videos: [] };
   agronomist: null | { open_cases: number; message: string };
   admin: null | { pilot_plan: { code: string; name: string; monthly_price_paise: number; annual_price_paise: number; farm_limit: number; scan_limit: number }; message: string };
 };

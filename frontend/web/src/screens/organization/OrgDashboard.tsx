@@ -69,7 +69,7 @@ export const OrgDashboard: React.FC = () => {
       <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4 flex flex-wrap items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-2.5 text-amber-900 font-semibold">
           <Database size={17} className="shrink-0 text-amber-800" />
-          <span>Viewing shared demonstration cooperative data. Field assessments have not been fabricated.</span>
+          <span>Viewing shared demonstration cooperative data for <strong>Rakshak Demo Farmer</strong> ({workspace?.farmer?.email || 'farmer@rakshak.local'}). Field assessments have not been fabricated.</span>
         </div>
         <button className="action secondary text-xs py-1.5 px-3" onClick={() => setDemoMode(false)}>
           Switch to Live workspace
