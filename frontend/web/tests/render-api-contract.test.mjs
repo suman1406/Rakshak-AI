@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-const baseUrl = (process.env.RAKSHAK_API_BASE_URL || 'https://rakshak-backend-7qx2.onrender.com').replace(/\/$/, '');
+const baseUrl = (process.env.RAKSHAK_API_BASE_URL || 'https://rakshak-backend-prd.onrender.com').replace(/\/$/, '');
 const requiredPaths = [
   '/api/v1/farms',
   '/api/v1/fields',

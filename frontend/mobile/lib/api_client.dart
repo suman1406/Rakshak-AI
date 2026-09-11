@@ -8,7 +8,7 @@ class ApiClient {
   ApiClient({String? baseUrl})
       : baseUrl = baseUrl ??
             const String.fromEnvironment('API_BASE_URL',
-                defaultValue: 'https://rakshak-backend-7qx2.onrender.com');
+                defaultValue: 'https://rakshak-backend-prd.onrender.com');
 
   static final instance = ApiClient();
   final String baseUrl;

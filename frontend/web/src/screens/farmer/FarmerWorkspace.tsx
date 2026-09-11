@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Sprout, Plus, Camera, ArrowRight, RefreshCw } from 'lucide-react';
+import { Sprout, Plus, Camera, ArrowRight, RefreshCw, Database } from 'lucide-react';
 import { apiClient } from '../../services/apiClient';
 import { useAuth } from '../../context/AuthContext';
+import { useDemoMode } from '../../context/DemoModeContext';
+import { demoWorkspaceToFarms } from '../../services/demoWorkspaceAdapters';
 import { EvidenceViewer } from '../../components/shared/EvidenceViewer';
 import { EvidenceFrame } from '../../types';
 
-type Field = { id: string; farm_id: string; name: string; area_hectares?: number };
-type Farm = { id: string; name: string };
+type Field = { id: string; farm_id: string; name: string; farm_name?: string; district?: string; area_hectares?: number };
+type Farm = { id: string; name: string; district?: string };
 type Scan = { video_id: string; field_id: string; status: string; created_at: string };
 const terminal = ['ready', 'failed', 'insufficient_evidence'];
 const readable = (value: string) => value.replaceAll('_', ' ');
@@ -15,6 +17,7 @@ const errorMessage = (error: unknown) => error instanceof Error ? error.message 
 
 export function FarmerWorkspace({ basePath = '/farmer' }: { basePath?: string }) {
   const { user } = useAuth();
+  const { enabled: isDemoMode, workspace, setEnabled: setDemoMode } = useDemoMode();
   const [params, setParams] = useSearchParams();
   const videoId = params.get('scan');
   const [fields, setFields] = useState<Field[]>([]);
@@ -40,6 +43,25 @@ export function FarmerWorkspace({ basePath = '/farmer' }: { basePath?: string })
   const [pollRevision, setPollRevision] = useState(0);
 
   async function load() {
+    if (isDemoMode && workspace) {
+      const demoFarms = demoWorkspaceToFarms(workspace);
+      const extractedFields: Field[] = demoFarms.flatMap(f => f.fields.map(field => ({
+        id: field.id,
+        farm_id: f.id,
+        farm_name: f.name,
+        district: f.district,
+        name: field.name,
+        area_hectares: field.areaAcres ? Number((field.areaAcres / 2.47105).toFixed(2)) : undefined,
+      })));
+      setFarms(demoFarms.map(f => ({ id: f.id, name: f.name, district: f.district })));
+      setFields(extractedFields);
+      setScans([]);
+      setFieldId(current => current || extractedFields[0]?.id || '');
+      setFarmId(current => current || demoFarms[0]?.id || '');
+      setLoading(false);
+      return;
+    }
+
     setError('');
     try {
       const [f, a, s] = await Promise.all([apiClient.listFields(), apiClient.listFarms(), apiClient.listVideos()]);
@@ -49,10 +71,12 @@ export function FarmerWorkspace({ basePath = '/farmer' }: { basePath?: string })
     } catch (e) { setError(errorMessage(e)); }
     finally { setLoading(false); }
   }
-  useEffect(() => { void load(); }, []);
+
+  useEffect(() => { void load(); }, [isDemoMode, workspace]);
+
   useEffect(() => {
     setAnalysis(null); setEvidence([]); setStatus(''); setReviewRequested(false); setNotice('');
-    if (!videoId) return;
+    if (!videoId || isDemoMode) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
     const poll = async () => {
@@ -72,10 +96,10 @@ export function FarmerWorkspace({ basePath = '/farmer' }: { basePath?: string })
     };
     void poll();
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [videoId, pollRevision]);
+  }, [videoId, pollRevision, isDemoMode]);
 
   async function retryScan() {
-    if (!videoId) return;
+    if (!videoId || isDemoMode) return;
     setBusy(true); setError('');
     try {
       await apiClient.retryVideo(videoId);
@@ -85,7 +109,9 @@ export function FarmerWorkspace({ basePath = '/farmer' }: { basePath?: string })
   }
 
   async function addField(event: React.FormEvent) {
-    event.preventDefault(); setBusy(true); setError('');
+    event.preventDefault();
+    if (isDemoMode) return;
+    setBusy(true); setError('');
     try {
       let target = farmId;
       if (!target) {
@@ -97,8 +123,10 @@ export function FarmerWorkspace({ basePath = '/farmer' }: { basePath?: string })
       setNotice('Field saved. You can now record your first scan.');
     } catch (e) { setError(errorMessage(e)); } finally { setBusy(false); }
   }
+
   async function upload(event: React.FormEvent) {
-    event.preventDefault(); if (!file || !fieldId || !consent) return;
+    event.preventDefault();
+    if (isDemoMode || !file || !fieldId || !consent) return;
     if (file.size > 100 * 1024 * 1024) { setError('Choose a video smaller than 100 MB.'); return; }
     setBusy(true); setError('');
     try {
@@ -106,7 +134,9 @@ export function FarmerWorkspace({ basePath = '/farmer' }: { basePath?: string })
       setParams({ scan: scan.video_id }); await load();
     } catch (e) { setError(errorMessage(e)); } finally { setBusy(false); }
   }
+
   async function reportAction(kind: 'review' | 'feedback') {
+    if (isDemoMode) return;
     setBusy(true); setError('');
     try {
       if (kind === 'review') { await apiClient.requestReview(analysis.diagnosis_id); setReviewRequested(true); setNotice('Your review request has been saved.'); }
@@ -115,7 +145,27 @@ export function FarmerWorkspace({ basePath = '/farmer' }: { basePath?: string })
   }
 
   return <div className="farmer-workspace">
-    <header className="workspace-heading"><div><p className="eyebrow">SOYBEAN FIELD CARE</p><h1>{videoId ? 'Your crop assessment' : `Your fields, ${user?.name.split(' ')[0] || 'farmer'}`}</h1><p>{videoId ? 'Review the observations and decide your next step.' : 'Record a short walk through your crop. Keep each assessment with its field.'}</p></div>{videoId ? <Link className="action secondary" to={basePath}>Back to fields</Link> : <button className="action" onClick={() => setAdding(!adding)}><Plus size={18} />Add a field</button>}</header>
+    <header className="workspace-heading">
+      <div>
+        <p className="eyebrow">SOYBEAN FIELD CARE</p>
+        <h1>{videoId ? 'Your crop assessment' : `Your fields, ${user?.name.split(' ')[0] || 'farmer'}`}</h1>
+        <p>{videoId ? 'Review the observations and decide your next step.' : 'Record a short walk through your crop. Keep each assessment with its field.'}</p>
+      </div>
+      {videoId ? <Link className="action secondary" to={basePath}>Back to fields</Link> : isDemoMode ? null : <button className="action" onClick={() => setAdding(!adding)}><Plus size={18} />Add a field</button>}
+    </header>
+
+    {isDemoMode && (
+      <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2.5 text-amber-900 font-semibold">
+          <Database size={17} className="shrink-0 text-amber-800" />
+          <span>Demo workspace is read-only. Switch to Live workspace to add your own fields or upload evidence.</span>
+        </div>
+        <button className="action secondary text-xs py-1.5 px-3" onClick={() => setDemoMode(false)}>
+          Switch to Live workspace
+        </button>
+      </section>
+    )}
+
     {error && <div className="message error" role="alert">{error}<button onClick={() => { void load(); }}>Try again</button></div>}
     {notice && <div className="message" role="status">{notice}</div>}
     {loading ? <div aria-busy="true" className="workspace-loading">Loading your fields and scans…</div> : videoId ? <>
@@ -134,11 +184,58 @@ export function FarmerWorkspace({ basePath = '/farmer' }: { basePath?: string })
       </section>}
       {analysis && <EvidenceViewer evidenceFrames={evidence} aiIndication={analysis.diagnosis?.disease || ''} confidence={analysis.diagnosis?.confidence || 0} videoUrl={`/api/v1/videos/${videoId}/content`} />}
     </> : <>
-      {(adding || !fields.length) && <section className="workspace-panel"><h2>{fields.length ? 'Add a field' : 'Start with your first field'}</h2><p>Give it a name you will recognize when you return.</p><form className="workspace-form" onSubmit={addField}>{farms.length > 0 && <label>Farm<select value={farmId} onChange={e => setFarmId(e.target.value)}>{farms.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}<option value="">Create a new farm</option></select></label>}{!farmId && <label>Farm name<input required maxLength={255} value={farmName} onChange={e => setFarmName(e.target.value)} /></label>}<label>Field name<input required maxLength={255} value={fieldName} onChange={e => setFieldName(e.target.value)} placeholder="For example, East soybean field" /></label><label>Area in hectares (optional)<input type="number" min="0.01" step="0.01" value={area} onChange={e => setArea(e.target.value)} /></label><p>Crop: Soybean</p><button className="action" disabled={busy || !fieldName.trim() || (!farmId && !farmName.trim())}>{busy ? 'Saving…' : 'Save field'}</button></form></section>}
-      {fields.length > 0 && <div className="farmer-columns"><section className="workspace-panel"><div className="section-heading"><h2>Record a new scan</h2><Camera size={24} /></div><p>Walk slowly. Keep the camera 30–60 cm from the leaves, in even daylight.</p><form onSubmit={upload} className="workspace-form"><label>Field<select required value={fieldId} onChange={e => setFieldId(e.target.value)}>{fields.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}</select></label><label>10–30 second video<input type="file" accept="video/mp4,video/quicktime,video/x-m4v,video/x-msvideo" capture="environment" required onChange={e => setFile(e.target.files?.[0] || null)} /></label><p className="helper-copy">MP4, MOV, M4V or AVI, up to 100 MB and 1080p. Include several plants and avoid rapid camera movement.</p><label className="consent-control"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} required />I agree to processing this field video for an AI assessment.</label><button className="action" disabled={busy || !file || !consent}>{busy ? 'Uploading your video…' : 'Upload and assess'}<ArrowRight size={18} /></button></form></section><section className="workspace-panel"><h2>Your fields</h2><ul className="field-list">{fields.map(f => <li key={f.id}><Sprout size={22} /><div><strong>{f.name}</strong><p>Soybean{f.area_hectares ? ` · ${f.area_hectares} ha` : ''}</p></div><button className="text-action" onClick={() => setFieldId(f.id)} aria-label={`Select ${f.name} for scanning`}>{fieldId === f.id ? 'Selected' : 'Select'}</button></li>)}</ul></section></div>}
-      <section className="workspace-panel"><div className="section-heading"><h2>Recent scans</h2><button className="text-action" onClick={() => { void load(); }}>Refresh</button></div>{!scans.length ? <p>Your first assessment will appear here after you upload a video.</p> : <ul className="scan-list">{scans.map(s => <li key={s.video_id}><div><strong>{fields.find(f => f.id === s.field_id)?.name || 'Field scan'}</strong><p>{new Date(s.created_at).toLocaleString()}</p></div><span className="status-label">{readable(s.status)}</span><Link className="text-action" to={`${basePath}?scan=${s.video_id}`}>Open<ArrowRight size={16} /></Link></li>)}</ul>}</section>
+      {(!isDemoMode && (adding || !fields.length)) && <section className="workspace-panel"><h2>{fields.length ? 'Add a field' : 'Start with your first field'}</h2><p>Give it a name you will recognize when you return.</p><form className="workspace-form" onSubmit={addField}>{farms.length > 0 && <label>Farm<select value={farmId} onChange={e => setFarmId(e.target.value)}>{farms.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}<option value="">Create a new farm</option></select></label>}{!farmId && <label>Farm name<input required maxLength={255} value={farmName} onChange={e => setFarmName(e.target.value)} /></label>}<label>Field name<input required maxLength={255} value={fieldName} onChange={e => setFieldName(e.target.value)} placeholder="For example, East soybean field" /></label><label>Area in hectares (optional)<input type="number" min="0.01" step="0.01" value={area} onChange={e => setArea(e.target.value)} /></label><p>Crop: Soybean</p><button className="action" disabled={busy || !fieldName.trim() || (!farmId && !farmName.trim())}>{busy ? 'Saving…' : 'Save field'}</button></form></section>}
+      {fields.length > 0 && <div className="farmer-columns">
+        <section className="workspace-panel">
+          <div className="section-heading"><h2>Record a new scan</h2><Camera size={24} /></div>
+          <p>Walk slowly. Keep the camera 30–60 cm from the leaves, in even daylight.</p>
+          {isDemoMode ? (
+            <div className="mt-4 p-4 rounded-xl border border-structural bg-field-canvas space-y-2 text-xs">
+              <p className="font-semibold text-field-ink">Scan upload disabled in Demo Mode</p>
+              <p className="text-muted-leaf">Switch to Live workspace to upload video evidence and process real AI crop assessments.</p>
+              <button className="action secondary text-xs py-2 px-3 mt-1" onClick={() => setDemoMode(false)}>
+                Switch to Live workspace
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={upload} className="workspace-form">
+              <label>Field<select required value={fieldId} onChange={e => setFieldId(e.target.value)}>{fields.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}</select></label>
+              <label>10–30 second video<input type="file" accept="video/mp4,video/quicktime,video/x-m4v,video/x-msvideo" capture="environment" required onChange={e => setFile(e.target.files?.[0] || null)} /></label>
+              <p className="helper-copy">MP4, MOV, M4V or AVI, up to 100 MB and 1080p. Include several plants and avoid rapid camera movement.</p>
+              <label className="consent-control"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} required />I agree to processing this field video for an AI assessment.</label>
+              <button className="action" disabled={busy || !file || !consent}>{busy ? 'Uploading your video…' : 'Upload and assess'}<ArrowRight size={18} /></button>
+            </form>
+          )}
+        </section>
+        <section className="workspace-panel">
+          <h2>{isDemoMode ? 'Demo Fields (Rakshak Cooperative)' : 'Your fields'}</h2>
+          <ul className="field-list">
+            {fields.map(f => (
+              <li key={f.id}>
+                <Sprout size={22} />
+                <div>
+                  <strong>{f.name}</strong>
+                  <p>Soybean{f.area_hectares ? ` · ${f.area_hectares} ha` : ''}{f.farm_name ? ` · ${f.farm_name}` : ''}{f.district ? ` (${f.district})` : ''}</p>
+                </div>
+                {!isDemoMode && <button className="text-action" onClick={() => setFieldId(f.id)} aria-label={`Select ${f.name} for scanning`}>{fieldId === f.id ? 'Selected' : 'Select'}</button>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>}
+      <section className="workspace-panel">
+        <div className="section-heading"><h2>Recent scans</h2>{!isDemoMode && <button className="text-action" onClick={() => { void load(); }}>Refresh</button>}</div>
+        {isDemoMode ? (
+          <p className="text-sm text-muted-leaf py-2">No demo scans are included in this prototype.</p>
+        ) : !scans.length ? (
+          <p>Your first assessment will appear here after you upload a video.</p>
+        ) : (
+          <ul className="scan-list">{scans.map(s => <li key={s.video_id}><div><strong>{fields.find(f => f.id === s.field_id)?.name || 'Field scan'}</strong><p>{new Date(s.created_at).toLocaleString()}</p></div><span className="status-label">{readable(s.status)}</span><Link className="text-action" to={`${basePath}?scan=${s.video_id}`}>Open<ArrowRight size={16} /></Link></li>)}</ul>
+        )}
+      </section>
     </>}
   </div>;
 }
+
 
 

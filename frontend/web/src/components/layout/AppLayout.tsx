@@ -3,16 +3,168 @@ import { Link, useLocation, Outlet } from 'react-router-dom';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Sprout, ClipboardList, Building2, FileBarChart, User, Settings, LogOut, Shield, Database, Menu, X, ArrowUpRight, ChevronRight, HelpCircle, Leaf } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useDemoMode } from '../../context/DemoModeContext';
 import { Brand } from '../ui/brand';
 import { Button } from '../ui/button';
+
 export const AppLayout: React.FC = () => {
     const { user, role, logout } = useAuth();
+    const { enabled: isDemoMode, available: isDemoAvailable, setEnabled: setDemoMode } = useDemoMode();
     const location = useLocation();
     const [open, setOpen] = useState(false);
+
     useEffect(() => setOpen(false), [location.pathname]);
-    const items = role === 'farmer' ? [{ name: 'Fields & scans', path: '/farmer', icon: Sprout }, { name: 'Your profile', path: '/settings/profile', icon: User }, { name: 'Security & consent', path: '/settings/security', icon: Shield }] : role === 'agronomist' ? [{ name: 'Review queue', path: '/agronomist/dashboard', icon: ClipboardList }, { name: 'Completed reviews', path: '/agronomist/reports', icon: FileBarChart }, { name: 'Your profile', path: '/settings/profile', icon: User }, { name: 'Security & consent', path: '/settings/security', icon: Shield }] : role === 'admin' ? [{ name: 'Access & pilot plans', path: '/admin/dashboard', icon: Shield }, { name: 'Field overview', path: '/organization/dashboard', icon: Building2 }, { name: 'Review queue', path: '/agronomist/dashboard', icon: ClipboardList }, { name: 'Contact inbox', path: '/admin/inquiries', icon: FileBarChart }, { name: 'Demo data', path: '/admin/demo-data', icon: Database }, { name: 'Security & consent', path: '/settings/security', icon: Settings }] : [{ name: 'Field overview', path: '/organization/dashboard', icon: Building2 }, { name: 'Fields & scans', path: '/organization/scans', icon: Sprout }, { name: 'Field reports', path: '/organization/reports', icon: FileBarChart }, { name: 'Organization', path: '/settings/organization', icon: User }, { name: 'Security & consent', path: '/settings/security', icon: Shield }];
+
+    const items = role === 'farmer' ? [
+      { name: 'Fields & scans', path: '/farmer', icon: Sprout },
+      { name: 'Your profile', path: '/settings/profile', icon: User },
+      { name: 'Security & consent', path: '/settings/security', icon: Shield }
+    ] : role === 'agronomist' ? [
+      { name: 'Review queue', path: '/agronomist/dashboard', icon: ClipboardList },
+      { name: 'Completed reviews', path: '/agronomist/reports', icon: FileBarChart },
+      { name: 'Your profile', path: '/settings/profile', icon: User },
+      { name: 'Security & consent', path: '/settings/security', icon: Shield }
+    ] : role === 'admin' ? [
+      { name: 'Access & pilot plans', path: '/admin/dashboard', icon: Shield },
+      { name: 'Field overview', path: '/organization/dashboard', icon: Building2 },
+      { name: 'Review queue', path: '/agronomist/dashboard', icon: ClipboardList },
+      { name: 'Contact inbox', path: '/admin/inquiries', icon: FileBarChart },
+      { name: 'Demo data', path: '/admin/demo-data', icon: Database },
+      { name: 'Security & consent', path: '/settings/security', icon: Settings }
+    ] : [
+      { name: 'Field overview', path: '/organization/dashboard', icon: Building2 },
+      { name: 'Fields & scans', path: '/organization/scans', icon: Sprout },
+      { name: 'Field reports', path: '/organization/reports', icon: FileBarChart },
+      { name: 'Organization', path: '/settings/organization', icon: User },
+      { name: 'Security & consent', path: '/settings/security', icon: Shield }
+    ];
+
     const label = role === 'farmer' ? 'Farmer workspace' : role === 'agronomist' ? 'Agronomist workspace' : role === 'admin' ? 'Platform administration' : 'Organization workspace';
     const currentPage = items.find(item => location.pathname.startsWith(item.path))?.name || 'Workspace';
-    const navigation = <nav className="workspace-navigation" aria-label="Workspace navigation">{items.map(item => { const Icon = item.icon; const active = location.pathname.startsWith(item.path); return <Link key={item.path} to={item.path} aria-current={active ? 'page' : undefined}><Icon size={19} strokeWidth={1.6}/>{item.name}</Link>; })}</nav>;
-    return <div className="app-shell"><a className="skip-link" href="#main-content">Skip to content</a><aside className="workspace-rail"><Brand /><div className="workspace-switcher"><span><Leaf size={17}/></span><div><strong>{role === 'admin' ? 'Platform' : role === 'agronomist' ? 'Expert workspace' : role === 'farmer' ? 'Your fields' : 'Field workspace'}</strong><small>Soybean pilot</small></div></div><p className="workspace-role">Workspace</p>{navigation}<Link className="workspace-help" to="/contact"><HelpCircle size={17}/>Help & support<ArrowUpRight size={13}/></Link><div className="workspace-account"><span className="account-avatar">{user?.name?.[0] || 'R'}</span><div><strong>{user?.name || 'Your account'}</strong><Link to="/settings/profile">Manage profile <ArrowUpRight size={12}/></Link></div></div><Button variant="ghost" className="signout-button" onClick={logout}><LogOut size={17}/>Sign out</Button><p className="rail-footnote">Rakshak AI <span>v0.2</span></p></aside><div className="workspace-body"><header className="workspace-topbar"><div className="mobile-brand"><Brand /></div><span className="desktop-workspace-title"><span>{label.replace(' workspace', '')}</span><ChevronRight size={13}/><strong>{currentPage}</strong></span><div className="topbar-actions"><span className="pilot-badge">Soybean pilot</span><Dialog.Root open={open} onOpenChange={setOpen}><Dialog.Trigger asChild><Button className="workspace-menu-trigger" variant="ghost" size="icon" aria-label="Open workspace navigation"><Menu /></Button></Dialog.Trigger><Dialog.Portal><Dialog.Overlay className="navigation-overlay"/><Dialog.Content className="navigation-drawer"><Dialog.Title className="text-xl font-semibold">{label}</Dialog.Title><Dialog.Description className="sr-only">Navigate your fields, reviews and account settings.</Dialog.Description><Dialog.Close asChild><Button variant="ghost" size="icon" className="drawer-close" aria-label="Close navigation"><X /></Button></Dialog.Close>{navigation}<Button variant="secondary" onClick={logout}><LogOut size={18}/>Sign out</Button></Dialog.Content></Dialog.Portal></Dialog.Root></div></header><main id="main-content" tabIndex={-1} className="workspace-main"><Outlet /></main></div></div>;
+
+    const navigation = (
+      <nav className="workspace-navigation" aria-label="Workspace navigation">
+        {items.map(item => {
+          const Icon = item.icon;
+          const active = location.pathname.startsWith(item.path);
+          return (
+            <Link key={item.path} to={item.path} aria-current={active ? 'page' : undefined}>
+              <Icon size={19} strokeWidth={1.6}/>
+              {item.name}
+            </Link>
+          );
+        })}
+      </nav>
+    );
+
+    const workspaceSwitchControl = isDemoAvailable ? (
+      <div className="demo-workspace-toggle-group" role="radiogroup" aria-label="Select workspace dataset">
+        <button
+          type="button"
+          role="radio"
+          aria-checked={isDemoMode}
+          className={`demo-toggle-btn ${isDemoMode ? 'active' : ''}`}
+          onClick={() => setDemoMode(true)}
+          title="Switch to shared demonstration dataset"
+        >
+          <Database size={13} />
+          <span>Demo workspace</span>
+        </button>
+        <button
+          type="button"
+          role="radio"
+          aria-checked={!isDemoMode}
+          className={`demo-toggle-btn ${!isDemoMode ? 'active' : ''}`}
+          onClick={() => setDemoMode(false)}
+          title="Switch to live account data"
+        >
+          <span>Live workspace</span>
+        </button>
+      </div>
+    ) : null;
+
+    return (
+      <div className="app-shell">
+        <a className="skip-link" href="#main-content">Skip to content</a>
+        <aside className="workspace-rail">
+          <Brand />
+          <div className="workspace-switcher">
+            <span><Leaf size={17}/></span>
+            <div>
+              <strong>{role === 'admin' ? 'Platform' : role === 'agronomist' ? 'Expert workspace' : role === 'farmer' ? 'Your fields' : 'Field workspace'}</strong>
+              <small>{isDemoMode ? 'Demo Cooperative' : 'Soybean pilot'}</small>
+            </div>
+          </div>
+          <p className="workspace-role">Workspace</p>
+          {navigation}
+          <Link className="workspace-help" to="/contact">
+            <HelpCircle size={17}/>Help & support<ArrowUpRight size={13}/>
+          </Link>
+          <div className="workspace-account">
+            <span className="account-avatar">{user?.name?.[0] || 'R'}</span>
+            <div>
+              <strong>{user?.name || 'Your account'}</strong>
+              <Link to="/settings/profile">Manage profile <ArrowUpRight size={12}/></Link>
+            </div>
+          </div>
+          <Button variant="ghost" className="signout-button" onClick={logout}>
+            <LogOut size={17}/>Sign out
+          </Button>
+          <p className="rail-footnote">Rakshak AI <span>v0.2</span></p>
+        </aside>
+
+        <div className="workspace-body">
+          <header className="workspace-topbar">
+            <div className="mobile-brand"><Brand /></div>
+            <span className="desktop-workspace-title">
+              <span>{label.replace(' workspace', '')}</span>
+              <ChevronRight size={13}/>
+              <strong>{currentPage}</strong>
+            </span>
+            <div className="topbar-actions">
+              {isDemoMode && (
+                <span className="demo-data-badge" title="Viewing shared demonstration data (read-only)">
+                  <Database size={12}/> DEMO DATA
+                </span>
+              )}
+              {workspaceSwitchControl}
+              <span className="pilot-badge">Soybean pilot</span>
+              <Dialog.Root open={open} onOpenChange={setOpen}>
+                <Dialog.Trigger asChild>
+                  <Button className="workspace-menu-trigger" variant="ghost" size="icon" aria-label="Open workspace navigation">
+                    <Menu />
+                  </Button>
+                </Dialog.Trigger>
+                <Dialog.Portal>
+                  <Dialog.Overlay className="navigation-overlay"/>
+                  <Dialog.Content className="navigation-drawer">
+                    <Dialog.Title className="text-xl font-semibold">{label}</Dialog.Title>
+                    <Dialog.Description className="sr-only">Navigate your fields, reviews and account settings.</Dialog.Description>
+                    <Dialog.Close asChild>
+                      <Button variant="ghost" size="icon" className="drawer-close" aria-label="Close navigation">
+                        <X />
+                      </Button>
+                    </Dialog.Close>
+                    {isDemoAvailable && (
+                      <div className="py-2 border-b border-structural mb-2">
+                        <p className="text-xs font-semibold text-muted-leaf mb-2">Workspace Dataset</p>
+                        {workspaceSwitchControl}
+                      </div>
+                    )}
+                    {navigation}
+                    <Button variant="secondary" onClick={logout}>
+                      <LogOut size={18}/>Sign out
+                    </Button>
+                  </Dialog.Content>
+                </Dialog.Portal>
+              </Dialog.Root>
+            </div>
+          </header>
+          <main id="main-content" tabIndex={-1} className="workspace-main">
+            <Outlet />
+          </main>
+        </div>
+      </div>
+    );
 };
+

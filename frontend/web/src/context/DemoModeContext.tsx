@@ -14,23 +14,57 @@ export const DemoModeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [workspace, setWorkspace] = useState<DemoWorkspace | null>(null);
   const [loading, setLoading] = useState(false);
   const [enabled, setEnabledState] = useState(false);
+
   const refresh = async () => {
-    if (!isAuthenticated) { setWorkspace(null); setEnabledState(false); return; }
+    if (!isAuthenticated) {
+      setWorkspace(null);
+      setEnabledState(false);
+      if (typeof window !== 'undefined') {
+        window.sessionStorage.removeItem(STORAGE_KEY);
+      }
+      return;
+    }
     setLoading(true);
-    try { setWorkspace(await apiClient.getDemoWorkspace()); }
-    catch { setWorkspace(null); setEnabledState(false); }
-    finally { setLoading(false); }
+    try {
+      const data = await apiClient.getDemoWorkspace();
+      setWorkspace(data);
+    } catch {
+      setWorkspace(null);
+      setEnabledState(false);
+    } finally {
+      setLoading(false);
+    }
   };
-  useEffect(() => { void refresh(); }, [isAuthenticated]);
+
   useEffect(() => {
-    const requested = window.sessionStorage.getItem(STORAGE_KEY) === 'true';
-    setEnabledState(Boolean(requested && workspace?.available));
-  }, [workspace?.available]);
+    void refresh();
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!workspace?.available || !isAuthenticated) {
+      setEnabledState(false);
+      return;
+    }
+    const saved = window.sessionStorage.getItem(STORAGE_KEY);
+    if (saved === 'false') {
+      setEnabledState(false);
+    } else {
+      // Default to ON if available and user hasn't explicitly chosen 'false'
+      setEnabledState(true);
+      if (saved !== 'true') {
+        window.sessionStorage.setItem(STORAGE_KEY, 'true');
+      }
+    }
+  }, [workspace?.available, isAuthenticated]);
+
   const setEnabled = (next: boolean) => {
     const safeNext = Boolean(next && workspace?.available);
-    window.sessionStorage.setItem(STORAGE_KEY, String(safeNext));
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.setItem(STORAGE_KEY, String(safeNext));
+    }
     setEnabledState(safeNext);
   };
+
   return <DemoModeContext.Provider value={{ enabled, available: Boolean(workspace?.available), loading, workspace, setEnabled, refresh }}>{children}</DemoModeContext.Provider>;
 };
 

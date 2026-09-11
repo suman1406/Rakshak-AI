@@ -164,3 +164,47 @@ h1,h2,h3 { font-family: var(--ui-font); }
 @media(max-width:700px) { .about-story,.about-principles { grid-template-columns:1fr; gap:28px; }.about-story img { height:280px; }.about-story { margin-bottom:35px; }.guide-steps li { gap:20px; } }
 .pricing-toolbar{display:flex;align-items:center;justify-content:space-between;gap:20px;margin:40px 0 24px}.billing-switch{display:flex;gap:4px;padding:4px;border:1px solid var(--color-structural);border-radius:10px}.pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:20px}.pricing-plan{padding:28px;border:1px solid var(--color-structural);border-radius:12px;background:#fff;display:flex;flex-direction:column;gap:18px}.pricing-plan h2{margin:0}.pricing-plan .plan-price{font-size:34px;font-weight:600;letter-spacing:-1.4px;margin:0}.plan-price span{display:block;font-size:14px;letter-spacing:0;font-weight:400;color:var(--color-muted-leaf);margin-top:6px}.pricing-plan dl{border-block:1px solid var(--color-structural);padding:16px 0}.pricing-plan dl>div{display:flex;justify-content:space-between;gap:12px;margin:8px 0}.pricing-plan dd{font-weight:600}.pricing-plan ul{list-style:none;padding:0;display:grid;gap:12px;font-size:14px;flex:1}.pricing-plan li{display:flex;gap:10px;align-items:center}.pricing-note{max-width:680px;margin-top:64px}.pricing-note p{line-height:1.7}.pricing-note a{text-decoration:underline}@media(max-width:600px){.pricing-toolbar{align-items:flex-start;flex-direction:column}.pricing-plan{padding:24px}}
 .assessment-bars{display:grid;gap:20px;margin-top:24px;max-width:720px}.assessment-bars>div>div{display:flex;justify-content:space-between;gap:12px;font-size:14px;margin-bottom:8px}.assessment-bars meter{display:block;width:100%;height:14px;border:0;border-radius:4px;background:var(--soft-healthy)}.assessment-bars meter::-webkit-meter-bar{background:var(--soft-healthy);border:0;border-radius:4px}.assessment-bars meter::-webkit-meter-optimum-value{background:var(--field-ink);border-radius:4px}.assessment-bars meter::-moz-meter-bar{background:var(--field-ink)}
+
+/* Demo Mode Switch & Badge Styles */
+.demo-workspace-toggle-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  background: var(--field-canvas);
+  border: 1px solid var(--structural-border);
+  border-radius: 8px;
+}
+.demo-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--muted-leaf);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.demo-toggle-btn.active {
+  background: var(--pure-surface);
+  color: var(--field-ink);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+.demo-data-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #FEF3C7;
+  color: #78350F;
+  border: 1px solid #FCD34D;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+

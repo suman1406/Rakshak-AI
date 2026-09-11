@@ -6,7 +6,7 @@ Run with a connected API using:
 
 ```bash
 flutter pub get
-flutter run --dart-define=API_BASE_URL=https://your-api.example.com
+flutter run --dart-define=API_BASE_URL=https://rakshak-backend-prd.onrender.com
 ```
 
 Camera and microphone access are requested only when recording. Gallery selection uses the platform media picker. Audio is not used for diagnosis.
