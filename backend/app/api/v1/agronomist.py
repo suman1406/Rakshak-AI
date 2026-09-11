@@ -17,12 +17,25 @@ from app.models.prediction import VideoDiagnosis
 from app.models.verification import ReviewStatus, ReviewWorkItem, VerifiedLabel
 from app.models.video import Video
 from app.modules.reporting.result_contract import disease_slug
+from app.modules.reporting.reviews import review_summary
 
 router = APIRouter(prefix="/agronomist", tags=["Agronomist"])
 
+@router.get('/reviews')
+async def list_reviews(current_user: Annotated[User, Depends(require_role(UserRole.agronomist, UserRole.admin))], db: Annotated[AsyncSession, Depends(get_db)], limit: int = Query(100, ge=1, le=500), offset: int = Query(0, ge=0)):
+    def utc(value):
+        return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
+    stmt = select(VerifiedLabel, VideoDiagnosis, Video, Field).join(VideoDiagnosis, VerifiedLabel.video_diagnosis_id == VideoDiagnosis.id).join(Video, VideoDiagnosis.video_id == Video.id).join(Field, Video.field_id == Field.id).join(Field.farm).where(diagnosis_scope(current_user))
+    if current_user.role != UserRole.admin:
+        stmt = stmt.where(VerifiedLabel.agronomist_id == current_user.id)
+    rows = (await db.execute(stmt.order_by(VerifiedLabel.created_at.desc()).offset(offset).limit(limit))).all()
+    return [{'id': label.id, 'diagnosis_id': diagnosis.id, 'field_name': field.name, 'reviewed_at': label.created_at, 'submitted_at': video.created_at,
+             'disease_id': label.disease_id, 'is_healthy': label.is_healthy_override, 'severity_level': label.severity_level, 'notes': label.notes,
+             'elapsed_minutes': round((utc(label.created_at) - utc(video.created_at)).total_seconds() / 60, 1)} for label, diagnosis, video, field in rows]
+
 @router.post("/cases/{video_diagnosis_id}/claim")
 async def claim_case(video_diagnosis_id: str, current_user: Annotated[User, Depends(require_role(UserRole.agronomist, UserRole.admin))], db: Annotated[AsyncSession, Depends(get_db)]):
-    diag = (await db.execute(select(VideoDiagnosis).join(VideoDiagnosis.video).join(Video.field).join(Field.farm).where(VideoDiagnosis.id == video_diagnosis_id, diagnosis_scope(current_user)))).scalar_one_or_none()
+    diag = (await db.execute(select(VideoDiagnosis).join(VideoDiagnosis.video).join(Video.field).join(Field.farm).where(VideoDiagnosis.id == video_diagnosis_id, diagnosis_scope(current_user)).with_for_update(of=VideoDiagnosis))).scalar_one_or_none()
     if not diag: raise HTTPException(status_code=404, detail="Case not found")
     item = (await db.execute(select(ReviewWorkItem).where(ReviewWorkItem.video_diagnosis_id == video_diagnosis_id))).scalar_one_or_none()
     if item is None:
@@ -38,6 +51,9 @@ async def claim_case(video_diagnosis_id: str, current_user: Annotated[User, Depe
 
 @router.get("/cases/{video_diagnosis_id}/history")
 async def review_history(video_diagnosis_id: str, current_user: Annotated[User, Depends(require_role(UserRole.agronomist, UserRole.admin))], db: Annotated[AsyncSession, Depends(get_db)]):
+    diag = (await db.execute(select(VideoDiagnosis).join(VideoDiagnosis.video).join(Video.field).join(Field.farm).where(VideoDiagnosis.id == video_diagnosis_id, diagnosis_scope(current_user)).with_for_update(of=VideoDiagnosis))).scalar_one_or_none()
+    if diag is None:
+        raise HTTPException(status_code=404, detail="Case not found")
     item = (await db.execute(select(ReviewWorkItem).where(ReviewWorkItem.video_diagnosis_id == video_diagnosis_id))).scalar_one_or_none()
     labels = (await db.execute(select(VerifiedLabel).where(VerifiedLabel.video_diagnosis_id == video_diagnosis_id).order_by(VerifiedLabel.created_at))).scalars().all()
     return {"workflow": None if not item else {"status": item.status, "assigned_agronomist_id": item.assigned_agronomist_id, "completed_at": item.completed_at}, "verifications": [{"id": label.id, "agronomist_id": label.agronomist_id, "created_at": label.created_at, "notes": label.notes} for label in labels]}
@@ -88,11 +104,12 @@ async def get_agronomist_case(
         select(VideoDiagnosis)
         .options(
             selectinload(VideoDiagnosis.video).selectinload(Video.frames),
+            selectinload(VideoDiagnosis.video).selectinload(Video.field).selectinload(Field.farm),
             selectinload(VideoDiagnosis.verified_labels),
             selectinload(VideoDiagnosis.disease),
         )
         .join(VideoDiagnosis.video).join(Video.field).join(Field.farm)
-        .where(VideoDiagnosis.id == video_diagnosis_id, diagnosis_scope(current_user))
+        .where(VideoDiagnosis.id == video_diagnosis_id, diagnosis_scope(current_user)).with_for_update(of=VideoDiagnosis)
     )
     result = await db.execute(stmt)
     diag = result.scalar_one_or_none()
@@ -102,7 +119,14 @@ async def get_agronomist_case(
     return {
         "video_diagnosis_id": diag.id,
         "video_id": diag.video_id,
+        "created_at": diag.video.created_at,
+        "expert_review": await review_summary(db, diag.id),
+        "field": {"id": diag.video.field.id, "name": diag.video.field.name, "farm_id": diag.video.field.farm_id},
+        "farm": {"id": diag.video.field.farm.id, "name": diag.video.field.farm.name, "district": diag.video.field.farm.district},
         "disease": disease_slug(diag),
+        "is_unknown": diag.is_unknown,
+        "probability_distribution": diag.probability_distribution,
+        "model_versions": diag.model_versions or {'aggregation': diag.aggregation_model_version},
         "confidence": diag.confidence,
         "confidence_band": diag.confidence_band.value,
         "severity_level": diag.severity_level,

@@ -1,4 +1,6 @@
 from contextlib import asynccontextmanager
+import asyncio
+from contextlib import suppress
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -11,14 +13,28 @@ from app.core.config import settings
 from app.core.logging import RequestLoggingMiddleware, logger
 from app.db.base import Base
 from app.db.bootstrap_accounts import ensure_bootstrap_access_accounts, ensure_initial_admin_account
+from app.db.catalog import ensure_disease_catalog
+from app.db.plans import ensure_launch_plans
 from app.db.session import async_session_factory, engine
+from app.media_storage import media_storage
+
+
+async def maintain_evidence_cache():
+    # Every API host owns its cache; a worker's retention job cannot clean it.
+    while True:
+        try:
+            await asyncio.to_thread(media_storage.prune_cache)
+        except Exception:
+            logger.exception('Could not prune local evidence cache')
+        await asyncio.sleep(3600)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Initializing Fasal Rakshak API...")
-    # Initialize DB tables
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # Deployed environments are migrated by the entrypoint before serving traffic.
+    if settings.ENVIRONMENT in ('local', 'development', 'test'):
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
     if settings.INITIAL_ADMIN_EMAIL or settings.INITIAL_ADMIN_PASSPHRASE:
         if not settings.INITIAL_ADMIN_EMAIL or not settings.INITIAL_ADMIN_PASSPHRASE:
             logger.error("Initial admin configuration is incomplete; no admin account was created.")
@@ -36,13 +52,24 @@ async def lifespan(app: FastAPI):
                 logger.info("Created bootstrap access accounts: %s", ", ".join(created_accounts))
             else:
                 logger.info("Bootstrap access accounts already exist.")
+    # Seed disease taxonomy catalog (idempotent — safe on every restart)
+    async with async_session_factory() as session:
+        await ensure_disease_catalog(session)
+        await ensure_launch_plans(session)
     logger.info("Database schema initialized successfully.")
-    yield
+    cache_maintenance = asyncio.create_task(maintain_evidence_cache())
+    try:
+        yield
+    finally:
+        cache_maintenance.cancel()
+        with suppress(asyncio.CancelledError):
+            await cache_maintenance
+        await engine.dispose()
     logger.info("Shutting down Fasal Rakshak API...")
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    version="1.0.0",
+    version="0.2.0",
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
@@ -100,6 +127,32 @@ async def healthz():
         "service": "rakshak-api",
         "environment": settings.ENVIRONMENT,
     }
+
+@app.get('/readyz', tags=['Health'])
+async def readiness():
+    from sqlalchemy import text
+    from redis.asyncio import Redis
+    database_ready = queue_ready = storage_ready = False
+    try:
+        async with async_session_factory() as db:
+            await db.execute(text('SELECT 1'))
+        database_ready = True
+    except Exception:
+        pass
+    redis = Redis.from_url(settings.REDIS_URL, socket_connect_timeout=2, socket_timeout=2)
+    try:
+        queue_ready = bool(await redis.ping())
+    except Exception:
+        pass
+    finally:
+        await redis.aclose()
+    try:
+        if settings.STORAGE_BACKEND == 's3':
+            await asyncio.to_thread(media_storage._client().head_bucket, Bucket=settings.S3_BUCKET_NAME)
+        storage_ready = True
+    except Exception:
+        pass
+    return JSONResponse(status_code=200 if database_ready and queue_ready and storage_ready else 503, content={'database': database_ready, 'queue': queue_ready, 'storage': storage_ready})
 
 # API v1 Routers
 app.include_router(api_router, prefix=settings.API_V1_STR)

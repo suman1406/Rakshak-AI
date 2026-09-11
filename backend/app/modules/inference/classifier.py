@@ -148,6 +148,8 @@ class DiseaseClassifier:
                 )
 
             classes = json.load(open(CLASSES_PATH))
+            if classes != EXPECTED_TAXONOMY_CLASSES:
+                raise ValueError("Bundled class order differs from the versioned inference taxonomy")
 
             # Device selection (MPS → CUDA → CPU)
             if torch.backends.mps.is_available():
@@ -160,7 +162,7 @@ class DiseaseClassifier:
             model = timm.create_model(
                 "efficientnet_b0", pretrained=False, num_classes=len(classes)
             )
-            state_dict = torch.load(WEIGHTS_PATH, map_location=device)
+            state_dict = torch.load(WEIGHTS_PATH, map_location=device, weights_only=True)
             model.load_state_dict(state_dict)
             model.eval()
             model = model.to(device)
@@ -180,6 +182,8 @@ class DiseaseClassifier:
             if CALIBRATION_PATH.exists():
                 calib = json.load(open(CALIBRATION_PATH))
                 temperature = float(calib.get("temperature", 1.0))
+            if not np.isfinite(temperature) or temperature <= 0:
+                raise ValueError("Calibration temperature must be finite and positive")
             self._temperature = temperature
 
             self._device = device

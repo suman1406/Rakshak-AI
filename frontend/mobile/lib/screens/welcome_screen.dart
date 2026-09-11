@@ -10,40 +10,41 @@ class WelcomeScreen extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(
           body: SafeArea(
               child: PageContent(children: [
-        const SizedBox(height: 34),
-        Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(
-                color: RakshakColors.signal,
-                borderRadius: BorderRadius.circular(20)),
-            child: const Icon(Icons.eco_rounded,
-                size: 42, color: RakshakColors.ink)),
+        const SizedBox(height: 18),
+        const RakshakBrand(),
         const SizedBox(height: 28),
-        Text('Rakshak AI',
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(color: RakshakColors.leaf)),
+        ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: Image.asset('assets/soybean-field.png',
+                height: 260,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                semanticLabel: 'Illustrative soybean field in morning light')),
+        const SizedBox(height: 26),
+        Text('Your field.\nA closer look.',
+            style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                fontSize: 40,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -1.5)),
         const SizedBox(height: 14),
-        Text('See your crop\nwith more clarity.',
-            style: Theme.of(context).textTheme.displaySmall),
-        const SizedBox(height: 16),
         const Text(
-            'Evidence-based crop health insights from a simple field video.'),
-        const SizedBox(height: 28),
-        const SafetyNote(
-            title: 'Built for careful field decisions.',
-            body:
-                'Capture context, review evidence, and know when a second set of eyes is useful.'),
+            'Keep your field observations together. Record a short soybean video, read the evidence, and ask for an expert review.'),
         const SizedBox(height: 24),
         PrimaryAction(
-            label: 'Get started',
-            icon: Icons.arrow_forward_rounded,
-            onPressed: () => navigateTo(context, const OnboardingScreen())),
+            label: 'Create your farmer account',
+            icon: Icons.arrow_forward,
+            onPressed: () => navigateTo(context, const RegisterScreen())),
         const SizedBox(height: 12),
         SecondaryAction(
-            label: 'Create an account',
-            onPressed: () => navigateTo(context, const RegisterScreen())),
+            label: 'Sign in',
+            onPressed: () => navigateTo(context, const LoginScreen())),
+        const SizedBox(height: 12),
+        Center(
+            child: TextButton(
+                onPressed: () => navigateTo(context, const OnboardingScreen()),
+                child: const Text('How field recording works'))),
+        const SizedBox(height: 16),
+        const Text('Soybean pilot. AI indications need human judgment.',
+            style: TextStyle(fontSize: 13, color: RakshakColors.leaf)),
       ])));
 }

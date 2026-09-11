@@ -4,9 +4,13 @@ import { AuthProvider } from './context/AuthContext';
 import { DemoModeProvider } from './context/DemoModeContext';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { AppLayout } from './components/layout/AppLayout';
+import { RouteViewport } from './components/layout/RouteViewport';
+import { FarmerWorkspace } from './screens/farmer/FarmerWorkspace';
 
 // Public Pages
 import { LandingPage } from './screens/public/LandingPage';
+import { ForFarmersPage } from './screens/public/ForFarmersPage';
+import { NotFoundPage } from './screens/public/NotFoundPage';
 import { AboutPage } from './screens/public/AboutPage';
 import { HowItWorksPage } from './screens/public/HowItWorksPage';
 import { PricingPage } from './screens/public/PricingPage';
@@ -19,6 +23,7 @@ import { RegisterPage, ForgotPasswordPage } from './screens/auth/RegisterPage';
 import { OnboardingPage } from './screens/auth/OnboardingPage';
 import { ApplicationPage } from './screens/auth/ApplicationPage';
 import { AdminDashboard } from './screens/admin/AdminDashboard';
+import { InquiriesPage } from './screens/admin/InquiriesPage';
 import { DemoDataPage } from './screens/admin/DemoDataPage';
 
 // Agronomist Pages
@@ -43,10 +48,11 @@ import {
 export function App() {
   return (
     <AuthProvider>
-      <DemoModeProvider><Router>
+      <DemoModeProvider><Router><RouteViewport/>
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<LandingPage />} />
+          <Route path="/for-farmers" element={<ForFarmersPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/how-it-works" element={<HowItWorksPage />} />
           <Route path="/pricing" element={<PricingPage />} />
@@ -63,10 +69,13 @@ export function App() {
           <Route path="/admin/access" element={<LoginPage />} />
 
           {/* Agronomist Portal (Protected) */}
+          <Route path="/farmer" element={<ProtectedRoute allowedRoles={['farmer']}><AppLayout /></ProtectedRoute>}>
+            <Route index element={<FarmerWorkspace />} />
+          </Route>
           <Route
             path="/agronomist"
             element={
-              <ProtectedRoute allowedRoles={['agronomist', 'org_admin', 'admin', 'enterprise']}>
+              <ProtectedRoute allowedRoles={['agronomist', 'admin']}>
                 <AppLayout />
               </ProtectedRoute>
             }
@@ -91,13 +100,14 @@ export function App() {
             <Route path="farms/:id" element={<OrgFarmDetailsPage />} />
             <Route path="fields/:id" element={<OrgFieldDetailsPage />} />
             <Route path="reports" element={<OrgReportsPage />} />
+            <Route path="scans" element={<FarmerWorkspace basePath="/organization/scans" />} />
           </Route>
 
           {/* Settings Routes (Protected) */}
           <Route
             path="/settings"
             element={
-                <ProtectedRoute allowedRoles={['agronomist', 'org_admin', 'admin', 'enterprise']}>
+                <ProtectedRoute allowedRoles={['farmer', 'agronomist', 'org_admin', 'admin', 'enterprise']}>
                 <AppLayout />
               </ProtectedRoute>
             }
@@ -119,11 +129,12 @@ export function App() {
           >
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="inquiries" element={<InquiriesPage />} />
             <Route path="demo-data" element={<DemoDataPage />} />
           </Route>
 
           {/* Fallback Route */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Router></DemoModeProvider>
     </AuthProvider>

@@ -1,0 +1,62 @@
+name: rakshak-prd-validation
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: validation
+      POSTGRES_PASSWORD: validation-local-only
+      POSTGRES_DB: validation
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U validation -d validation']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  redis:
+    image: redis:7-alpine
+  minio:
+    image: minio/minio:latest
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: validation
+      MINIO_ROOT_PASSWORD: validation-local-only
+    ports: ['127.0.0.1:19000:9000']
+  api:
+    image: rakshak-prd-validation
+    volumes: ['./backend:/app:ro']
+    environment: &runtime
+      ENVIRONMENT: validation
+      DATABASE_URL: postgresql+psycopg://validation:validation-local-only@postgres:5432/validation
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET_KEY: validation-only-do-not-deploy-this-key-2026
+      STORAGE_BACKEND: s3
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_ACCESS_KEY: validation
+      S3_SECRET_KEY: validation-local-only
+      S3_REGION: us-east-1
+      S3_BUCKET_NAME: validation-evidence
+      LOCAL_STORAGE_DIR: /tmp/evidence
+      CORS_ORIGINS: http://localhost:3005,http://127.0.0.1:3005
+      INITIAL_ADMIN_EMAIL: admin@validation.local
+      INITIAL_ADMIN_PASSPHRASE: ValidationAdmin2026!
+      OMP_NUM_THREADS: 2
+      MKL_NUM_THREADS: 2
+      PYTHONDONTWRITEBYTECODE: 1
+    ports: ['127.0.0.1:8001:8000']
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_started}
+      minio-init: {condition: service_completed_successfully}
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio: {condition: service_started}
+    entrypoint: ['/bin/sh', '-c']
+    command:
+      - 'until mc alias set validation http://minio:9000 validation validation-local-only; do sleep 2; done; mc mb --ignore-existing validation/validation-evidence'
+  worker:
+    image: rakshak-prd-validation
+    volumes: ['./backend:/app:ro']
+    environment: *runtime
+    command: celery -A app.worker.celery_app worker --loglevel=info --concurrency=1 -Q cpu_processing,gpu_inference
+    depends_on:
+      api: {condition: service_started}

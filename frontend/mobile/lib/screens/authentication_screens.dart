@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'support_screen.dart';
+import 'dart:convert';
 import '../api_client.dart';
 import '../core/app_theme.dart';
 import '../widgets/app_components.dart';
@@ -18,6 +20,12 @@ class _LoginScreenState extends State<LoginScreen> {
   bool submitting = false;
   bool consent = false;
   String? error;
+  @override
+  void dispose() {
+    email.dispose();
+    password.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +46,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 controller: email,
                 keyboardType: TextInputType.emailAddress,
                 decoration: const InputDecoration(
-                    labelText: 'Email address',
+                    labelText: 'Email or phone',
                     prefixIcon: Icon(Icons.mail_outline)),
                 validator: requiredField),
             const SizedBox(height: 14),
@@ -56,25 +64,38 @@ class _LoginScreenState extends State<LoginScreen> {
                 validator: requiredField),
             const SizedBox(height: 24),
             if (error != null) ...[
-              AppCard(color: RakshakColors.error, child: Text(error!, style: const TextStyle(color: RakshakColors.errorText))),
+              AppCard(
+                  color: RakshakColors.error,
+                  child: Text(error!,
+                      style: const TextStyle(color: RakshakColors.errorText))),
               const SizedBox(height: 12),
             ],
             PrimaryAction(
                 label: submitting ? 'Signing in...' : 'Sign in',
                 icon: Icons.arrow_forward_rounded,
-                onPressed: submitting ? null : () async {
-                  if (!formKey.currentState!.validate()) return;
-                  setState(() { submitting = true; error = null; });
-                  try {
-                    await ApiClient.instance.login(email.text.trim(), password.text);
-                    if (!mounted) return;
-                    navigateTo(context, const HomeScreen());
-                  } catch (exception) {
-                    if (mounted) setState(() => error = safeErrorMessage(exception, fallback: 'We could not sign you in. Check your details and try again.'));
-                  } finally {
-                    if (mounted) setState(() => submitting = false);
-                  }
-                }),
+                onPressed: submitting
+                    ? null
+                    : () async {
+                        if (!formKey.currentState!.validate()) return;
+                        setState(() {
+                          submitting = true;
+                          error = null;
+                        });
+                        try {
+                          await ApiClient.instance
+                              .login(email.text.trim(), password.text);
+                          if (!context.mounted) return;
+                          navigateTo(context, const HomeScreen());
+                        } catch (exception) {
+                          if (mounted) {
+                            setState(() => error = safeErrorMessage(exception,
+                                fallback:
+                                    'We could not sign you in. Check your details and try again.'));
+                          }
+                        } finally {
+                          if (mounted) setState(() => submitting = false);
+                        }
+                      }),
           ]),
         ),
         const SizedBox(height: 14),
@@ -101,6 +122,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final email = TextEditingController();
   final password = TextEditingController();
   bool submitting = false;
+  bool consent = false;
+  @override
+  void dispose() {
+    name.dispose();
+    phone.dispose();
+    email.dispose();
+    password.dispose();
+    super.dispose();
+  }
+
   String? error;
   @override
   Widget build(BuildContext context) => AppPage(
@@ -115,35 +146,93 @@ class _RegisterScreenState extends State<RegisterScreen> {
           Form(
               key: formKey,
               child: Column(children: [
-                TextFormField(controller: name,
+                TextFormField(
+                    controller: name,
                     decoration: const InputDecoration(labelText: 'Full name'),
                     validator: requiredField),
                 const SizedBox(height: 14),
-                TextFormField(controller: phone,
-                    decoration: const InputDecoration(labelText: 'Phone number'),
-                    validator: requiredField),
+                TextFormField(
+                    controller: phone,
+                    keyboardType: TextInputType.phone,
+                    decoration: const InputDecoration(
+                        labelText: 'Phone number (optional)')),
                 const SizedBox(height: 14),
-                TextFormField(controller: email,
-                    decoration: const InputDecoration(labelText: 'Email address'),
-                    validator: requiredField),
+                TextFormField(
+                    controller: email,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration:
+                        const InputDecoration(labelText: 'Email address'),
+                    validator: (value) => value != null &&
+                            RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
+                                .hasMatch(value.trim())
+                        ? null
+                        : 'Enter a valid email address'),
                 const SizedBox(height: 14),
-                TextFormField(controller: password, obscureText: true, decoration: const InputDecoration(labelText: 'Password'), validator: requiredField),
+                TextFormField(
+                    controller: password,
+                    obscureText: true,
+                    maxLength: 72,
+                    decoration: const InputDecoration(
+                        labelText: 'Password',
+                        helperText: 'Use at least 8 characters'),
+                    validator: validateNewPassword),
                 const SizedBox(height: 16),
-                CheckboxListTile(contentPadding: EdgeInsets.zero, value: consent, onChanged: (value) => setState(() => consent = value ?? false), controlAffinity: ListTileControlAffinity.leading, title: const Text('I agree to processing my account and field data for this service.')),
-                if (error != null) ...[AppCard(color: RakshakColors.error, child: Text(error!, style: const TextStyle(color: RakshakColors.errorText))), const SizedBox(height: 12)],
+                CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: consent,
+                    onChanged: (value) =>
+                        setState(() => consent = value ?? false),
+                    controlAffinity: ListTileControlAffinity.leading,
+                    title: const Text(
+                        'I agree to processing my account and field data for this service.')),
+                TextButton(onPressed: () => navigateTo(context, const PrivacyTermsScreen()), child: const Text('Read privacy and terms')),
+                if (error != null) ...[
+                  AppCard(
+                      color: RakshakColors.error,
+                      child: Text(error!,
+                          style:
+                              const TextStyle(color: RakshakColors.errorText))),
+                  const SizedBox(height: 12)
+                ],
                 PrimaryAction(
-                    label: submitting ? 'Creating account...' : 'Create account',
-                    onPressed: submitting ? null : () async {
-                      if (!formKey.currentState!.validate() || !consent) { if (!consent) setState(() => error = 'Please agree to data processing before creating an account.'); return; }
-                      setState(() { submitting = true; error = null; });
-                      try {
-                        await ApiClient.instance.register(name: name.text.trim(), phone: phone.text.trim(), email: email.text.trim(), password: password.text, consentToDataProcessing: consent);
-                        await ApiClient.instance.login(email.text.trim(), password.text);
-                        if (!mounted) return;
-                        navigateTo(context, const HomeScreen());
-                      } catch (exception) { if (mounted) setState(() => error = safeErrorMessage(exception, fallback: 'We could not create your account. Please try again.')); }
-                      finally { if (mounted) setState(() => submitting = false); }
-                    }),
+                    label:
+                        submitting ? 'Creating account...' : 'Create account',
+                    onPressed: submitting
+                        ? null
+                        : () async {
+                            if (!formKey.currentState!.validate() || !consent) {
+                              if (!consent) {
+                                setState(() => error =
+                                    'Please agree to data processing before creating an account.');
+                              }
+                              return;
+                            }
+                            setState(() {
+                              submitting = true;
+                              error = null;
+                            });
+                            try {
+                              await ApiClient.instance.register(
+                                  name: name.text.trim(),
+                                  phone: phone.text.trim(),
+                                  email: email.text.trim(),
+                                  password: password.text,
+                                  consentToDataProcessing: consent);
+                              await ApiClient.instance
+                                  .login(email.text.trim(), password.text);
+                              if (!context.mounted) return;
+                              navigateTo(context, const HomeScreen());
+                            } catch (exception) {
+                              if (mounted) {
+                                setState(() => error = safeErrorMessage(
+                                    exception,
+                                    fallback:
+                                        'We could not create your account. Please try again.'));
+                              }
+                            } finally {
+                              if (mounted) setState(() => submitting = false);
+                            }
+                          }),
               ])),
         ]),
       );
@@ -151,3 +240,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
 String? requiredField(String? value) =>
     value == null || value.trim().isEmpty ? 'This field is required' : null;
+
+String? validateNewPassword(String? value) {
+  if (value == null || value.length < 8) return 'Use at least 8 characters';
+  if (utf8.encode(value).length > 72) {
+    return 'Password is too long; use fewer characters';
+  }
+  return null;
+}

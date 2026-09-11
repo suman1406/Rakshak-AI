@@ -22,6 +22,9 @@ class DiagnosisRecommendation(BaseModel):
 
 
 class DiagnosisOut(BaseModel):
+    expert_review: dict | None = None
+    probability_distribution: dict[str, float] | None = None
+    model_versions: dict[str, str] = {}
     video_diagnosis_id: str
     video_id: str
     crop: str = "soybean"

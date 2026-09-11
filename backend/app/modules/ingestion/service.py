@@ -8,9 +8,10 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from ...core.config import settings
 from ...core.logging import logger
+from ...media_storage import media_storage
 from ...db.session import async_session_factory
 from ...models.farm import Disease, Field
-from ...models.prediction import ConfidenceBand, DecisionAuthorityStatus, Detection, VideoDiagnosis
+from ...models.prediction import ConfidenceBand, DecisionAuthorityStatus, Detection, FrameDiagnosis, VideoDiagnosis
 from ...models.video import Frame, Video, VideoStatus
 from ..processing.extractor import VideoFrameExtractor
 from ..processing.quality import QualityFilterService
@@ -24,7 +25,7 @@ from ...guardrails.certainty_filter import CertaintyGuardrailFilter
 
 class VideoIngestionService:
     def __init__(self):
-        self.extractor = VideoFrameExtractor(target_fps=1.0, max_frames=30)
+        self.extractor = VideoFrameExtractor(target_fps=2.0, max_frames=60)
         self.quality_filter = QualityFilterService(
             min_blur_threshold=settings.QUALITY_BLUR_THRESHOLD,
             min_exposure_score=40.0,
@@ -48,7 +49,7 @@ class VideoIngestionService:
             duration = frames / fps
             if not settings.MIN_VIDEO_DURATION_SECONDS <= duration <= settings.MAX_VIDEO_DURATION_SECONDS:
                 raise HTTPException(status_code=422, detail=f"Video duration must be {settings.MIN_VIDEO_DURATION_SECONDS:g}–{settings.MAX_VIDEO_DURATION_SECONDS:g} seconds")
-            if width > settings.MAX_VIDEO_WIDTH or height > settings.MAX_VIDEO_HEIGHT:
+            if max(width, height) > max(settings.MAX_VIDEO_WIDTH, settings.MAX_VIDEO_HEIGHT) or min(width, height) > min(settings.MAX_VIDEO_WIDTH, settings.MAX_VIDEO_HEIGHT):
                 raise HTTPException(status_code=422, detail="Video resolution exceeds the capture limit")
             return duration
         finally:
@@ -113,14 +114,17 @@ class VideoIngestionService:
             field_id=field_id,
             uploaded_by=user_id,
             status=VideoStatus.uploaded,
-            storage_path=str(video_file_path),
+            storage_path=media_storage.store(f"videos/{video_id}/{video_file_path.name}", video_file_path),
             duration_seconds=duration_seconds,
             usable_frames_count=0,
             total_frames_extracted=0,
+            device_metadata={"processing_consent": True, "consent_version": "video-processing-v1", "consent_accepted_at": datetime.now(timezone.utc).isoformat()},
         )
         db.add(video)
         await db.commit()
         await db.refresh(video)
+        if settings.STORAGE_BACKEND == 's3':
+            video_file_path.unlink(missing_ok=True)
         logger.info(f"Video {video_id} uploaded successfully, storage_path={video_file_path}")
         return video
 
@@ -145,7 +149,7 @@ class VideoIngestionService:
         frames_dir.mkdir(parents=True, exist_ok=True)
 
         extracted_frames = self.extractor.extract_frames(
-            video_path=video.storage_path,
+            video_path=str(media_storage.local_path(video.storage_path)),
             output_dir=str(frames_dir),
         )
         video.total_frames_extracted = len(extracted_frames)
@@ -162,24 +166,28 @@ class VideoIngestionService:
         # A retry may follow a crash after frames were committed but before the
         # diagnosis was persisted. Replace that attempt's derived rows so frame
         # records remain idempotent for a video.
-        await db.execute(delete(Frame).where(Frame.video_id == video_id))
-        # Also clean up any detection/diagnosis records from previous attempts
+        await db.execute(delete(FrameDiagnosis).where(FrameDiagnosis.detection_id.in_(
+            select(Detection.id).where(Detection.frame_id.in_(select(Frame.id).where(Frame.video_id == video_id)))
+        )))
         await db.execute(delete(Detection).where(Detection.frame_id.in_(
             select(Frame.id).where(Frame.video_id == video_id)
         )))
+        await db.execute(delete(Frame).where(Frame.video_id == video_id))
         await db.flush()
 
         # Store Frame rows in DB
         for q in quality_results:
             frame_row = Frame(
                 video_id=video_id,
-                storage_path=q.file_path,
+                storage_path=media_storage.store(f"frames/{video_id}/{Path(q.file_path).name}", q.file_path),
                 blur_score=q.blur_score,
                 exposure_score=q.exposure_score,
                 is_selected=q.is_selected,
                 sequence_index=q.sequence_index,
             )
             db.add(frame_row)
+            if settings.STORAGE_BACKEND == 's3':
+                Path(q.file_path).unlink(missing_ok=True)
 
         video.quality_score = avg_quality
         video.usable_frames_count = usable_count
@@ -205,6 +213,11 @@ class VideoIngestionService:
 
         # Run detection + classification on all selected frames (Grade 3)
         frame_results = await self._inference.run_frame_inference(video_id, db)
+        if sum(fr.detections_count > 0 for fr in frame_results) < settings.MIN_USABLE_FRAMES_THRESHOLD:
+            video.status = VideoStatus.insufficient_evidence
+            video.error_detail = "Not enough crop regions were detected. Capture clear, close views of several soybean plants."
+            await db.commit()
+            return
 
         # 6. Aggregation: Bayesian temporal aggregation
         video.status = VideoStatus.aggregating
@@ -255,7 +268,10 @@ class VideoIngestionService:
             if llm_result:
                 # Run LLM explanation through guardrail filter
                 llm_explanation = llm_result.get("explanation", "")
-                guardrail_result = guardrail_filter.evaluate(llm_explanation)
+                proposed_actions = llm_result.get("action_items", [])
+                if not isinstance(proposed_actions, list) or not all(isinstance(item, str) for item in proposed_actions):
+                    raise ValueError("Invalid advisory actions")
+                guardrail_result = guardrail_filter.evaluate(llm_explanation + "\n" + "\n".join(proposed_actions))
                 if guardrail_result.passed:
                     explanation = llm_explanation
                     action_items = llm_result.get("action_items", [])
@@ -318,7 +334,7 @@ class VideoIngestionService:
                 "soybean_rust": "Soybean Rust",
                 "soybean_frogeye_leaf_spot": "Frogeye Leaf Spot",
                 "soybean_healthy": "Healthy",
-                "soybean_bacterial_blight": "Sudden Death Syndrome",
+                "soybean_bacterial_blight": "Bacterial Blight",
             }
             disease_name = taxonomy_names.get(top_class)
             if disease_name:
@@ -337,7 +353,19 @@ class VideoIngestionService:
         if is_unknown:
             severity_level = 0
             affected_estimate = 0.0
+            template = get_canned_report("unknown_other")
+            explanation = template["explanation"]
+            action_items = template["action_items"].split("\n")
 
+        provenance_rows = (await db.execute(
+            select(Detection.detector_model_version, FrameDiagnosis.classifier_model_version)
+            .join(FrameDiagnosis, FrameDiagnosis.detection_id == Detection.id)
+            .join(Frame, Frame.id == Detection.frame_id).where(Frame.video_id == video_id).distinct()
+        )).all()
+        provenance = {'aggregation': agg_result.aggregation_model_version}
+        if provenance_rows:
+            provenance['detector'] = ', '.join(sorted({row[0] for row in provenance_rows}))
+            provenance['classifier'] = ', '.join(sorted({row[1] for row in provenance_rows}))
         diagnosis = VideoDiagnosis(
             video_id=video_id,
             disease_id=disease_id,
@@ -347,10 +375,13 @@ class VideoIngestionService:
             severity_level=severity_level,
             affected_plant_estimate=affected_estimate,
             supporting_frames=known_frame_count,
-            total_frames=len(extracted_frames),
-            aggregation_model_version="bayes-v1.0",
+            total_frames=len(frame_results),
+            aggregation_model_version=agg_result.aggregation_model_version,
+            probability_distribution=agg_dist,
+            model_versions=provenance,
             decision_authority=DecisionAuthorityStatus.advisory_only,
             explanation=explanation,
+            action_items="\n".join(item for item in action_items if item.strip()) or None,
         )
         db.add(diagnosis)
 
@@ -371,6 +402,7 @@ class VideoIngestionService:
                 await self._process_pipeline_internal(video_id, db_session)
             except Exception as e:
                 logger.exception(f"Error in video processing pipeline for {video_id}: {e}")
+                await db_session.rollback()
                 stmt = select(Video).where(Video.id == video_id)
                 result = await db_session.execute(stmt)
                 video = result.scalar_one_or_none()
@@ -386,6 +418,7 @@ class VideoIngestionService:
                     await self._process_pipeline_internal(video_id, db)
                 except Exception as e:
                     logger.exception(f"Error in video processing pipeline for {video_id}: {e}")
+                    await db.rollback()
                     stmt = select(Video).where(Video.id == video_id)
                     result = await db.execute(stmt)
                     video = result.scalar_one_or_none()

@@ -1,3 +1,23 @@
+x-runtime: &runtime
+  DATABASE_URL: postgresql+psycopg://rakshak:rakshak@postgres:5432/rakshak
+  REDIS_URL: redis://redis:6379/0
+  STORAGE_BACKEND: s3
+  S3_ENDPOINT_URL: http://minio:9000
+  S3_ACCESS_KEY: rakshak-local
+  S3_SECRET_KEY: ${S3_SECRET_KEY:?Set a unique local object-storage password in .env}
+  S3_BUCKET_NAME: rakshak-evidence
+  S3_REGION: us-east-1
+  LOCAL_STORAGE_DIR: /app/storage
+  JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Set a unique JWT_SECRET_KEY in .env}
+  CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:3005}
+  ENVIRONMENT: docker
+  INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:-}
+  INITIAL_ADMIN_PASSPHRASE: ${INITIAL_ADMIN_PASSPHRASE:-}
+  GROQ_API_KEY: ${GROQ_API_KEY:-}
+  GROQ_MODEL: ${GROQ_MODEL:-}
+  EVIDENCE_RETENTION_DAYS: ${EVIDENCE_RETENTION_DAYS:-180}
+  OMP_NUM_THREADS: 2
+  MKL_NUM_THREADS: 2
 services:
   postgres:
     image: postgres:16-alpine
@@ -5,71 +25,52 @@ services:
       POSTGRES_USER: rakshak
       POSTGRES_PASSWORD: rakshak
       POSTGRES_DB: rakshak
-    ports: ["5433:5432"]
-    volumes: ["rakshak-postgres:/var/lib/postgresql/data"]
+    ports: ['127.0.0.1:5433:5432']
+    volumes: ['rakshak-postgres:/var/lib/postgresql/data']
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U rakshak -d rakshak"]
+      test: ['CMD-SHELL', 'pg_isready -U rakshak -d rakshak']
       interval: 5s
       timeout: 5s
       retries: 10
   redis:
     image: redis:7-alpine
-    ports: ["6380:6379"]
+    command: redis-server --appendonly yes
+    volumes: ['rakshak-redis:/data']
+    ports: ['127.0.0.1:6380:6379']
   minio:
     image: minio/minio:latest
-    command: server /data --console-address ":9001"
+    command: server /data --console-address ':9001'
     environment:
-      MINIO_ROOT_USER: minio
-      MINIO_ROOT_PASSWORD: minio123
-    ports: ["9000:9000", "9001:9001"]
-    volumes: ["rakshak-minio:/data"]
+      MINIO_ROOT_USER: rakshak-local
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?Set a unique local object-storage password in .env}
+    ports: ['127.0.0.1:9000:9000', '127.0.0.1:9001:9001']
+    volumes: ['rakshak-minio:/data']
+  storage-init:
+    image: minio/mc:latest
+    environment:
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?Set a unique local object-storage password in .env}
+    depends_on: [minio]
+    entrypoint: ['/bin/sh', '-c']
+    command: ['until mc alias set local http://minio:9000 rakshak-local "$$MINIO_ROOT_PASSWORD"; do sleep 2; done; mc mb --ignore-existing local/rakshak-evidence']
   backend:
     build: ./backend
-    environment:
-      DATABASE_URL: postgresql+psycopg://rakshak:rakshak@postgres:5432/rakshak
-      REDIS_URL: redis://redis:6379/0
-      S3_ENDPOINT_URL: http://minio:9000
-      S3_BUCKET_NAME: rakshak-evidence
-      LOCAL_STORAGE_DIR: /app/storage
-      MAX_UPLOAD_BYTES: 104857600
-      CELERY_CPU_QUEUE: cpu_processing
-      CELERY_GPU_QUEUE: gpu_inference
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Set JWT_SECRET_KEY in .env before starting Docker Compose}
-      DEMO_GATE_PASSWORD: ${DEMO_GATE_PASSWORD:?Set DEMO_GATE_PASSWORD in .env before starting Docker Compose}
-      INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:-}
-      INITIAL_ADMIN_PASSPHRASE: ${INITIAL_ADMIN_PASSPHRASE:-}
-      GROQ_API_KEY: ${GROQ_API_KEY:-}
-      ENVIRONMENT: docker
-      # Keep local browser and deployed web origins explicit; never use a
-      # credentialed wildcard origin for the API.
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:3005,https://stail-rakshakai.vercel.app}
-    ports: ["8000:8000"]
-    volumes:
-      - rakshak-evidence-local:/app/storage
+    environment: *runtime
+    ports: ['127.0.0.1:8000:8000']
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_started
-      minio:
-        condition: service_started
+      postgres: {condition: service_healthy}
+      redis: {condition: service_started}
+      storage-init: {condition: service_completed_successfully}
   worker:
     build: ./backend
-    command: celery -A app.worker.celery_app worker --loglevel=info -Q cpu_processing,gpu_inference
-    environment:
-      DATABASE_URL: postgresql+psycopg://rakshak:rakshak@postgres:5432/rakshak
-      REDIS_URL: redis://redis:6379/0
-      CELERY_CPU_QUEUE: cpu_processing
-      CELERY_GPU_QUEUE: gpu_inference
-      LOCAL_STORAGE_DIR: /app/storage
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    volumes:
-      - rakshak-evidence-local:/app/storage
+    environment: *runtime
+    command: celery -A app.worker.celery_app worker --loglevel=info --concurrency=1 -Q cpu_processing,gpu_inference
+    depends_on: [backend]
+  scheduler:
+    build: ./backend
+    environment: *runtime
+    command: celery -A app.worker.celery_app beat --loglevel=info --schedule=/tmp/celerybeat-schedule
+    depends_on: [worker]
 volumes:
   rakshak-postgres:
+  rakshak-redis:
   rakshak-minio:
-  rakshak-evidence-local:

@@ -11,12 +11,18 @@ from sqlalchemy.orm import selectinload
 from app.core.deps import get_current_user, require_role, get_db
 from app.core.scopes import farm_scope
 from app.models.farm import Farm, Field
-from app.models.identity import User, UserRole
+from app.models.identity import User, UserRole, Organization
 from app.models.prediction import VideoDiagnosis
 from app.models.video import Video
 from app.modules.reporting.result_contract import disease_slug
 
 router = APIRouter(prefix="/b2b", tags=["B2B / Enterprise"])
+
+@router.get('/subscription')
+async def get_subscription(current_user: Annotated[User, Depends(require_role(UserRole.enterprise))],
+                           db: Annotated[AsyncSession, Depends(get_db)]):
+    from app.core.entitlements import organization_usage
+    return await organization_usage(db, current_user.org_id)
 
 
 @router.get("/dashboard")
@@ -43,13 +49,17 @@ async def get_b2b_dashboard(
             .options(selectinload(VideoDiagnosis.video), selectinload(VideoDiagnosis.disease))
             .join(VideoDiagnosis.video).join(Video.field).join(Field.farm)
             .join(VideoDiagnosis.disease, isouter=True)
-            .where(scope)
+            .where(scope).order_by(VideoDiagnosis.created_at.desc())
         )
     ).scalars().all()
     by_disease: dict[str, int] = {}
     healthy_fields: set[str] = set()
     at_risk_fields: set[str] = set()
+    seen_fields: set[str] = set()
     for diagnosis in diagnoses:
+        if diagnosis.video.field_id in seen_fields:
+            continue
+        seen_fields.add(diagnosis.video.field_id)
         slug = disease_slug(diagnosis)
         by_disease[slug] = by_disease.get(slug, 0) + 1
         if slug == "healthy":
@@ -57,7 +67,9 @@ async def get_b2b_dashboard(
         elif slug != "unknown_other":
             at_risk_fields.add(diagnosis.video.field_id)
 
+    organization = await db.get(Organization, current_user.org_id) if current_user.org_id else None
     return {
+        "organization_name": organization.name if organization else None,
         "total_farms": farms_count,
         "total_fields": fields_count,
         "scans_processed": videos_count,

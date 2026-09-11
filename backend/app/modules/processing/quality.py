@@ -155,7 +155,7 @@ class QualityFilterService:
                 )
             )
 
-        usable_frames = [r for r in results if r.is_usable]
+        usable_frames = [r for r in results if r.is_selected]
         usable_count = len(usable_frames)
         avg_quality = (
             round(sum(r.composite_quality_score for r in usable_frames) / usable_count, 1)

@@ -1,73 +1,12 @@
 import React from 'react';
-import { PublicNavbar } from '../../components/layout/PublicNavbar';
-import { PublicFooter } from '../../components/layout/PublicFooter';
-import { SafetyBanner } from '../../components/shared/SafetyBanner';
-import { Video, Layers, Scan, CheckCircle2, UserCheck, BarChart2 } from 'lucide-react';
-
-export const HowItWorksPage: React.FC = () => {
-  return (
-    <div className="min-h-screen bg-field-canvas text-field-ink flex flex-col font-sans">
-      <PublicNavbar />
-
-      <main className="flex-1 py-12 md:py-20 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto w-full space-y-12">
-        <div className="space-y-4">
-          <span className="px-3 py-1 bg-lime-signal text-field-ink text-xs font-mono font-bold rounded-full">
-            COMPUTER VISION PIPELINE
-          </span>
-          <h1 className="text-4xl font-extrabold text-field-ink tracking-tight">
-            How Rakshak AI Analyzes Soybean Field Videos
-          </h1>
-          <p className="text-base text-muted-leaf leading-relaxed">
-            Unlike static leaf photograph models that struggle with lighting variability and motion blur, Rakshak AI processes short video sweeps to construct a robust multi-frame evidence portfolio.
-          </p>
-        </div>
-
-        <SafetyBanner />
-
-        <div className="space-y-8 pt-4">
-          <div className="p-6 bg-pure-surface rounded-2xl border border-structural space-y-3">
-            <div className="flex items-center gap-3">
-              <span className="w-8 h-8 rounded-lg bg-field-ink text-lime-signal font-bold flex items-center justify-center text-sm">1</span>
-              <h3 className="text-lg font-bold text-field-ink">Short Field Video Recording</h3>
-            </div>
-            <p className="text-xs text-muted-leaf leading-relaxed pl-11">
-              Farmers record a short 10–30 second sweep across upper, middle, and lower leaf canopies using the mobile app interface.
-            </p>
-          </div>
-
-          <div className="p-6 bg-pure-surface rounded-2xl border border-structural space-y-3">
-            <div className="flex items-center gap-3">
-              <span className="w-8 h-8 rounded-lg bg-field-ink text-lime-signal font-bold flex items-center justify-center text-sm">2</span>
-              <h3 className="text-lg font-bold text-field-ink">Evidence Sampling & Quality Checks</h3>
-            </div>
-            <p className="text-xs text-muted-leaf leading-relaxed pl-11">
-              The service samples usable frames from the video and reports when there is not enough usable evidence to continue.
-            </p>
-          </div>
-
-          <div className="p-6 bg-pure-surface rounded-2xl border border-structural space-y-3">
-            <div className="flex items-center gap-3">
-              <span className="w-8 h-8 rounded-lg bg-field-ink text-lime-signal font-bold flex items-center justify-center text-sm">3</span>
-              <h3 className="text-lg font-bold text-field-ink">Evidence-Backed Scan Result</h3>
-            </div>
-            <p className="text-xs text-muted-leaf leading-relaxed pl-11">
-              Available disease indications, confidence, severity, and evidence remain attached to the submitted scan rather than being replaced with a sample result.
-            </p>
-          </div>
-
-          <div className="p-6 bg-pure-surface rounded-2xl border border-structural space-y-3">
-            <div className="flex items-center gap-3">
-              <span className="w-8 h-8 rounded-lg bg-field-ink text-lime-signal font-bold flex items-center justify-center text-sm">4</span>
-              <h3 className="text-lg font-bold text-field-ink">Agronomist Review & Cluster Analytics</h3>
-            </div>
-            <p className="text-xs text-muted-leaf leading-relaxed pl-11">
-              High-priority signals are dispatched to regional agronomists for verification, while aggregate health data updates the FPO cluster command dashboard.
-            </p>
-          </div>
-        </div>
-      </main>
-
-      <PublicFooter />
-    </div>
-  );
-};
+import { Link } from 'react-router-dom';
+import { PublicPage } from '../../components/ui/public-page';
+import { Button } from '../../components/ui/button';
+const steps = [
+  ['Choose your field', 'Create a farmer account and give your field a recognizable name. Keep separate areas as separate records.'],
+  ['Record 10–30 seconds', 'Walk slowly in even daylight. Hold the camera about 30–60 cm from the plants. Pause on several leaves, including affected and nearby plants. Avoid filming people or private documents.'],
+  ['Upload with consent', 'Select the video and agree to processing. Uploads support MP4, MOV, M4V and AVI, up to 100 MB and 1080p. Keep the page open until the upload is saved.'],
+  ['Review the result', 'Rakshak selects usable observations and runs the current soybean baseline model. Read the indication, confidence and visual severity together with the saved evidence. A low-quality video may require a retake.'],
+  ['Add context or request review', 'Record what you saw in the field. Request an agronomist review when you need a second opinion, then return to the report to read the completed review.'],
+];
+export const HowItWorksPage: React.FC = () => <PublicPage title="Make your next video useful." intro="A steady, short recording gives you clearer evidence to work with. Start with these five steps."><ol className="guide-steps">{steps.map(([title,body],i) => <li key={title}><span>{String(i+1).padStart(2,'0')}</span><div><h2>{title}</h2><p>{body}</p></div></li>)}</ol><section className="message"><h2>Know the limits.</h2><p>This pilot does not verify crop identity or measure infection across an entire field. Model confidence is not a calibrated probability of disease. Inspect uncertain symptoms and seek expert judgment before deciding on treatment.</p></section><div className="workspace-actions"><Button asChild><Link to="/register">Create your farmer account</Link></Button><Link className="quiet-link" to="/contact">Get help</Link></div></PublicPage>;

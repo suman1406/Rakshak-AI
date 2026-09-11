@@ -1,112 +1,49 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { SettingsLayout } from './SettingsProfilePage';
+import { apiClient } from '../../services/apiClient';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Building2, Shield, Bell, CheckCircle2 } from 'lucide-react';
 
-export const SettingsOrgPage: React.FC = () => {
-  const { user } = useAuth();
+export function SettingsOrgPage() {
+  const { role } = useAuth();
+  const [data, setData] = useState<any>(null);
+  const [subscription, setSubscription] = useState<any>(null);
+  const [error, setError] = useState('');
+  useEffect(() => { apiClient.getB2BDashboard().then(setData).catch(e => setError(e.message)); if (role === 'enterprise' || role === 'org_admin') apiClient.getSubscription().then(setSubscription).catch(e => setError(e.message)); }, [role]);
+  return <SettingsLayout><h2 className="text-xl font-semibold mb-4">Your organization</h2>{error ? <p role="alert">{error}</p> : !data ? <p role="status">Loading organization records…</p> : <dl className="report-facts"><div><dt>Organization</dt><dd>{data.organization_name || 'No organization assigned'}</dd></div><div><dt>Farms</dt><dd>{data.total_farms}</dd></div><div><dt>Fields</dt><dd>{data.total_fields}</dd></div></dl>}{subscription && <section className="subscription-panel"><p className="eyebrow">Plan and usage</p><h2>{subscription.plan}</h2><p>{subscription.status} · {subscription.billing_interval || 'Billing not assigned'}</p><dl className="report-facts"><div><dt>Farms</dt><dd>{subscription.farms_used} / {subscription.farm_limit ?? 'By agreement'}</dd></div><div><dt>Scans this month (UTC)</dt><dd>{subscription.scans_used} / {subscription.scan_limit ?? 'By agreement'}</dd></div></dl><p>New uploads count toward the monthly allowance. Retrying an existing scan does not count twice. Billing is managed by the team; no automatic payment is taken here.</p><Link className="text-action" to="/contact">Discuss your plan or allowance</Link></section>}</SettingsLayout>;
+}
 
-  return (
-    <SettingsLayout>
-      <div className="space-y-6 text-xs">
-        <div className="pb-4 border-b border-structural">
-          <h3 className="font-bold text-sm text-field-ink">Organization Information</h3>
-          <p className="text-muted-leaf">FPO registration details and cluster coverage</p>
-        </div>
+export function SettingsNotificationsPage() {
+  return <SettingsLayout><h2 className="text-xl font-semibold mb-4">Scan updates</h2><p>Processing status and completed assessments are available in your workspace. SMS and WhatsApp delivery are not enabled for this release.</p></SettingsLayout>;
+}
 
-        <div className="space-y-4">
-          <div>
-            <label className="block font-semibold mb-1">Organization / FPO Name</label>
-            <input
-              type="text"
-              readOnly
-              value={user?.organization || 'Shinde Farmer Producer Organization'}
-              className="w-full p-2.5 rounded-xl border border-structural bg-field-canvas font-medium outline-none"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block font-semibold mb-1">Registered Monitored Farms</label>
-              <input
-                type="text"
-                readOnly
-                value="4,281 Farms"
-                className="w-full p-2.5 rounded-xl border border-structural bg-field-canvas font-mono outline-none"
-              />
-            </div>
-            <div>
-              <label className="block font-semibold mb-1">Total Acreage</label>
-              <input
-                type="text"
-                readOnly
-                value="28,450 Acres"
-                className="w-full p-2.5 rounded-xl border border-structural bg-field-canvas font-mono outline-none"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-    </SettingsLayout>
-  );
-};
-
-export const SettingsNotificationsPage: React.FC = () => {
-  return (
-    <SettingsLayout>
-      <div className="space-y-6 text-xs">
-        <div className="pb-4 border-b border-structural">
-          <h3 className="font-bold text-sm text-field-ink">Field Notification Preferences</h3>
-          <p className="text-muted-leaf">Manage disease escalation alerts</p>
-        </div>
-
-        <div className="space-y-3">
-          <label className="flex items-center gap-3 p-3 bg-field-canvas rounded-xl border border-structural cursor-pointer">
-            <input type="checkbox" defaultChecked className="rounded accent-field-ink" />
-            <div>
-              <p className="font-bold text-field-ink">High-Risk Disease Outbreak Alerts</p>
-              <p className="text-[11px] text-muted-leaf">Notify immediately when soybean rust exceeds 80% confidence</p>
-            </div>
-          </label>
-
-          <label className="flex items-center gap-3 p-3 bg-field-canvas rounded-xl border border-structural cursor-pointer">
-            <input type="checkbox" defaultChecked className="rounded accent-field-ink" />
-            <div>
-              <p className="font-bold text-field-ink">Agronomist Verification Completion</p>
-              <p className="text-[11px] text-muted-leaf">Receive WhatsApp / SMS when an agronomist verifies field scan</p>
-            </div>
-          </label>
-        </div>
-      </div>
-    </SettingsLayout>
-  );
-};
-
-export const SettingsSecurityPage: React.FC = () => {
-  return (
-    <SettingsLayout>
-      <div className="space-y-6 text-xs">
-        <div className="pb-4 border-b border-structural">
-          <h3 className="font-bold text-sm text-field-ink">Data Retention & Consent Information</h3>
-          <p className="text-muted-leaf">Compliance disclosures and AI safety guidelines</p>
-        </div>
-
-        <div className="space-y-4">
-          <div className="p-4 bg-field-canvas rounded-2xl border border-structural space-y-2">
-            <p className="font-bold text-field-ink">Data Retention Policy</p>
-            <p className="text-muted-leaf leading-relaxed">
-              Field video frames are retained for 180 days to generate historical disease progression curves. Agronomist decision logs are preserved permanently for quality auditing.
-            </p>
-          </div>
-
-          <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl space-y-2 text-amber-950">
-            <p className="font-bold">AI Indication Consent Notice</p>
-            <p className="leading-relaxed">
-              By using Rakshak AI, you acknowledge that all visual detections represent probabilistic indications and do not constitute an official legal or confirmed chemical diagnosis without agronomist verification.
-            </p>
-          </div>
-        </div>
-      </div>
-    </SettingsLayout>
-  );
-};
+export function SettingsSecurityPage() {
+  const { logout } = useAuth();
+  const [consent, setConsent] = useState<boolean | null>(null);
+  const [current, setCurrent] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmation, setConfirmation] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  useEffect(() => { apiClient.getCurrentUser().then(user => setConsent(user.training_consent)).catch(e => setError(e.message)); }, []);
+  async function run(action: () => Promise<unknown>, success: string) {
+    setBusy(true); setError(''); setMessage('');
+    try { await action(); setMessage(success); } catch (e) { setError(e instanceof Error ? e.message : 'Unable to save changes'); }
+    finally { setBusy(false); }
+  }
+  return <SettingsLayout><h2 className="text-xl font-semibold mb-4">Security and consent</h2><div className="space-y-6">
+    {error && <p role="alert">{error}</p>}{message && <p role="status">{message}</p>}
+    <section><h3 className="font-semibold mb-2">Optional model training</h3><p className="mb-3">Allow your evidence and expert corrections to be included in future training exports. This is optional and does not affect scan processing. You can withdraw permission for future exports here.</p>
+      <label className="flex gap-3 items-start"><input type="checkbox" checked={consent === true} disabled={busy || consent === null} onChange={e => { const accepted = e.target.checked; void run(async () => { await apiClient.updateProfile({ training_consent: accepted }); setConsent(accepted); }, 'Training preference saved'); }} />I agree to optional model-training use</label>
+    </section>
+    <form className="space-y-3" onSubmit={e => { e.preventDefault(); if (password !== confirmation) { setError('The new passwords do not match'); return; } void run(async () => { await apiClient.changePassword(current, password); logout(); }, 'Password changed'); }}>
+      <h3 className="font-semibold">Change password</h3>
+      <label className="block">Current password<input className="block border rounded p-3 w-full" type="password" autoComplete="current-password" value={current} onChange={e => setCurrent(e.target.value)} required /></label>
+      <label className="block">New password<input className="block border rounded p-3 w-full" type="password" autoComplete="new-password" minLength={8} maxLength={72} value={password} onChange={e => setPassword(e.target.value)} required /></label>
+      <label className="block">Repeat new password<input className="block border rounded p-3 w-full" type="password" autoComplete="new-password" value={confirmation} onChange={e => setConfirmation(e.target.value)} required /></label>
+      <p>Changing your password signs you out on every device.</p><button className="border rounded px-4 py-3" disabled={busy}>Change password and sign out</button>
+    </form>
+    <section><h3 className="font-semibold mb-2">Active sessions</h3><p className="mb-3">Sign out on all devices, including this one.</p><button className="border rounded px-4 py-3" disabled={busy} onClick={() => void run(async () => { await apiClient.logoutAll(); logout(); }, 'Sessions signed out')}>Sign out everywhere</button></section>
+    <Link className="text-action" to="/privacy">Read the privacy notice</Link></div></SettingsLayout>;
+}

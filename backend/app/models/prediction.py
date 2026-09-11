@@ -1,11 +1,12 @@
 import enum
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, Integer, JSON, SmallInteger, String
+from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, Integer, JSON, SmallInteger, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from ..db.base import Base
 
 class DetectionClass(str, enum.Enum):
+    frame_region = "frame_region"
     plant = "plant"
     leaf = "leaf"
     diseased_leaf = "diseased_leaf"
@@ -61,12 +62,15 @@ class VideoDiagnosis(Base):
     supporting_frames: Mapped[int | None] = mapped_column(Integer, nullable=True)
     total_frames: Mapped[int | None] = mapped_column(Integer, nullable=True)
     aggregation_model_version: Mapped[str] = mapped_column(String(100), nullable=False)
+    probability_distribution: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    model_versions: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     decision_authority: Mapped[DecisionAuthorityStatus] = mapped_column(
         Enum(DecisionAuthorityStatus),
         nullable=False,
         default=DecisionAuthorityStatus.advisory_only
     )
     explanation: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    action_items: Mapped[str | None] = mapped_column(Text, nullable=True)  # newline-separated steps
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 
     video: Mapped["Video"] = relationship("Video", back_populates="diagnoses")

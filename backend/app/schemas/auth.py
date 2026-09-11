@@ -50,6 +50,7 @@ class UserLogin(BaseModel):
     password: str
 
 class UserUpdate(BaseModel):
+    training_consent: bool | None = None
     display_name: str | None = Field(default=None, max_length=255)
     phone: str | None = None
 
@@ -66,6 +67,7 @@ class TokenResponse(BaseModel):
     user_id: str
 
 class UserOut(BaseModel):
+    training_consent: bool = False
     id: str
     email: str | None = None
     phone: str | None = None

@@ -26,18 +26,13 @@ export interface LeafRegion {
   width: number;
   height: number;
   label: string;
-  confidence: number;
+  confidence: number | null;
   hasLesion: boolean;
 }
 
 export interface EvidenceFrame {
   frameNumber: number;
-  timestampSeconds: number;
   thumbnailUrl: string;
-  leafRegionsCount: number;
-  lesionsCount: number;
-  confidenceScore: number;
-  leafRegions: LeafRegion[];
   notes?: string;
 }
 
@@ -59,7 +54,6 @@ export interface Case {
   estimatedAffectedPlantsPercent: number;
   framesAnalyzedCount: number; // e.g. 16
   supportingFramesCount: number; // e.g. 12
-  leafRegionsAnalyzedCount: number; // e.g. 43
   probabilities: DiagnosisProbability[];
   explanation: string;
   evidenceFrames: EvidenceFrame[];
@@ -70,7 +64,7 @@ export interface Case {
 export interface AgronomistVerification {
   verifiedBy: string; // agronomist name
   verifiedAt: string;
-  decision: 'confirmed' | 'changed' | 'marked_healthy' | 'marked_uncertain';
+  decision?: 'confirmed' | 'changed' | 'marked_healthy' | 'marked_uncertain';
   verifiedDisease: string;
   expertNotes: string;
   recommendedNextSteps?: string[];
@@ -85,8 +79,7 @@ export interface Field {
   district: string;
   crop: string;
   areaAcres: number;
-  healthScore: number; // 0 - 100
-  healthStatus: 'Healthy' | 'At Risk' | 'Disease Detected';
+  healthStatus: 'Healthy' | 'At Risk' | 'Disease Detected' | 'Not assessed' | 'Uncertain';
   latestScanDate: string;
   primaryDiseaseSignal?: string;
   severity?: SeverityLevel;
@@ -100,9 +93,8 @@ export interface ScanSummary {
   date: string;
   crop: string;
   diseaseIndication: string;
-  confidence: number;
+  confidence: number | null;
   severity: SeverityLevel;
-  healthScore: number;
   verifiedByAgronomist: boolean;
 }
 
@@ -113,8 +105,7 @@ export interface Farm {
   district: string;
   ownerName: string;
   totalFieldsCount: number;
-  healthScore: number; // 0 - 100
-  riskStatus: 'Low Risk' | 'Moderate Risk' | 'High Risk';
+  riskStatus: 'Low Risk' | 'Moderate Risk' | 'High Risk' | 'Not assessed' | 'Uncertain';
   diseaseSignalsCount: number;
   totalScansCount: number;
   fields: Field[];
@@ -136,7 +127,7 @@ export interface AgronomistMetrics {
   highPriorityCases: number;
   awaitingReview: number;
   reviewedThisWeek: number;
-  averageReviewTimeMinutes: number;
+  averageReviewTimeMinutes: number | null;
 }
 
 export interface PricingPlan {
@@ -161,3 +152,4 @@ export interface GeneratedReport {
   downloadUrl: string;
   size: string;
 }
+

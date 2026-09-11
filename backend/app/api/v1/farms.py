@@ -6,6 +6,7 @@ from sqlalchemy.orm import selectinload
 from app.core.deps import get_current_user, get_db
 from app.core.scopes import farm_scope
 from app.core.audit import write_audit_log
+from app.core.entitlements import require_capacity
 from app.models.farm import Farm
 from app.models.identity import User
 from app.schemas.farm import FarmCreate, FarmOut, FarmUpdate
@@ -28,6 +29,7 @@ async def create_farm(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
+    await require_capacity(db, current_user.org_id, 'farms')
     farm = Farm(
         owner_user_id=current_user.id,
         org_id=current_user.org_id,

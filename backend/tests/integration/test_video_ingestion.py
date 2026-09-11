@@ -30,6 +30,10 @@ def create_synthetic_mp4(num_frames=30, is_blurry=False, is_dark=False):
                     if (x // 16 + y // 16) % 2 == 0:
                         frame[y:y+16, x:x+16] = [255, val, 255 - val]
 
+        if not is_dark and not is_blurry:
+            # Independent, sharp observations for pipeline plumbing tests.
+            rng = np.random.default_rng(i)
+            frame = cv2.resize(rng.integers(30, 220, (16, 16, 3), dtype=np.uint8), (128, 128), interpolation=cv2.INTER_NEAREST)
         out.write(frame)
     out.release()
 
@@ -65,7 +69,17 @@ async def test_video_upload_consent_required(client):
     assert "consent is required" in res.json()["message"].lower()
 
 @pytest.mark.asyncio
-async def test_video_upload_and_pipeline_success(client, test_db):
+async def test_video_upload_and_pipeline_success(client, test_db, monkeypatch):
+    # This test proves orchestration with controlled model output, not scientific
+    # accuracy. Real checkpoints are verified separately by the model smoke tool.
+    from app.db.catalog import ensure_disease_catalog
+    from app.modules.inference.service import FrameInferenceResult
+    await ensure_disease_catalog(test_db)
+    async def infer(video_id, db):
+        return [FrameInferenceResult(str(i), "test.jpg", 90, 1, "soybean_rust", .95, False,
+            {"soybean_rust": .95, "soybean_healthy": .02, "soybean_bacterial_blight": .01,
+             "soybean_frogeye_leaf_spot": .01, "unknown_other": .01}) for i in range(6)]
+    monkeypatch.setattr(ingestion_service._inference, "run_frame_inference", infer)
     # Register and login first
     await client.post(
         "/api/v1/auth/register",

@@ -1,44 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import { Sprout, CheckCircle2, ArrowRight, LayoutDashboard, ClipboardCheck, BarChart3 } from 'lucide-react';
-import { PublicNavbar } from '../../components/layout/PublicNavbar';
-
-export const OnboardingPage: React.FC = () => {
-  const { user, role } = useAuth();
-  const navigate = useNavigate();
-  const isAgronomist = role === 'agronomist';
-  const destination = isAgronomist ? '/agronomist/dashboard' : '/organization/dashboard';
-  const features = isAgronomist
-    ? [['Review queue', 'Prioritize incoming cases', ClipboardCheck], ['Evidence', 'Inspect multi-frame signals', Sprout], ['Verification', 'Record expert decisions', CheckCircle2]]
-    : [['Field health', 'See portfolio risk', BarChart3], ['Farms & fields', 'Drill into local signals', Sprout], ['Reports', 'Export pilot summaries', CheckCircle2]];
-
-  return (
-    <div className="min-h-screen bg-field-canvas font-sans">
-      <PublicNavbar />
-      <div className="flex items-center justify-center p-4 sm:p-6 py-12">
-      <main className="max-w-2xl w-full bg-pure-surface border border-structural rounded-3xl p-6 sm:p-10 shadow-lg">
-        <div className="flex items-center gap-3 mb-10">
-          <div className="w-11 h-11 rounded-2xl bg-field-ink text-lime-signal flex items-center justify-center"><Sprout size={24} /></div>
-          <div><p className="font-extrabold text-field-ink">Rakshak AI</p><p className="text-xs text-muted-leaf">Workspace setup</p></div>
-        </div>
-        <section className="space-y-3">
-          <span className="text-[10px] font-mono uppercase tracking-[0.16em] text-muted-leaf">Step 1 of 1</span>
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-field-ink text-balance">Your {isAgronomist ? 'review workspace' : 'organization workspace'} is ready.</h1>
-          <p className="text-sm leading-6 text-muted-leaf max-w-xl">Welcome, {user?.name || 'workspace member'}. Your workspace is configured for the responsibilities associated with your account.</p>
-        </section>
-        <div className="grid sm:grid-cols-3 gap-3 my-8">
-          {features.map(([title, description, Icon]) => {
-            const FeatureIcon = Icon as typeof Sprout;
-            return <div key={title as string} className="rounded-2xl bg-field-canvas border border-structural p-4 space-y-3"><FeatureIcon size={19} className="text-field-ink" /><div><p className="text-xs font-bold text-field-ink">{title as string}</p><p className="text-[11px] leading-4 text-muted-leaf mt-1">{description as string}</p></div></div>;
-          })}
-        </div>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <button onClick={() => navigate(destination)} className="flex-1 py-3.5 bg-field-ink text-white font-bold text-sm rounded-xl hover:bg-opacity-90 transition flex items-center justify-center gap-2"><LayoutDashboard size={17} className="text-lime-signal" /> Open workspace <ArrowRight size={16} /></button>
-          <button onClick={() => navigate('/')} className="py-3.5 px-5 bg-field-canvas border border-structural text-field-ink font-bold text-sm rounded-xl hover:bg-white transition">Return to site</button>
-        </div>
-      </main>
-      </div>
-    </div>
-  );
-};
+import { Link } from 'react-router-dom';
+import { ArrowUpRight } from 'lucide-react';
+import { PublicPage } from '../../components/ui/public-page';
+export const OnboardingPage: React.FC = () => <PublicPage title="Choose your workspace." intro="Start with the role that matches your work. Expert and organization applications are reviewed before access is enabled."><div className="role-links onboarding-choices"><Link to="/register"><span><strong>I care for a field</strong><small>Create a farmer account to record scans and review results.</small></span><ArrowUpRight /></Link><Link to="/apply/agronomist"><span><strong>I review crop evidence</strong><small>Apply for agronomist access to inspect and verify cases.</small></span><ArrowUpRight /></Link><Link to="/apply/organization"><span><strong>I coordinate farms</strong><small>Apply for an organization workspace for your team.</small></span><ArrowUpRight /></Link></div><p className="public-signin">Already have access? <Link to="/login">Sign in</Link></p></PublicPage>;

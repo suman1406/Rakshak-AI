@@ -90,3 +90,77 @@ async def test_report_without_a_persisted_disease_is_unknown_not_soybean_rust(cl
     assert response.status_code == 200
     assert response.json()["result_state"] == "unknown"
     assert response.json()["disease"] == "unknown_other"
+
+
+@pytest.mark.asyncio
+async def test_analysis_and_report_returns_persisted_action_items(client, test_db):
+    owner, video = await _owned_video(test_db, status=VideoStatus.ready)
+    crop = Crop(name="Soybean")
+    test_db.add(crop)
+    await test_db.flush()
+    rust = Disease(crop_id=crop.id, name="Soybean Rust")
+    test_db.add(rust)
+    await test_db.flush()
+
+    custom_action_items = "1. Isolate infected patch\n2. Apply triazole fungicide within 48h"
+    diagnosis = VideoDiagnosis(
+        video_id=video.id,
+        disease_id=rust.id,
+        confidence=0.92,
+        confidence_band=ConfidenceBand.high,
+        severity_level=2,
+        aggregation_model_version="controlled-test",
+        explanation="Detected early pustules on soybean leaves.",
+        action_items=custom_action_items,
+    )
+    test_db.add(diagnosis)
+    await test_db.commit()
+
+    token = create_access_token(owner.id, owner.role.value)
+    
+    # Check video analysis endpoint
+    analysis_resp = await client.get(f"/api/v1/videos/{video.id}/analysis", headers={"Authorization": f"Bearer {token}"})
+    assert analysis_resp.status_code == 200
+    assert analysis_resp.json()["action_items"] == custom_action_items
+
+    # Check diagnosis report endpoint
+    diag_resp = await client.get(f"/api/v1/diagnosis/{diagnosis.id}", headers={"Authorization": f"Bearer {token}"})
+    assert diag_resp.status_code == 200
+    assert diag_resp.json()["action_items"] == custom_action_items
+
+
+@pytest.mark.asyncio
+async def test_analysis_and_report_falls_back_to_canned_when_action_items_none(client, test_db):
+    owner, video = await _owned_video(test_db, status=VideoStatus.ready)
+    crop = Crop(name="Soybean")
+    test_db.add(crop)
+    await test_db.flush()
+    rust = Disease(crop_id=crop.id, name="Soybean Rust")
+    test_db.add(rust)
+    await test_db.flush()
+
+    diagnosis = VideoDiagnosis(
+        video_id=video.id,
+        disease_id=rust.id,
+        confidence=0.88,
+        confidence_band=ConfidenceBand.high,
+        severity_level=1,
+        aggregation_model_version="controlled-test",
+        explanation=None,
+        action_items=None,
+    )
+    test_db.add(diagnosis)
+    await test_db.commit()
+
+    token = create_access_token(owner.id, owner.role.value)
+
+    # Check video analysis endpoint fallback
+    analysis_resp = await client.get(f"/api/v1/videos/{video.id}/analysis", headers={"Authorization": f"Bearer {token}"})
+    assert analysis_resp.status_code == 200
+    assert "fungicide" in analysis_resp.json()["action_items"].lower()
+
+    # Check diagnosis report endpoint fallback
+    diag_resp = await client.get(f"/api/v1/diagnosis/{diagnosis.id}", headers={"Authorization": f"Bearer {token}"})
+    assert diag_resp.status_code == 200
+    assert "fungicide" in diag_resp.json()["action_items"].lower()
+

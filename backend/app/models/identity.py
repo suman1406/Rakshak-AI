@@ -1,7 +1,7 @@
 import enum
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, Text
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, Text, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from ..db.base import Base
 
@@ -50,6 +50,8 @@ class User(Base):
     # migrated safely across the existing PostgreSQL deployments.
     account_status: Mapped[str] = mapped_column(String(16), nullable=False, default=AccountStatus.active.value, index=True)
     consent_accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    token_version: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    training_consent: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 
@@ -70,6 +72,7 @@ class OnboardingApplication(Base):
     organization_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     requested_org_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
     requested_plan_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    requested_billing_interval: Mapped[str] = mapped_column(String(16), default='monthly', server_default='monthly', nullable=False)
     reviewer_user_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id"), nullable=True)
     review_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

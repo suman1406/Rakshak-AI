@@ -1,7 +1,7 @@
 name: rakshak_mobile
 description: Farmer mobile client for Rakshak AI.
 publish_to: 'none'
-version: 0.1.0+1
+version: 0.2.0+2
 environment:
   sdk: '>=3.2.0 <4.0.0'
 dependencies:
@@ -18,3 +18,6 @@ dev_dependencies:
   flutter_lints: ^5.0.0
 flutter:
   uses-material-design: true
+  assets:
+    - assets/soybean-field.png
+    - assets/rakshak-symbol.png

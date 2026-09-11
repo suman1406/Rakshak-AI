@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import model_validator
 
 class Settings(BaseSettings):
     ENVIRONMENT: str = "local"
@@ -28,6 +29,9 @@ class Settings(BaseSettings):
     S3_SECRET_KEY: str | None = None
     S3_BUCKET_NAME: str = "fasal-rakshak-evidence"
     S3_REGION: str = "auto"
+    STORAGE_BACKEND: str = "local"
+    S3_SERVER_SIDE_ENCRYPTION: str | None = None
+    EVIDENCE_RETENTION_DAYS: int = 180
     LOCAL_STORAGE_DIR: str = "./storage"
     MAX_UPLOAD_BYTES: int = 100 * 1024 * 1024
     ALLOWED_VIDEO_EXTENSIONS: str = ".mp4,.mov,.m4v,.avi"
@@ -50,6 +54,23 @@ class Settings(BaseSettings):
     # Groq (for LLM advisor)
     GROQ_API_KEY: str | None = None
     GROQ_MODEL: str = "llama-3.1-70b-versatile"
+
+    @model_validator(mode='after')
+    def validate_deployment(self):
+        if self.STORAGE_BACKEND not in ('local', 's3'):
+            raise ValueError('STORAGE_BACKEND must be local or s3')
+        if self.EVIDENCE_RETENTION_DAYS < 1:
+            raise ValueError('EVIDENCE_RETENTION_DAYS must be positive')
+        if self.ENVIRONMENT == 'production':
+            if self.JWT_SECRET_KEY.lower().startswith(('dev-secret', 'replace-with', 'change-me', 'validation-only')) or len(self.JWT_SECRET_KEY.strip()) < 32:
+                raise ValueError('Production requires a unique JWT_SECRET_KEY of at least 32 characters')
+            if self.STORAGE_BACKEND != 's3':
+                raise ValueError('Production API and workers require shared private S3 storage')
+            if not self.DATABASE_URL.startswith(('postgresql://', 'postgresql+')):
+                raise ValueError('Production requires a PostgreSQL DATABASE_URL')
+            if self.BOOTSTRAP_DEMO_ACCOUNTS:
+                raise ValueError('Demo accounts must not be bootstrapped in production')
+        return self
     
     model_config = SettingsConfigDict(
         env_file=".env",

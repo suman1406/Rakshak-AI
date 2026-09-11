@@ -1,46 +1,5 @@
 import React from 'react';
-import { PublicNavbar } from '../../components/layout/PublicNavbar';
-import { PublicFooter } from '../../components/layout/PublicFooter';
-
-export const PrivacyPage: React.FC = () => {
-  return (
-    <div className="min-h-screen bg-field-canvas text-field-ink flex flex-col font-sans">
-      <PublicNavbar />
-      <main className="flex-1 py-12 md:py-20 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto w-full space-y-8 text-xs text-muted-leaf">
-        <h1 className="text-3xl font-extrabold text-field-ink">Privacy Policy</h1>
-        <div className="bg-pure-surface p-8 rounded-2xl border border-structural space-y-4">
-          <h2 className="text-base font-bold text-field-ink">Field Data & Video Retention Policy</h2>
-          <p>
-            Fasal Rakshak respects the agricultural privacy of farmers and FPOs. Uploaded soybean field videos are processed solely for crop disease feature extraction, multi-frame evidence gallery rendering, and agronomist verification.
-          </p>
-          <h2 className="text-base font-bold text-field-ink">Geospatial Privacy</h2>
-          <p>
-            Field locations and GPS bounds are restricted to authorized FPO administrators and designated agronomists. Aggregated regional trend statistics are anonymized.
-          </p>
-        </div>
-      </main>
-      <PublicFooter />
-    </div>
-  );
-};
-
-export const TermsPage: React.FC = () => {
-  return (
-    <div className="min-h-screen bg-field-canvas text-field-ink flex flex-col font-sans">
-      <PublicNavbar />
-      <main className="flex-1 py-12 md:py-20 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto w-full space-y-8 text-xs text-muted-leaf">
-        <h1 className="text-3xl font-extrabold text-field-ink">Terms of Service</h1>
-        <div className="bg-pure-surface p-8 rounded-2xl border border-structural space-y-4">
-          <h2 className="text-base font-bold text-field-ink">AI Indication & Agricultural Disclaimer</h2>
-          <p className="font-semibold text-field-ink">
-            ALWAYS REMEMBER: AI indication, not confirmed diagnosis.
-          </p>
-          <p>
-            Rakshak AI outputs probabilistic machine vision indications based on visual features in video frames. Outputs do not constitute a guaranteed chemical prescription or official legal diagnosis. Farmers must verify all AI signals with a qualified agronomist before purchasing or applying crop protection products.
-          </p>
-        </div>
-      </main>
-      <PublicFooter />
-    </div>
-  );
-};
+import { Link } from 'react-router-dom';
+import { PublicPage } from '../../components/ui/public-page';
+export const PrivacyPage: React.FC = () => <PublicPage title="Your records, handled carefully." intro="This notice describes the Rakshak pilot's data handling. Last updated 9 September 2026."><div className="legal-copy"><h2>Account and field records</h2><p>We store your account details, fields, uploaded videos, extracted observations, model assessments, feedback, and expert reviews to operate the service. Contact requests are saved in the platform inbox with a hashed request-origin identifier used for abuse prevention.</p><h2>Access and review</h2><p>Your account role and organization determine access. An independent farmer's review request makes that scan available to an authorized agronomist. Original evidence is served through authenticated requests rather than public file URLs.</p><h2>Processing and optional training</h2><p>Video processing requires consent at upload. Training permission is a separate, optional account setting and defaults off. Turning it off excludes your records from future training exports; it does not remove an export already made. Request help with an earlier export through the contact form.</p><h2>Retention</h2><p>Evidence retention defaults to 180 days and can be configured by the deployment operator. Scheduled cleanup removes eligible video and frame media after that period. Reports, expert labels, account records and audit events remain available for service history. Operational backups and infrastructure retention must be configured by the operator.</p><h2>Browser storage</h2><p>The web application keeps sign-in tokens in local browser storage and the optional demo preference in session storage. Sign out to clear stored sign-in tokens, or use Sign out everywhere to revoke sessions. The application does not add advertising or analytics cookies; hosting infrastructure may have its own operational storage.</p><h2>Service providers</h2><p>The service uses its configured database, private object storage and processing workers. If an optional language-model provider is enabled, structured assessment details may be sent to generate an explanation. Video evidence is not sent to that provider by the reporting flow.</p><h2>Your choices</h2><p>You can edit your display name, change your password, revoke all sessions, and change training consent in settings. For account deletion, data access, or questions about retention, <Link to="/contact">submit a privacy request</Link>. Requests are reviewed by the platform team.</p></div></PublicPage>;
+export const TermsPage: React.FC = () => <PublicPage title="Use Rakshak with care." intro="Pilot service terms and product limitations. Last updated 9 September 2026."><div className="legal-copy"><h2>Advisory use</h2><p>Rakshak provides visual indications from baseline models. Results are not confirmed diagnoses, guaranteed outcomes, or pesticide prescriptions. An expert's remote review is limited by the supplied evidence and may require a field inspection.</p><h2>Suitable evidence</h2><p>Upload only records you are authorized to share. Avoid people, personal documents and unrelated content. The current pilot is intended for soybean observations.</p><h2>Accounts and access</h2><p>Keep sign-in credentials private. Expert and organization access requires application approval. Do not use another organization's records or attempt to bypass access restrictions.</p><h2>Pilot availability</h2><p>Processing may be delayed or fail. Saved scans expose their status and available recovery steps. Model performance, processing times, physical-device behavior and external infrastructure require deployment-specific validation.</p><h2>Plans and support</h2><p>Published plans describe the current pilot catalog. Applying does not collect payment or promise a response-time guarantee. Contact the team to agree the rollout details and any service commitments.</p><p><Link to="/contact">Contact the team</Link> · <Link to="/privacy">Privacy notice</Link></p></div></PublicPage>;

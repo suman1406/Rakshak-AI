@@ -83,4 +83,5 @@ CANNED_REPORTS: dict[str, dict[str, str]] = {
 }
 
 def get_canned_report(disease_slug: str) -> dict[str, str]:
+    disease_slug = {"soybean_healthy": "healthy", "soybean_bacterial_blight": "bacterial_blight", "soybean_frogeye_leaf_spot": "frogeye_leaf_spot"}.get(disease_slug, disease_slug)
     return CANNED_REPORTS.get(disease_slug, CANNED_REPORTS["unknown_other"])

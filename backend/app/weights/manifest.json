@@ -1,0 +1,27 @@
+{
+  "release": "0.2.0",
+  "status": "baseline_unvalidated",
+  "model_improvement": "deferred_by_owner",
+  "assets": [
+    {
+      "path": "backend/app/weights/yolov8n.pt",
+      "sha256": "f59b3d833e2ff32e194b5bb8e08d211dc7c5bdf144b90d2c8412c47ccfc83b36",
+      "bytes": 6549796
+    },
+    {
+      "path": "backend/app/weights/soybean_classifier_effnet_b0.pt",
+      "sha256": "d1c1374da34990b30cb6b9b35b777a0c3179d0b6810591db49f71c115c41402a",
+      "bytes": 16353269
+    },
+    {
+      "path": "backend/app/weights/classes.json",
+      "sha256": "aed03b7a7c80a4c8a58c12ea6368f960c116626bb61384a5dde246e8ba7f2865",
+      "bytes": 109
+    },
+    {
+      "path": "backend/app/weights/calibration.json",
+      "sha256": "da8418ffeaaa4d59fa5f4b5e1b8d4be54eff016c08bea2a4cf0cb68356f13d41",
+      "bytes": 20
+    }
+  ]
+}

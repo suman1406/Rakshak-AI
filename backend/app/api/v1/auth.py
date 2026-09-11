@@ -1,7 +1,7 @@
 from typing import Annotated
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_current_user, get_db
@@ -21,6 +21,10 @@ class RefreshRequest(BaseModel):
 class RefreshResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=8, max_length=72)
 
 
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
@@ -77,8 +81,8 @@ async def login(payload: UserLogin, db: Annotated[AsyncSession, Depends(get_db)]
         detail = "This application is awaiting platform review" if user.account_status == AccountStatus.pending.value else "This account is not approved"
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
 
-    access_token = create_access_token(subject=user.id, role=user.role.value, org_id=user.org_id)
-    refresh_token = create_refresh_token(subject=user.id)
+    access_token = create_access_token(subject=user.id, role=user.role.value, org_id=user.org_id, token_version=user.token_version)
+    refresh_token = create_refresh_token(subject=user.id, token_version=user.token_version)
     await write_audit_log(db, actor_user_id=user.id, action="user.logged_in", entity_type="user", entity_id=user.id)
     await db.commit()
     return TokenResponse(
@@ -100,7 +104,9 @@ async def refresh_token(payload: RefreshRequest, db: Annotated[AsyncSession, Dep
         user = (await db.execute(stmt)).scalar_one_or_none()
         if not user or user.account_status != AccountStatus.active.value:
             raise HTTPException(status_code=401, detail="User not found")
-        new_access_token = create_access_token(subject=user.id, role=user.role.value, org_id=user.org_id)
+        if data.get("version", 0) != user.token_version:
+            raise HTTPException(status_code=401, detail="Session has been revoked")
+        new_access_token = create_access_token(subject=user.id, role=user.role.value, org_id=user.org_id, token_version=user.token_version)
         return RefreshResponse(access_token=new_access_token)
     except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid refresh token")
@@ -113,6 +119,9 @@ async def get_me(current_user: Annotated[User, Depends(get_current_user)]):
 
 @router.patch("/me", response_model=UserOut)
 async def update_me(payload: UserUpdate, current_user: Annotated[User, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db)]):
+    if payload.training_consent is not None:
+        current_user.training_consent = payload.training_consent
+        await write_audit_log(db, actor_user_id=current_user.id, action="user.training_consent_changed", entity_type="user", entity_id=current_user.id, metadata={"accepted": payload.training_consent})
     if payload.display_name is not None:
         current_user.display_name = payload.display_name
     if payload.phone is not None and payload.phone != current_user.phone:
@@ -124,3 +133,23 @@ async def update_me(payload: UserUpdate, current_user: Annotated[User, Depends(g
     await db.commit()
     await db.refresh(current_user)
     return current_user
+
+@router.post('/logout-all')
+async def logout_all(current_user: Annotated[User, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db)]):
+    from sqlalchemy import update
+    await db.execute(update(User).where(User.id == current_user.id).values(token_version=User.token_version + 1))
+    await write_audit_log(db, actor_user_id=current_user.id, action='user.sessions_revoked', entity_type='user', entity_id=current_user.id)
+    await db.commit()
+    return {'message': 'All sessions have been signed out'}
+
+@router.post('/password')
+async def change_password(payload: PasswordChange, current_user: Annotated[User, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db)]):
+    if not verify_password(payload.current_password, current_user.password_hash):
+        raise HTTPException(status_code=403, detail='Current password is incorrect')
+    if len(payload.new_password.encode('utf-8')) > 72:
+        raise HTTPException(status_code=422, detail='Password must be at most 72 UTF-8 bytes')
+    current_user.password_hash = get_password_hash(payload.new_password)
+    current_user.token_version += 1
+    await write_audit_log(db, actor_user_id=current_user.id, action='user.password_changed', entity_type='user', entity_id=current_user.id)
+    await db.commit()
+    return {'message': 'Password changed. Sign in again on each device.'}

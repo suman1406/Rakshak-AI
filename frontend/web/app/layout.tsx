@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import '../src/index.css';
+import '../src/saas.css';
+import '@fontsource-variable/geist';
 
 export const metadata: Metadata = {
   title: 'Rakshak AI | Field Health Intelligence',
@@ -9,4 +11,3 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return <html lang="en"><body>{children}</body></html>;
 }
-

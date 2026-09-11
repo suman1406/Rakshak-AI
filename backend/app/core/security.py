@@ -22,6 +22,7 @@ def create_access_token(
     role: str,
     org_id: str | None = None,
     expires_delta: timedelta | None = None,
+    token_version: int = 0,
 ) -> str:
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
@@ -34,11 +35,12 @@ def create_access_token(
         "role": role,
         "org_id": str(org_id) if org_id else None,
         "type": "access",
+        "version": token_version,
     }
     encoded_jwt = jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
     return encoded_jwt
 
-def create_refresh_token(subject: str | Any, expires_delta: timedelta | None = None) -> str:
+def create_refresh_token(subject: str | Any, expires_delta: timedelta | None = None, token_version: int = 0) -> str:
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
@@ -48,6 +50,7 @@ def create_refresh_token(subject: str | Any, expires_delta: timedelta | None = N
         "exp": expire,
         "sub": str(subject),
         "type": "refresh",
+        "version": token_version,
     }
     encoded_jwt = jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
     return encoded_jwt

@@ -35,6 +35,9 @@ export const AgronomistCaseReviewPage: React.FC = () => {
   const [expertNote, setExpertNote] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
   const [verifiedSuccess, setVerifiedSuccess] = useState(false);
+  const [error, setError] = useState('');
+  const [expertSeverity, setExpertSeverity] = useState('1');
+  const [affectedPercent, setAffectedPercent] = useState('');
 
   useEffect(() => {
     const fetchCase = async () => {
@@ -44,9 +47,10 @@ export const AgronomistCaseReviewPage: React.FC = () => {
       setVerifiedDisease(found.aiIndication.replace('Possible ', ''));
       setLoading(false);
     };
-    fetchCase();
+    fetchCase().catch(e => { setError(e instanceof Error ? e.message : 'Could not load this case.'); setLoading(false); });
   }, [id]);
 
+  if (error && !caseData) return <p role="alert">{error} <Link to="/agronomist/dashboard">Return to queue</Link></p>;
   if (loading || !caseData) {
     return <div className="p-8 text-center text-xs text-muted-leaf">Loading agronomist case review...</div>;
   }
@@ -55,14 +59,21 @@ export const AgronomistCaseReviewPage: React.FC = () => {
     e.preventDefault();
     setSubmitting(true);
 
-    await liveWorkspaceApi.verifyCase(caseData, {
-      is_healthy_override: decision === 'marked_healthy',
-      severity_level: decision === 'marked_healthy' ? 0 : decision === 'marked_uncertain' ? 1 : caseData.severity === 'Severe' ? 3 : caseData.severity === 'Moderate' ? 2 : 1,
-      notes: expertNote.trim() || undefined,
-    });
-    setCaseData(await liveWorkspaceApi.getCaseById(caseData.id));
-    setSubmitting(false);
-    setVerifiedSuccess(true);
+    setError('');
+    try {
+      const healthy = decision === 'marked_healthy' || (decision === 'confirmed' && caseData.aiIndication.toLowerCase().includes('healthy'));
+      const label = (decision === 'changed' ? verifiedDisease : caseData.aiIndication).toLowerCase().replaceAll(' ', '_');
+      await liveWorkspaceApi.verifyCase(caseData, {
+        is_healthy_override: healthy,
+        ...(healthy || decision === 'marked_uncertain' ? {} : { disease_slug: label }),
+        severity_level: healthy || decision === 'marked_uncertain' ? 0 : Number(expertSeverity),
+        affected_plant_estimate_independent: healthy || decision === 'marked_uncertain' ? 0 : Number(affectedPercent) / 100,
+        notes: expertNote.trim() || undefined,
+      });
+      setCaseData(await liveWorkspaceApi.getCaseById(caseData.id));
+      setVerifiedSuccess(true);
+    } catch (e) { setError(e instanceof Error ? e.message : 'Could not save verification.'); }
+    finally { setSubmitting(false); }
   };
 
   return (
@@ -100,11 +111,11 @@ export const AgronomistCaseReviewPage: React.FC = () => {
         {/* Left Col: Probability Distribution & Frame Stats (5 cols) */}
         <div className="lg:col-span-5 bg-pure-surface border border-structural p-6 rounded-3xl shadow-xs space-y-5 text-xs">
           <div className="flex items-center justify-between border-b border-structural pb-3">
-            <h3 className="font-bold text-sm text-field-ink">AI Probability Distribution</h3>
+            <h3 className="font-bold text-sm text-field-ink">Model probability estimates</h3>
             <SeverityBadge severity={caseData.severity} />
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-3">{caseData.probabilities.length === 0 && <p className="text-muted-leaf">The full distribution was not stored for this older assessment.</p>}
             {caseData.probabilities.map((prob) => (
               <div key={prob.disease} className="space-y-1">
                 <div className="flex justify-between font-semibold">
@@ -144,7 +155,7 @@ export const AgronomistCaseReviewPage: React.FC = () => {
             </div>
             <div className="p-2.5 bg-field-canvas rounded-xl border border-structural">
               <span className="text-[10px] text-muted-leaf block">Leaf Regions</span>
-              <span className="font-bold text-field-ink font-mono">{caseData.leafRegionsAnalyzedCount}</span>
+              <span className="font-bold text-field-ink font-mono">Not measured</span>
             </div>
           </div>
         </div>
@@ -152,6 +163,7 @@ export const AgronomistCaseReviewPage: React.FC = () => {
         {/* Right Col: Shared Evidence Viewer Component (7 cols) */}
         <div className="lg:col-span-7">
           <EvidenceViewer
+            videoUrl={caseData.videoUrl}
             evidenceFrames={caseData.evidenceFrames}
             aiIndication={caseData.aiIndication}
             confidence={caseData.confidence}
@@ -170,7 +182,7 @@ export const AgronomistCaseReviewPage: React.FC = () => {
             <div>
               <h2 className="text-base font-bold text-field-ink">Agronomist Verification Controls</h2>
               <p className="text-muted-leaf text-[11px]">
-                Submit your certified expert decision to update the field health ledger and advise the farmer.
+                Record your assessment and observations for the farmer. Model confidence and severity are not field-validated.
               </p>
             </div>
           </div>
@@ -180,7 +192,7 @@ export const AgronomistCaseReviewPage: React.FC = () => {
           <div className="p-4 bg-soft-healthy border border-emerald-300 rounded-2xl flex items-center justify-between text-emerald-950 font-bold">
             <div className="flex items-center gap-2">
               <CheckCircle2 size={18} className="text-emerald-700" />
-              <span>Verification was recorded in the backend review queue.</span>
+              <span>Your review is saved and available to the farmer.</span>
             </div>
             <Link to="/agronomist/dashboard" className="px-3 py-1 bg-field-ink text-white text-xs rounded-lg font-mono">
               Return to Queue
@@ -189,15 +201,16 @@ export const AgronomistCaseReviewPage: React.FC = () => {
         )}
 
         <form onSubmit={handleVerificationSubmit} className="space-y-5">
+          {error && <p role="alert" className="message error">{error}</p>}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block font-bold mb-1.5 text-field-ink">Verification Action</label>
+              <label htmlFor="review-action" className="block font-bold mb-1.5 text-field-ink">Verification action</label>
               <select
-                value={decision}
+                id="review-action" value={decision}
                 onChange={(e) => setDecision(e.target.value as any)}
                 className="w-full p-3 rounded-xl border border-structural bg-field-canvas font-medium text-xs outline-none"
               >
-                <option value="confirmed">Confirm AI Indication (Soybean Rust)</option>
+                <option value="confirmed">Confirm AI indication ({caseData.aiIndication})</option>
                 <option value="changed">Change Disease Classification</option>
                 <option value="marked_healthy">Mark as Healthy Crop</option>
                 <option value="marked_uncertain">Mark for In-Person Field Inspection</option>
@@ -206,35 +219,36 @@ export const AgronomistCaseReviewPage: React.FC = () => {
 
             {decision === 'changed' && (
               <div>
-                <label className="block font-bold mb-1.5 text-field-ink">Corrected Disease Diagnosis</label>
+                <label htmlFor="review-disease" className="block font-bold mb-1.5 text-field-ink">Corrected disease</label>
                 <select
-                  value={verifiedDisease}
+                  id="review-disease" value={verifiedDisease}
                   onChange={(e) => setVerifiedDisease(e.target.value)}
                   className="w-full p-3 rounded-xl border border-structural bg-field-canvas font-medium text-xs outline-none"
                 >
                   <option value="Bacterial Blight">Bacterial Blight</option>
-                  <option value="Cercospora Leaf Blight">Cercospora Leaf Blight</option>
-                  <option value="Downy Mildew">Downy Mildew</option>
-                  <option value="Nutrient Deficiency">Nutrient Deficiency (Non-pathogenic)</option>
+                  <option value="Soybean Rust">Soybean Rust</option>
+                  <option value="Frogeye Leaf Spot">Frogeye Leaf Spot</option>
                 </select>
               </div>
             )}
           </div>
 
+          {decision !== 'marked_healthy' && decision !== 'marked_uncertain' && <div className="workspace-form"><label>Your independent severity assessment<select value={expertSeverity} onChange={e => setExpertSeverity(e.target.value)}><option value="0">Healthy</option><option value="1">Early</option><option value="2">Moderate</option><option value="3">Severe</option></select></label><label>Your estimated affected percentage<input type="number" min="0" max="100" step="1" required value={affectedPercent} onChange={e => setAffectedPercent(e.target.value)} /></label></div>}
           <div>
-            <label className="block font-bold mb-1.5 text-field-ink">Expert Notes & Next Steps Advisory</label>
+            <label htmlFor="review-notes" className="block font-bold mb-1.5 text-field-ink">Your observations and next steps</label>
             <textarea
+              id="review-notes" maxLength={2000}
               rows={4}
               value={expertNote}
               onChange={(e) => setExpertNote(e.target.value)}
-              placeholder="Enter specific advice for the farmer (e.g., recommend copper oxychloride spray, or adjust irrigation interval)..."
+              placeholder="Describe your observations and practical next inspection steps."
               className="w-full p-3 rounded-xl border border-structural bg-field-canvas text-xs outline-none"
             />
           </div>
 
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || verifiedSuccess || caseData.reviewStatus === 'reviewed'}
             className="w-full py-3.5 bg-field-ink text-white font-bold text-sm rounded-xl hover:bg-opacity-90 transition flex items-center justify-center gap-2 shadow-sm"
           >
             <Send size={16} className="text-lime-signal" />
@@ -252,8 +266,7 @@ export const AgronomistCaseReviewPage: React.FC = () => {
                 {new Date(caseData.agronomistVerification.verifiedAt).toLocaleString()}
               </p>
               <p>
-                <strong>Decision:</strong> {caseData.agronomistVerification.decision} (
-                {caseData.agronomistVerification.verifiedDisease})
+                <strong>Assessment:</strong> {caseData.agronomistVerification.verifiedDisease}
               </p>
               <p>
                 <strong>Notes:</strong> {caseData.agronomistVerification.expertNotes}
@@ -265,3 +278,4 @@ export const AgronomistCaseReviewPage: React.FC = () => {
     </div>
   );
 };
+

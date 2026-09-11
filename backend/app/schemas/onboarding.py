@@ -19,6 +19,7 @@ class ApplicationCreate(BaseModel):
     organization_name: str | None = Field(default=None, min_length=2, max_length=255)
     organization_type: OrgType | None = None
     requested_plan_code: str | None = Field(default=None, max_length=50, pattern=r"^[a-z0-9_-]+$")
+    requested_billing_interval: Literal['monthly', 'annual'] = 'monthly'
 
     @field_validator("email")
     @classmethod
