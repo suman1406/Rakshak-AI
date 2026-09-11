@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { liveWorkspaceApi } from '../../services/liveWorkspaceApi';
 import { Farm } from '../../types';
-import { SeverityBadge } from '../../components/shared/RoleBadge';
-import { ArrowLeft, Building2, MapPin, ExternalLink, ShieldAlert, FileText } from 'lucide-react';
+import { ArrowLeft, ExternalLink } from 'lucide-react';
+import { useDemoMode } from '../../context/DemoModeContext';
+import { getDemoFarmByReference, isDemoReference } from '../../services/demoWorkspaceAdapters';
 
 export const OrgFarmDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const { enabled: isDemoMode, workspace } = useDemoMode();
   const [farm, setFarm] = useState<Farm | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -16,11 +18,19 @@ export const OrgFarmDetailsPage: React.FC = () => {
     const fetchFarm = async () => {
       setLoading(true); setError('');
       if (!id) throw new Error('A farm identifier is required.');
+      if ((isDemoMode || isDemoReference(id)) && workspace) {
+        const demoFarm = getDemoFarmByReference(workspace, id);
+        if (demoFarm) {
+          setFarm(demoFarm);
+          setLoading(false);
+          return;
+        }
+      }
       setFarm(await liveWorkspaceApi.getFarmById(id));
       setLoading(false);
     };
     fetchFarm().catch(e => { setError(e.message); setLoading(false); });
-  }, [id, revision]);
+  }, [id, revision, isDemoMode, workspace]);
 
   if (error) return <div className="message error" role="alert">{error}<button onClick={() => setRevision(value => value + 1)}>Try again</button></div>;
 
@@ -108,20 +118,24 @@ export const OrgFarmDetailsPage: React.FC = () => {
       {/* Recent Video Cases */}
       <div className="bg-pure-surface border border-structural rounded-3xl p-6 shadow-xs space-y-3 text-xs">
         <h3 className="font-bold text-sm text-field-ink">Recent Video Analyses</h3>
-        {farm.recentCases.map((c) => (
-          <div key={c.id} className="p-3.5 bg-field-canvas rounded-2xl border border-structural flex items-center justify-between">
-            <div>
-              <p className="font-bold text-field-ink">Field case • {c.aiIndication}</p>
-              <p className="text-[11px] text-muted-leaf">{new Date(c.submittedAt).toLocaleDateString()} • {c.confidence}% Confidence</p>
+        {farm.recentCases.length === 0 ? (
+          <p className="text-muted-leaf py-2">No recent video analyses recorded for this farm.</p>
+        ) : (
+          farm.recentCases.map((c) => (
+            <div key={c.id} className="p-3.5 bg-field-canvas rounded-2xl border border-structural flex items-center justify-between">
+              <div>
+                <p className="font-bold text-field-ink">Field case • {c.aiIndication}</p>
+                <p className="text-[11px] text-muted-leaf">{new Date(c.submittedAt).toLocaleDateString()} • {c.confidence}% Confidence</p>
+              </div>
+              <Link
+                to={`/agronomist/cases/${c.id}`}
+                className="px-3 py-1.5 bg-pure-surface border border-structural font-bold rounded-lg text-field-ink hover:bg-gray-200 transition"
+              >
+                Open Case Details
+              </Link>
             </div>
-            <Link
-              to={`/agronomist/cases/${c.id}`}
-              className="px-3 py-1.5 bg-pure-surface border border-structural font-bold rounded-lg text-field-ink hover:bg-gray-200 transition"
-            >
-              Open Case Details
-            </Link>
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );
